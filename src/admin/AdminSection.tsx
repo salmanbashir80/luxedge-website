@@ -27,6 +27,7 @@ import { CatalogProductsPage, CatalogProductEditor, CatalogPromotionsPage } from
 import HermesIntel from './HermesIntel';
 import BlogManager from './BlogManager';
 import MediaManager from './MediaManager';
+import LuxedgeSales from './LuxedgeSales';
 import type {
   Product, ProductVariant, AdminCategory,
   AIProvider, EnterpriseVariant, VariantAttribute,
@@ -128,6 +129,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
       items: [
         { to: '/admin/cj-setup', icon: Package, label: 'CJ Supplier', g: 'linear-gradient(135deg,#10b981,#06b6d4)', dot: '#34d399' },
         { to: '/admin/payments', icon: CreditCard, label: 'Payments', g: 'linear-gradient(135deg,#635bff,#8b5cf6)', dot: '#a78bfa' },
+        { to: '/admin/sales', icon: CurrencyDollar, label: 'Luxedge Sales', g: 'linear-gradient(135deg,#C5A880,#9a6f16)', dot: '#C5A880' },
         { to: '/admin/settings', icon: GearSix, label: 'Settings', g: 'linear-gradient(135deg,#94a3b8,#64748b)', dot: '#cbd5e1' },
         { to: '/admin/settings/listing-playbook', icon: BookBookmark, label: 'Listing Playbook', g: 'linear-gradient(135deg,#0ea5e9,#6366f1)', dot: '#60a5fa' },
       ],
@@ -6211,6 +6213,7 @@ export default function AdminSection() {
       <Route path="products/edit/:id" element={<AdminLayout><CatalogProductEditor /></AdminLayout>} />
       <Route path="promotions" element={<AdminLayout><CatalogPromotionsPage /></AdminLayout>} />
       <Route path="orders" element={<AdminLayout><AOrders /></AdminLayout>} />
+      <Route path="sales" element={<AdminLayout><LuxedgeSales /></AdminLayout>} />
       <Route path="gift-drop" element={<AdminLayout><GiftDropAdmin /></AdminLayout>} />
       <Route path="campaigns" element={<AdminLayout><CampaignManager /></AdminLayout>} />
       <Route path="users" element={<AdminLayout><AUsers /></AdminLayout>} />

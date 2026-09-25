@@ -61,6 +61,7 @@ import blogStatsHandler from '../api/admin/blog-stats';
 import mediaStatsHandler from '../api/admin/media-stats';
 import autoListHandler from '../api/admin/auto-list';
 import tableColumnsHandler from '../api/admin/table-columns';
+import salesHandler from '../api/admin/sales';
 import giftDropAdminHandler from '../api/admin/gift-drop';
 import { stateHandler as giftDropStateHandler, claimHandler as giftDropClaimHandler } from '../api/gift-drop';
 import campaignsAdminHandler from '../api/admin/campaigns';
@@ -133,6 +134,7 @@ const ROUTES: Route[] = [
   { path: '/api/admin/media-stats', handler: mediaStatsHandler },
   { path: '/api/admin/auto-list', handler: autoListHandler },
   { path: '/api/admin/table-columns', handler: tableColumnsHandler },
+  { path: '/api/admin/sales', handler: salesHandler },
   { path: '/api/merch-stats', handler: merchStatsHandler },
   { path: '/api/gift-drop/state', handler: giftDropStateHandler },
   { path: '/api/gift-drop/claim', handler: giftDropClaimHandler },
