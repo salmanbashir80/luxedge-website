@@ -48,6 +48,34 @@ than the deploy.
 
 ---
 
+### Entry 2 — Safe sitemap fallback + egress reduction (issue #138)
+
+| Field | Value |
+| --- | --- |
+| Fix | `/sitemap.xml` degrades to a minimal static emergency feed when the DB is unavailable; `product_images` reads gain the server-side `url=not.like.data:*` egress filter |
+| **Live Worker version** | `d18b84bb-5a21-486e-80d1-9742271d0f80` |
+| Worker version created | `2026-09-29` |
+| Deploy author | `8002salman@gmail.com` |
+| **Commit that is live** | `476a492779d50e13de4f9c0d8742ba321b5cb946` |
+| Commit subject | `fix(seo): add safe sitemap fallback and reduce Supabase egress` |
+| Base (parent) commit | `e7ea2d1` |
+
+**Context:** Supabase `eidujmfbcfrjjleitaqp` is API-restricted (HTTP 402 `exceed_egress_quota`), so the previous fail-closed sitemap returned 503 (issue #138). This deploy serves a valid 12-URL static emergency feed (`X-Luxedge-Sitemap-Mode: emergency`) until the quota resets; dynamic mode resumes automatically on recovery.
+
+**Evidence that `476a492` == the live artifact**
+
+| Check | Result |
+| --- | --- |
+| `GET /sitemap.xml` | `200`, `application/xml; charset=utf-8`, `x-luxedge-sitemap-mode: emergency` (the replaced code path cannot emit that header) |
+| Emergency body | valid XML, exactly 12 static URLs, zero `/product/`, `/category/`, `/blog`, `/shop` paths |
+| `GET /robots.txt` | `200`, still references `https://luxedge.us/sitemap.xml` |
+| `/`, `/about`, `/privacy`, `/shop` | all `200` |
+| `GET /google-products.xml` | `502` — expected while the DB is 402-restricted; no fabricated feed data |
+| Assets | upload reported no changed asset files; SPA hashes match Entry 1 (`index-D8mU0Fu2.js`) |
+| Test suite | 1629 passed, 8 skipped; `tsc --noEmit` at the 6-error baseline; `npm run build` green |
+
+---
+
 ## Adding an entry
 
 1. Note the Worker version `npx wrangler deployments list` reports for the deploy (with
