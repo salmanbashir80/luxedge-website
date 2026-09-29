@@ -63,9 +63,38 @@ YOUTUBE_CHANNEL_URL = "https://www.youtube.com/@TheAIWithSalman"
 [triggers]
 crons = ["0 * * * *", "0 3 * * *"]
 
+# ============================================================================
+# CLOUDFLARE D1 — $0 database replacement for the Supabase read dependency
+# ============================================================================
+# Production Supabase is hard-restricted (HTTP 402 exceed_egress_quota), which
+# emptied /shop and forced the emergency static sitemap. D1 (Free: 10 databases,
+# 500 MB each, 5 GB/account, 5M rows read + 100k rows written per day, no egress
+# charges) carries the storefront read surface instead, at $0.
+#
+# IMPORTANT: `d1_databases` is NOT inheritable across environments, so the
+# staging binding is declared explicitly under [env.staging] below. Both use the
+# same migrations_dir, so `wrangler d1 migrations apply` works for either.
+#
+# Deploying a binding alone changes NO behaviour: the Worker only reads D1 when
+# DATA_BACKEND=d1, so adding this binding is inert until the cutover flips it.
+[[d1_databases]]
+binding = "DB"
+database_name = "luxedge-production-db"
+database_id = "43bbff72-1294-4aa8-a3f0-24ea74e82c20"
+migrations_dir = "cloudflare/d1/migrations"
+
 [env.staging]
 name = "luxedge-cloudflare-staging"
 
 [env.staging.vars]
 VERCEL_ENV = "preview"
 DEPLOYMENT_ENV = "staging"
+# Staging reads D1. Production stays on Supabase until the D1 cutover is
+# explicitly verified and flipped there too.
+DATA_BACKEND = "d1"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "luxedge-staging-db"
+database_id = "41b939a3-f7ee-4d8c-8bf5-83d6f8dbe0d2"
+migrations_dir = "cloudflare/d1/migrations"

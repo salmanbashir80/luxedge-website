@@ -1,6 +1,7 @@
 import { SITEMAP_PRODUCTS_SELECT, SITEMAP_CATEGORIES_SELECT, SITEMAP_BLOG_POSTS_SELECT } from './selects';
 import { isHeldBlog, isHeldProduct, isBlogPublic } from '../src/content/reviewHolds';
 import { isPubliclyListableProduct } from '../src/content/productEligibility';
+import { readPostgrestPath } from './d1/read';
 
 // Dynamic sitemap source. Media routes are noindexed and deliberately excluded.
 const root = 'https://luxedge.us';
@@ -33,17 +34,17 @@ export const STATIC_ROUTES: SitemapLink[] = [
   { href: '/sitemap', label: 'Sitemap' },
 ];
 
-function supabaseBase(): string { return (process.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, ''); }
-function supabaseAnon(): string { return (process.env.VITE_SUPABASE_ANON_KEY || '').trim(); }
+/**
+ * Public reads go through the data layer (worker/d1/), which serves Cloudflare
+ * D1 when DATA_BACKEND=d1 and Supabase otherwise. The path strings below are
+ * unchanged — the D1 layer accepts the same PostgREST sub-paths — so every
+ * query, select constant and eligibility rule in this file is untouched by the
+ * migration. `null` still means "database unavailable", never "no rows".
+ */
 async function fetchRows<T>(path: string): Promise<T | null> {
-  const base = supabaseBase(); const key = supabaseAnon();
-  if (!base || !key) return null;
-  try {
-    const res = await fetch(`${base}/rest/v1/${path}`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(12_000) });
-    if (!res.ok) return null;
-    const text = await res.text();
-    return text ? (JSON.parse(text) as T) : null;
-  } catch { return null; }
+  // Single data boundary: the caller's type parameter T is the row-array shape,
+  // exactly as the previous `JSON.parse(text) as T` cast asserted it.
+  return (await readPostgrestPath(path)) as unknown as T | null;
 }
 interface ProductRow { id: string; slug?: string | null; name?: string | null; status?: string | null; description?: string | null; short_description?: string | null; price?: number | null; image_url?: string | null; supplier_source?: string | null; cost_price?: number | null; us_inventory?: boolean | null; stock_status?: string | null; inventory_qty?: number | null; commerce_readiness?: string | null; }
 interface CategoryRow { slug: string; name?: string | null; }

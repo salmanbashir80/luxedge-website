@@ -11,7 +11,7 @@
 // an EMPTY Map → grids fall back to flag/availability/visual ordering.
 // ============================================================================
 import { MerchStats, emptyMerchStats } from '../features/catalog/merchandising';
-import { getDbMode } from './db';
+import { isRemoteDb } from './db';
 
 const CACHE_KEY = 'luxedge:merch-stats:v1';
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -63,7 +63,7 @@ export function statsFromPayload(rows: { id: string }[]): Map<string, MerchStats
 /** Fetch merchandising stats once per session (with TTL). Never throws. */
 export async function loadMerchStats(): Promise<Map<string, MerchStats>> {
   try {
-    if (getDbMode() !== 'supabase') return new Map();
+    if (!isRemoteDb()) return new Map();
     const cached = readCache();
     if (cached) return statsFromPayload(Object.entries(cached).map(([id, s]) => ({ id, ...s })));
     const res = await fetch('/api/merch-stats', {

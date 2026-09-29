@@ -76,6 +76,8 @@ import googleFeedHandler from '../api/google-feed';
 import imgProxyHandler from '../api/img-proxy';
 import { maybeInjectSeo } from './seo-meta';
 import { buildSitemap, buildEmergencyStaticSitemap } from './sitemap';
+import { setDataRuntime } from './d1/runtime';
+import { handleDbApi } from './db-api';
 import blogAutomationHandler from '../api/blog-automation/index';
 import adsenseHandler, { setAdSenseRuntimeBindings } from '../api/adsense/index';
 
@@ -428,6 +430,12 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     if (url.pathname === '/video-sitemap.xml') {
       return new Response('Video sitemap retired.', { status: 410, headers: { 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } });
     }
+    // Public allowlisted storefront reads served from D1 (see worker/db-api.ts).
+    // Read-only, projection-limited and same-origin — the $0 replacement for the
+    // browser's direct Supabase PostgREST calls.
+    if (url.pathname.startsWith('/api/db/')) {
+      return handleDbApi(request, url);
+    }
     // Google AdSense earnings API (server-side). Routed by path prefix
     // because it has multiple sub-routes (status/auth/oauth/sync/earnings).
     if (url.pathname.startsWith('/api/adsense')) {
@@ -610,6 +618,11 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const pathname = new URL(request.url).pathname;
+    // Cloudflare bindings are only reachable per-request, and the sitemap/SEO
+    // readers are called from deep inside handleRequest without an `env`, so the
+    // data backend (D1 when DATA_BACKEND=d1, else Supabase) is published once
+    // here — the same pattern already used for the AdSense OAuth bindings.
+    setDataRuntime(env);
     const res = await handleRequest(request, env);
     // Single security-header owner: every response this Worker returns —
     // HTML shell, JSON APIs, sitemaps, redirects — gets the same header set
@@ -644,6 +657,7 @@ export default {
    */
   async scheduled(event: unknown, env: Env): Promise<void> {
     populateProcessEnv(env);
+    setDataRuntime(env);
     if (env.YOUTUBE_API_KEY) process.env.YOUTUBE_API_KEY = env.YOUTUBE_API_KEY;
 
     const cron = (event as { cron?: string } | null)?.cron || '';

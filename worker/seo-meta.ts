@@ -47,6 +47,8 @@ import { categoryContentFor } from '../src/content/categoryContent';
 import { authorFor } from '../src/content/authors';
 import { SSR_FOOTER_NAV } from '../src/content/navigation';
 import { productContentFor } from '../src/content/productContent';
+import { readPostgrestPath } from './d1/read';
+import { isD1Backend } from './d1/runtime';
 import { productFacts, FREE_SHIPPING_CLAIM } from '../src/content/productFacts';
 import {
   HOME_SECTIONS,
@@ -99,7 +101,10 @@ function injectCanonical(html: string, canonical: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Data access (Supabase anon REST — same pattern as api/google-feed.ts)
+// Data access — Cloudflare D1 when DATA_BACKEND=d1 (see worker/d1/read.ts),
+// otherwise the Supabase anon REST path this module has always used. The path
+// strings themselves are unchanged PostgREST sub-paths, so switching backends
+// requires no query edits here.
 // ---------------------------------------------------------------------------
 
 function supabaseBase(): string {
@@ -172,6 +177,12 @@ async function cachedFetch<T>(key: string, ttl: number, fn: () => Promise<T>): P
 }
 
 async function fetchJson<T>(base: string, key: string, path: string): Promise<T | null> {
+  // D1 first when the environment selects it. Checked explicitly rather than
+  // "try D1 then fall back", so a D1 outage surfaces as null (the honest
+  // unavailable path) instead of being masked by a second failing backend.
+  // Single data boundary: T is the row-array shape the caller already asserts,
+  // matching what the previous `JSON.parse(text) as T` cast did.
+  if (isD1Backend()) return (await readPostgrestPath(path)) as unknown as T | null;
   try {
     const res = await fetch(`${base}/rest/v1/${path}`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` },

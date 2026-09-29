@@ -15,7 +15,18 @@
 
 import { getSession } from './supabase';
 
-export type DbMode = 'local' | 'supabase' | 'unconfigured';
+export type DbMode = 'local' | 'supabase' | 'd1' | 'unconfigured';
+
+/**
+ * True when a REMOTE database backs the app (Supabase or Cloudflare D1), as
+ * opposed to localStorage/unconfigured. Callers that only need "is there a
+ * real storefront database?" must use this instead of comparing to 'supabase'
+ * directly, or they silently stop working the moment the backend flips to D1.
+ */
+export function isRemoteDb(): boolean {
+  const mode = getDbMode();
+  return mode === 'supabase' || mode === 'd1';
+}
 
 export interface DbConnectionResult {
   ok: boolean;
@@ -23,19 +34,18 @@ export interface DbConnectionResult {
   detail?: string;
 }
 
+export interface DbListOptions {
+  select?: string;
+  orderBy?: string;
+  limit?: number;
+  filters?: Record<string, string>;
+  /** Raw filter expressions passed through verbatim (e.g. `url=not.like.data:*`). */
+  rawFilters?: Record<string, string>;
+}
+
 export interface DbAdapter {
   mode: DbMode;
-  list<T>(
-    table: string,
-    opts?: {
-      select?: string;
-      orderBy?: string;
-      limit?: number;
-      filters?: Record<string, string>;
-      /** Raw PostgREST filter expressions appended verbatim (e.g. `url=not.like.data:*`). */
-      rawFilters?: Record<string, string>;
-    },
-  ): Promise<T[]>;
+  list<T>(table: string, opts?: DbListOptions): Promise<T[]>;
   get<T>(table: string, id: string): Promise<T | null>;
   /** First row matching `column = value`, or null. Used for identity lookups. */
   findFirst<T>(table: string, column: string, value: string): Promise<T | null>;
@@ -236,10 +246,7 @@ export class SupabaseAdapter implements DbAdapter {
     return res;
   }
 
-  async list<T>(
-    table: string,
-    opts?: { select?: string; orderBy?: string; limit?: number; filters?: Record<string, string>; rawFilters?: Record<string, string> },
-  ): Promise<T[]> {
+  async list<T>(table: string, opts?: DbListOptions): Promise<T[]> {
     const url = new URL(this.endpoint(table));
     if (opts?.select) url.searchParams.set('select', opts.select);
     if (opts?.orderBy) url.searchParams.set('order', opts.orderBy);
@@ -324,6 +331,109 @@ export class SupabaseAdapter implements DbAdapter {
 }
 
 // ---------------------------------------------------------------------------
+// Cloudflare D1 adapter (same-origin Worker data API)
+// ---------------------------------------------------------------------------
+/**
+ * Reads the storefront through the Worker's allowlisted /api/db route, which
+ * serves Cloudflare D1 (see worker/db-api.ts). Same-origin, no SDK, no key in
+ * the browser bundle — and it replaces the direct browser→Supabase PostgREST
+ * calls that broke when Supabase began returning HTTP 402.
+ *
+ * READS ONLY. /api/db implements SELECTs exclusively, so the mutating methods
+ * throw a clear error instead of pretending to succeed: mutations must go
+ * through a server-authorized route, which is a separate (PHASE 8) migration.
+ * A thrown error here is honest — every caller already handles a failed remote
+ * read by degrading (empty storefront / safe defaults), never by inventing data.
+ */
+export class WorkerDbAdapter implements DbAdapter {
+  readonly mode: DbMode = 'd1';
+  private base: string;
+
+  constructor(base = '/api/db') {
+    this.base = base.replace(/\/$/, '');
+  }
+
+  private url(table: string, opts?: DbListOptions): string {
+    const params = new URLSearchParams();
+    if (opts?.select) params.set('select', opts.select);
+    if (opts?.orderBy) params.set('order', opts.orderBy);
+    if (opts?.limit) params.set('limit', String(opts.limit));
+    if (opts?.filters) {
+      for (const [key, value] of Object.entries(opts.filters)) params.append(key, `eq.${value}`);
+    }
+    if (opts?.rawFilters) {
+      for (const [key, expr] of Object.entries(opts.rawFilters)) params.append(key, expr);
+    }
+    const qs = params.toString();
+    return `${this.base}/${encodeURIComponent(table)}${qs ? `?${qs}` : ''}`;
+  }
+
+  private async read<T>(url: string): Promise<T[]> {
+    const res = await fetch(url, { headers: { accept: 'application/json' } });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`D1 API ${res.status}: ${text.slice(0, 200)}`);
+    }
+    const rows = (await res.json()) as T[];
+    return Array.isArray(rows) ? rows : [];
+  }
+
+  async list<T>(table: string, opts?: DbListOptions): Promise<T[]> {
+    return this.read<T>(this.url(table, opts));
+  }
+
+  async get<T>(table: string, id: string): Promise<T | null> {
+    const rows = await this.read<T>(this.url(table, { filters: { id }, limit: 1 }));
+    return rows.length ? rows[0] : null;
+  }
+
+  async findFirst<T>(table: string, column: string, value: string): Promise<T | null> {
+    const rows = await this.read<T>(this.url(table, { filters: { [column]: value }, limit: 1 }));
+    return rows.length ? rows[0] : null;
+  }
+
+  private readOnly(operation: string): never {
+    throw new Error(
+      `D1 adapter is read-only (${operation} on ${this.base}). Public reads are migrated; authorized writes are not yet.`,
+    );
+  }
+
+  async insert<T extends { id: string }>(_table: string, _row: T): Promise<T> {
+    return this.readOnly('insert');
+  }
+
+  async insertRaw<T>(_table: string, _row: T): Promise<T> {
+    return this.readOnly('insertRaw');
+  }
+
+  async update<T extends { id: string }>(_table: string, _id: string, _patch: Partial<T>): Promise<T | null> {
+    return this.readOnly('update');
+  }
+
+  async updateBy<T>(_table: string, _column: string, _value: string, _patch: Partial<T>): Promise<T | null> {
+    return this.readOnly('updateBy');
+  }
+
+  async remove(_table: string, _id: string): Promise<void> {
+    this.readOnly('remove');
+  }
+
+  /** Real probe: reads one public row through the Worker the way the store does. */
+  async testConnection(): Promise<DbConnectionResult> {
+    try {
+      const res = await fetch(this.url('categories', { select: 'id', limit: 1 }));
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        return { ok: false, mode: 'd1', detail: `D1 API HTTP ${res.status}: ${text.slice(0, 120)}` };
+      }
+      return { ok: true, mode: 'd1', detail: 'Cloudflare D1 reachable (/api/db)' };
+    } catch (e) {
+      return { ok: false, mode: 'd1', detail: (e as Error).message || 'D1 API unreachable' };
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
 let dbConfigOverride: { url: string; anonKey: string } | null | undefined = undefined;
@@ -344,11 +454,32 @@ export function resolveDbConfig(): { url: string; anonKey: string } | null {
   return { url, anonKey };
 }
 
+/**
+ * Which data backend the storefront should use.
+ *   VITE_DATA_BACKEND=d1  -> Cloudflare D1 via the same-origin Worker API
+ *   anything else         -> Supabase (previous behaviour, unchanged default)
+ * Opt-in and explicit: the switch is a build/deploy decision that must be
+ * visible, not something inferred at runtime.
+ */
+export function resolveDataBackend(): 'd1' | 'supabase' {
+  const requested = String(
+    (import.meta as { env?: Record<string, string> }).env?.VITE_DATA_BACKEND || '',
+  ).trim().toLowerCase();
+  return requested === 'd1' ? 'd1' : 'supabase';
+}
+
 let cachedAdapter: DbAdapter | null = null;
 
-/** Returns the active adapter. Defaults to localStorage; upgrades to Supabase when configured. */
+/**
+ * Returns the active adapter: D1 when selected, else Supabase when configured,
+ * else localStorage.
+ */
 export function getDb(): DbAdapter {
   if (cachedAdapter) return cachedAdapter;
+  if (resolveDataBackend() === 'd1') {
+    cachedAdapter = new WorkerDbAdapter();
+    return cachedAdapter;
+  }
   const cfg = resolveDbConfig();
   cachedAdapter = cfg ? new SupabaseAdapter(cfg.url, cfg.anonKey) : new LocalStorageAdapter();
   return cachedAdapter;
@@ -356,6 +487,7 @@ export function getDb(): DbAdapter {
 
 /** Which persistence mode is active — used for honest UI status. */
 export function getDbMode(): DbMode {
+  if (resolveDataBackend() === 'd1') return 'd1';
   return resolveDbConfig() ? 'supabase' : 'local';
 }
 

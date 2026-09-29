@@ -29,7 +29,7 @@
 //   reads to published products for the anon role.
 // ============================================================================
 
-import { getDb, getDbMode } from './db';
+import { getDb, isRemoteDb } from './db';
 import { deriveCommerceReadiness, deriveInventorySource, deriveSourceType, type CommerceReadiness } from '../features/catalog/commerceReadiness';
 import { parseTagList } from '../features/catalog/tags';
 import { isHeldProduct } from '../content/reviewHolds';
@@ -407,7 +407,7 @@ function mapProductRow(
  * state) — never demo data.
  */
 export async function loadProductByIdOrSlug(key: string): Promise<CatalogProduct | null> {
-  if (getDbMode() !== 'supabase' || !key) return null;
+  if (!isRemoteDb() || !key) return null;
   const db = getDb();
   try {
     // Two separate lookups instead of an `or=(id.eq.X,slug.eq.X)` filter:
@@ -468,7 +468,7 @@ export async function loadProductByIdOrSlug(key: string): Promise<CatalogProduct
 }
 
 export async function loadStorefrontCatalog(): Promise<StorefrontCatalog | null> {
-  if (getDbMode() !== 'supabase') return null;
+  if (!isRemoteDb()) return null;
   const cached = readPublicCache<StorefrontCatalog>('luxedge:storefront-catalog:v1');
   if (cached) return { ...cached, products: cached.products.filter((p) => !isHeldProduct(p.slug) && isPubliclyListableProduct(p)) };
   const db = getDb();
@@ -615,7 +615,7 @@ function isStorefrontReady(p: DbProductRow): boolean {
  * storefront never shows coupons/shipping claims it cannot back.
  */
 export async function loadStorefrontPromotions(): Promise<StorePromotions> {
-  if (getDbMode() !== 'supabase') return { coupons: [], freeShippingEnabled: false, freeShippingThreshold: 50 };
+  if (!isRemoteDb()) return { coupons: [], freeShippingEnabled: false, freeShippingThreshold: 50 };
   const promoCache = readPublicCache<StorePromotions>('luxedge:storefront-promotions:v1');
   if (promoCache) return promoCache;
   const db = getDb();
