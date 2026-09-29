@@ -602,9 +602,14 @@ function AppProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const login = async (e: string, p: string, admin = false): Promise<string | null> => {
-    // Real authentication via Supabase Auth (Phase 3A). Returns null on
-    // success or an honest error message on failure.
-    const result = await useAuthStore.getState().signIn(e, p);
+    // TWO SEPARATE AUTH PATHS, ON PURPOSE.
+    //
+    // Buyers sign in against the Cloudflare/D1 routes, which set an HttpOnly
+    // cookie — the browser never holds a token. Admins keep the existing
+    // verified-JWT path, because an admin role must keep coming from a verified
+    // server-side claim and must never be satisfiable by a buyer session.
+    const store = useAuthStore.getState();
+    const result = admin ? await store.signIn(e, p) : await store.signInBuyer(e, p);
     if (!result.success) return result.message;
     const sbUser = result.user;
     if (!sbUser) return 'Sign-in did not return a session.';
@@ -623,14 +628,18 @@ function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await useAuthStore.getState().signOut();
+    // Ends whichever session exists: the buyer cookie (revoked server-side, so
+    // it cannot be replayed) and/or the admin JWT.
+    await useAuthStore.getState().signOutEverywhere();
     setUser(null);
     notify('Logged out');
   };
 
   const signup = async (n: string, e: string, p: string): Promise<string | null> => {
-    if (p.length < 6) return 'Password must be at least 6 characters';
-    const result = await useAuthStore.getState().signUp(n, e, p);
+    // Matches the server's policy (10 characters) so the customer is told before
+    // a round trip — the server enforces it regardless of this check.
+    if (p.length < 10) return 'Password must be at least 10 characters';
+    const result = await useAuthStore.getState().signUpBuyer(n, e, p);
     if (!result.success) return result.message;
     if (result.user) {
       setUser({ id: result.user.id, email: result.user.email, name: result.user.name, role: result.user.role, joined: new Date().toISOString().slice(0, 10) });

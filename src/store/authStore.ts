@@ -24,7 +24,25 @@ import {
   onAuthStateChange,
   isSupabaseConfigured,
 } from '../services/supabase';
+import {
+  buyerSignIn,
+  buyerSignOut,
+  buyerSignUp,
+  buyerMe,
+  buyerSignInMessage,
+  type BuyerUser,
+} from '../services/buyerAuth';
 import { ensureCustomerProfile } from '../services/customer';
+
+/** Map a Cloudflare/D1 buyer onto the store's user shape (role is never buyer-supplied). */
+function toSbUser(user: BuyerUser): SbUser {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.displayName || user.email.split('@')[0] || 'Customer',
+    role: 'buyer',
+  };
+}
 
 /** Fire-and-forget: keep a customers row in sync with the auth user. */
 function syncCustomerProfile(user: SbUser | null): void {
@@ -52,6 +70,12 @@ interface AuthStore {
   init: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signUp: (name: string, email: string, password: string) => Promise<AuthResult>;
+  /** Buyer sign-in via the Cloudflare/D1 routes (cookie session, no JS token). */
+  signInBuyer: (email: string, password: string) => Promise<AuthResult>;
+  /** Buyer registration via the Cloudflare/D1 routes. */
+  signUpBuyer: (name: string, email: string, password: string) => Promise<AuthResult>;
+  /** Ends BOTH session kinds; each is a no-op when it does not apply. */
+  signOutEverywhere: () => Promise<void>;
   signOut: () => Promise<void>;
   setSessionUser: (user: SbUser | null) => void;
 }
@@ -117,7 +141,15 @@ export const useAuthStore = create<AuthStore>()((set) => ({
 
     const session = await getSession();
     applyUser(set, session?.user || null);
-    if (session) scheduleRefresh(session.expiresAt);
+    if (session) {
+      scheduleRefresh(session.expiresAt);
+    } else {
+      // No Supabase session (the admin path) — then this may be a buyer, whose
+      // session is an HttpOnly cookie the page cannot read. The server is asked
+      // who it is rather than the client guessing from storage.
+      const buyer = await buyerMe();
+      if (buyer) applyUser(set, toSbUser(buyer));
+    }
     set({ ready: true });
   },
 
@@ -165,9 +197,67 @@ export const useAuthStore = create<AuthStore>()((set) => ({
     }
   },
 
+  /**
+   * BUYER SIGN-IN — separate from admin sign-in on purpose.
+   *
+   * Buyers authenticate against the Cloudflare/D1 routes, which set an HttpOnly
+   * cookie; the browser never sees a token and the password is never stored.
+   * Admin sign-in keeps its existing verified-JWT path (signIn above) because
+   * the admin role must keep coming from a verified server-side claim. The two
+   * are never mixed, so a buyer session can never satisfy an admin check.
+   */
+  signInBuyer: async (email, password) => {
+    try {
+      const result = await buyerSignIn(email.trim(), password);
+      if (!result.ok || !result.user) {
+        return { success: false, message: buyerSignInMessage(result), user: null };
+      }
+      const buyer = toSbUser(result.user);
+      applyUser(set, buyer);
+      syncCustomerProfile(buyer);
+      return { success: true, message: 'Signed in successfully.', user: buyer };
+    } catch (e) {
+      return { success: false, message: (e as Error).message || 'Sign-in failed.', user: null };
+    }
+  },
+
+  signUpBuyer: async (name, email, password) => {
+    try {
+      const result = await buyerSignUp(email.trim(), password, name.trim());
+      if (!result.ok || !result.user) {
+        return { success: false, message: result.message || 'Account creation failed.', user: null };
+      }
+      const buyer = toSbUser(result.user);
+      applyUser(set, buyer);
+      syncCustomerProfile(buyer);
+      // Stated honestly: no verification email is sent (there is no transactional
+      // email provider), so the message must not claim one was.
+      return {
+        success: true,
+        message: result.user.emailVerified
+          ? 'Account created — you are signed in.'
+          : 'Account created — you are signed in. We could not send a verification email, so your email is not yet confirmed.',
+        user: buyer,
+      };
+    } catch (e) {
+      return { success: false, message: (e as Error).message || 'Account creation failed.', user: null };
+    }
+  },
+
   signOut: async () => {
     if (refreshTimer) { clearTimeout(refreshTimer); refreshTimer = null; }
     await sbSignOut();
+    set({ user: null, isAuthenticated: false, isAdmin: false });
+  },
+
+  signOutEverywhere: async () => {
+    if (refreshTimer) { clearTimeout(refreshTimer); refreshTimer = null; }
+    // Both are attempted: a buyer has no Supabase session and an admin has no
+    // buyer cookie, and a failure in one must not leave the other alive.
+    await Promise.all([
+      buyerSignOut().catch(() => null),
+      sbSignOut().catch(() => null),
+    ]);
     set({ user: null, isAuthenticated: false, isAdmin: false });
   },
 
