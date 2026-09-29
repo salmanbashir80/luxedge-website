@@ -76,6 +76,38 @@ than the deploy.
 
 ---
 
+### Entry 3 — Cloudflare D1 storefront read path (STAGING ONLY)
+
+| Field | Value |
+| --- | --- |
+| Feature | D1-backed storefront reads + public `/api/db` API (staging verification) |
+| Environment | `luxedge-cloudflare-staging` — **not production** |
+| **Staging Worker version** | `6f515b4a-b7e9-4d7c-b5be-4f24191cefc8` |
+| Deploy date | `2026-09-29` |
+| **Commit that is live on staging** | `db31ccb7e7e28ad99a07918c8e1d9e10da99ac1f` |
+| Commit subject | `feat(cloudflare): add D1-backed storefront read path and public data API` |
+| Base (parent) commit | `c0b7c6c6676c14125da440ae4fbd39dea65d9614` |
+| Build | `VITE_DATA_BACKEND=d1 npm run build` (baked so the SPA exercises the D1 path) |
+| D1 databases | `luxedge-staging-db` `41b939a3-f7ee-4d8c-8bf5-83d6f8dbe0d2`, `luxedge-production-db` `43bbff72-1294-4aa8-a3f0-24ea74e82c20` (created, empty) |
+
+**Production is unchanged by this entry.** `luxedge-production` still runs
+`d18b84bb-5a21-486e-80d1-9742271d0f80` on Supabase, which is why `/shop` shows 0
+products — see `docs/CLOUDFLARE_MIGRATION.md` for the blockers.
+
+**Evidence gathered against staging**
+
+| Check | Result |
+| --- | --- |
+| `/sitemap.xml` | `200`, `x-luxedge-sitemap-mode: dynamic`, 65 URLs (32 `/product/`, 10 `/category/`, 9 `/blog/`) served from D1 |
+| `/api/db/products` | `200 application/json` with real rows |
+| `/api/db/products?select=id,owner_notes` | `400` — non-public column refused |
+| `/api/db/app_settings` | `404` — secrets table unreachable |
+| `select=*` / `POST` | `400` / `405` |
+| `/shop` | renders **32 products** (was 0 in production) |
+| Import verification | 10/10 tables source count == exported count == imported count |
+
+---
+
 ## Adding an entry
 
 1. Note the Worker version `npx wrangler deployments list` reports for the deploy (with
