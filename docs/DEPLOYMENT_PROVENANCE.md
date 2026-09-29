@@ -106,6 +106,44 @@ products — see `docs/CLOUDFLARE_MIGRATION.md` for the blockers.
 | `/shop` | renders **32 products** (was 0 in production) |
 | Import verification | 10/10 tables source count == exported count == imported count |
 
+### Entry 4 — D1 commerce persistence + buyer authentication (STAGING ONLY)
+
+| Field | Value |
+| --- | --- |
+| Feature | Orders persisted in D1 (checkout/webhook/ERP ledger) + Cloudflare-native buyer auth |
+| Environment | `luxedge-cloudflare-staging` — **not production** |
+| **Staging Worker version** | `1355ca21-c436-461d-afde-99e411e7d520` |
+| Deploy date | `2026-09-29` |
+| **Commit that is live on staging** | `a894718da4bc2519c80363eb1f5fa5f6256d8ddf` |
+| Commit subjects | `fix(commerce): persist Stripe orders in Cloudflare D1` (`91514a0`), `feat(auth): replace restricted Supabase buyer auth with D1 sessions` (`a894718`) |
+| Pushed | `2e5ca2b..a894718` on `main` (both commits are on origin — nothing here is local-only) |
+| D1 migrations applied | `0002_commerce.sql`, `0003_buyer_auth.sql` — to **staging and production** D1 (schema only) |
+
+**Production is unchanged by this entry.** `luxedge-production` still runs
+`d18b84bb-5a21-486e-80d1-9742271d0f80`; the new routes are absent there
+(`GET /api/auth/me` → `404`) and `/sitemap.xml` is still
+`x-luxedge-sitemap-mode: emergency`. The production D1 binding remains inert
+(no `DATA_BACKEND` var).
+
+**Evidence gathered against staging**
+
+| Check | Result |
+| --- | --- |
+| `POST /api/auth/signup` with no `Origin` header | `403 {"error":"Missing Origin header."}` (CSRF guard live) |
+| `POST /api/auth/signup` (Origin + JSON) | `200` + `Set-Cookie: lx_buyer=…; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000` |
+| `GET /api/auth/me` with that cookie / without it | `200` (same user) / `401` |
+| `POST /api/auth/login` correct / wrong password | `200` (rotated token) / `401 {"code":"INVALID_CREDENTIALS"}` |
+| `POST /api/auth/logout`, then replay the old cookie | logout `200`, replay `401` — revocation is server-side |
+| KDF benchmark (`/api/auth/_bench`, `AUTH_BENCH=1`) | 100 000 iterations `200`; 120 000+ → `NotSupportedError: iteration counts above 100000 are not supported` |
+| D1 counts after import (production **and** staging, identical) | products 117, product_images 427, categories 11, coupons 14, blog_posts 10, media_videos 27, luxedge_orders 9, inventory_reservations 2, buyer_users 0 |
+| Staging test account | created, verified, then deleted — `buyer_users` and `buyer_sessions` are empty again |
+| `/api/auth/_bench` after the final deploy | `404` (the benchmark var is removed; the route is closed) |
+
+The intermediate staging versions from the same sprint were
+`44220acf` (first auth deploy), `5af600da` (bench diagnostics), `463cb84b`
+(100 000-iteration KDF), then the final `1355ca21` with the benchmark route
+disabled.
+
 ---
 
 ## Adding an entry
