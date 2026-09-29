@@ -31,7 +31,13 @@ const COUNTS_FILE = path.join('.freebuff', 'migration', 'row-counts.json');
 /** D1's max SQL statement length is 100 KB — stay well clear of it. */
 const MAX_STATEMENT_BYTES = 80_000;
 
-/** Tables seeded into D1 (the public/SSR read surface). */
+/**
+ * Tables seeded into D1: the public/SSR read surface plus the commerce ledger
+ * (migration 0002). The commerce tables are here for the same reason the read
+ * tables are — `verify` must be able to prove the source and imported counts
+ * agree before any cutover, and order history is the one dataset where an
+ * unverified mismatch would mean real money.
+ */
 export const IMPORT_TABLES = [
   'products',
   'categories',
@@ -43,6 +49,9 @@ export const IMPORT_TABLES = [
   'blog_posts',
   'blog_revisions',
   'media_videos',
+  'luxedge_orders',
+  'inventory_reservations',
+  'order_financials',
 ];
 
 export function sqlLiteral(value) {

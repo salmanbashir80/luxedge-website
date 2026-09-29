@@ -70,6 +70,7 @@ import { sendJson, readJsonBody, rateLimited, clientIp } from '../_lib/providers
 import { upsertAppSetting, deleteAppSetting } from '../_lib/supabase.js';
 import { requireAdmin } from '../_lib/auth.js';
 import { validateFetchTarget } from '../_lib/ssrf.js';
+import { commerceFetch, commerceDbActive } from '../../worker/d1/commerce';
 
 const ERP_WEBHOOK_KEY = 'ERP_WEBHOOK_URL';
 const ERP_TOKEN_KEY = 'ERP_API_TOKEN';
@@ -187,6 +188,14 @@ function supabaseCfg(): { url: string; serviceRole: string } | null {
 /** True when luxedge_orders carries the erp_sync_* columns (migration 0029). */
 async function erpColumnsAvailable(): Promise<boolean> {
   if (erpColumnsOverride !== null) return erpColumnsOverride;
+  // On Cloudflare D1 the columns are part of migration 0002, so the ledger lives
+  // on the order row unconditionally — no probe, and no dependency on a schema
+  // probe that would need Supabase (which is 402-restricted).
+  if (commerceDbActive()) {
+    erpColumnsProbe = true;
+    erpColumnsProbeAt = Date.now();
+    return true;
+  }
   const now = Date.now();
   if (now - erpColumnsProbeAt < 5 * 60_000) return erpColumnsProbe;
   const cfg = supabaseCfg();
@@ -256,15 +265,23 @@ async function writeErpSyncEntries(entries: Record<string, SyncEntry>): Promise<
   await appendErpSyncLog(entries);
   if (await erpColumnsAvailable()) {
     const cfg = supabaseCfg();
-    if (!cfg) return false;
+    const d1Active = commerceDbActive();
+    if (!cfg && !d1Active) return false;
     try {
-      const jsonHeaders = { apikey: cfg.serviceRole, Authorization: `Bearer ${cfg.serviceRole}`, 'Content-Type': 'application/json' };
       await Promise.all(keys.map(async (orderNumber) => {
         const e = entries[orderNumber];
+        const body = { erp_sync_status: e.status, erp_synced_at: e.synced_at ?? null, erp_sync_error: e.error ?? null };
+        const d1 = await commerceFetch('luxedge_orders', `?order_number=eq.${encodeURIComponent(orderNumber)}`, {
+          method: 'PATCH',
+          body,
+          prefer: 'return=minimal',
+        });
+        if (d1) return;
+        if (!cfg) return;
         await fetch(`${cfg.url}/rest/v1/luxedge_orders?order_number=eq.${encodeURIComponent(orderNumber)}`, {
           method: 'PATCH',
-          headers: { ...jsonHeaders, Prefer: 'return=minimal' },
-          body: JSON.stringify({ erp_sync_status: e.status, erp_synced_at: e.synced_at ?? null, erp_sync_error: e.error ?? null }),
+          headers: { apikey: cfg.serviceRole, Authorization: `Bearer ${cfg.serviceRole}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify(body),
           signal: AbortSignal.timeout(10_000),
         });
       }));
@@ -384,10 +401,24 @@ async function appendErpSyncLog(entries: Record<string, SyncEntry>): Promise<voi
 async function clearErpFailed(): Promise<number> {
   if (await erpColumnsAvailable()) {
     const cfg = supabaseCfg();
-    if (!cfg) return 0;
+    const d1Active = commerceDbActive();
+    if (!cfg && !d1Active) return 0;
     try {
-      const list = await fetch(`${cfg.url}/rest/v1/luxedge_orders?erp_sync_status=eq.failed&select=id`, {
-        headers: { apikey: cfg.serviceRole, Authorization: `Bearer ${cfg.serviceRole}` },
+      const clearBody = { erp_sync_status: null, erp_synced_at: null, erp_sync_error: null };
+      if (d1Active) {
+        const list = await commerceFetch('luxedge_orders', '?erp_sync_status=eq.failed&select=id');
+        const rows = (list?.ok && Array.isArray(list.data) ? list.data : []) as Array<{ id?: string }>;
+        const ids = rows.map((r) => r.id).filter((x): x is string => Boolean(x));
+        if (!ids.length) return 0;
+        const patch = await commerceFetch('luxedge_orders', `?id=in.(${ids.join(',')})`, {
+          method: 'PATCH',
+          body: clearBody,
+          prefer: 'return=minimal',
+        });
+        return patch?.ok ? ids.length : 0;
+      }
+      const list = await fetch(`${cfg!.url}/rest/v1/luxedge_orders?erp_sync_status=eq.failed&select=id`, {
+        headers: { apikey: cfg!.serviceRole, Authorization: `Bearer ${cfg!.serviceRole}` },
         signal: AbortSignal.timeout(10_000),
       });
       if (!list.ok) return 0;
@@ -396,10 +427,10 @@ async function clearErpFailed(): Promise<number> {
       if (!ids.length) return 0;
       // ids come from the uuid column — plain (unquoted) values keep the URL
       // valid for fetch; PostgREST parses id=in.(a,b,c) natively.
-      const patch = await fetch(`${cfg.url}/rest/v1/luxedge_orders?id=in.(${ids.join(',')})`, {
+      const patch = await fetch(`${cfg!.url}/rest/v1/luxedge_orders?id=in.(${ids.join(',')})`, {
         method: 'PATCH',
-        headers: { apikey: cfg.serviceRole, Authorization: `Bearer ${cfg.serviceRole}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ erp_sync_status: null, erp_synced_at: null, erp_sync_error: null }),
+        headers: { apikey: cfg!.serviceRole, Authorization: `Bearer ${cfg!.serviceRole}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify(clearBody),
         signal: AbortSignal.timeout(10_000),
       });
       return patch.ok ? ids.length : 0;
@@ -622,9 +653,17 @@ function parseErpResponse(body: string): ParsedErpResult {
 async function fetchRealOrders(): Promise<{ ok: boolean; status: number; orders: OrderRow[]; error?: string }> {
   const url = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
   const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const select = 'id,order_number,customer_email,customer_name,shipping_address,items,coupon_code,subtotal,discount,shipping,tax,total,currency,status,stripe_session_id,stripe_payment_intent,created_at';
+  // Cloudflare D1 is authoritative once active: Admin → Orders → ERP Sync must
+  // read the same ledger the webhook writes, or every paid order would show as
+  // unsynced. (Supabase is 402-restricted, so the legacy path cannot answer.)
+  if (commerceDbActive()) {
+    const rows = await commerceFetch('luxedge_orders', `?order=created_at.asc&select=${encodeURIComponent(select)}`);
+    if (!rows?.ok) return { ok: false, status: rows?.status || 503, orders: [], error: 'database request rejected' };
+    return { ok: true, status: 200, orders: Array.isArray(rows.data) ? (rows.data as OrderRow[]) : [] };
+  }
   if (!url || !key) return { ok: false, status: 503, orders: [], error: 'Database is not configured on this deployment.' };
   try {
-    const select = 'id,order_number,customer_email,customer_name,shipping_address,items,coupon_code,subtotal,discount,shipping,tax,total,currency,status,stripe_session_id,stripe_payment_intent,created_at';
     const res = await fetch(
       `${url}/rest/v1/luxedge_orders?order=created_at.asc&select=${encodeURIComponent(select)}`,
       { headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(15_000) },

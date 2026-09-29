@@ -21,6 +21,13 @@
 export interface D1PreparedStatement {
   bind(...values: unknown[]): D1PreparedStatement;
   all<T = Record<string, unknown>>(): Promise<{ results?: T[] }>;
+  /**
+   * Required by the commerce layer (worker/d1/commerce.ts): an order insert or
+   * an inventory decrement needs the statement's own result, and `meta.changes`
+   * is how a conditional `UPDATE ... WHERE inventory_qty >= ?` reports whether
+   * it actually took the row — that row count IS the oversell guard.
+   */
+  run?(): Promise<{ meta?: { changes?: number } } | unknown>;
 }
 
 export interface D1DatabaseLike {

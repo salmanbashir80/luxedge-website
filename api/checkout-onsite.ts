@@ -50,9 +50,21 @@ import {
   getProviderForCheckout,
   type ProviderId,
 } from './_lib/payment-providers.js';
+import { commerceFetch, commerceRpc, commerceDbActive } from '../worker/d1/commerce';
 
 // ---------------------------------------------------------------------------
-// Environment + small Supabase REST helpers (same pattern as api/checkout.ts)
+// Environment + order persistence
+//
+// ORDER PERSISTENCE IS BACKEND-SWITCHED, AND THE SWITCH IS EXPLICIT.
+// Supabase PostgREST is hard-restricted (HTTP 402) for the service-role key too,
+// so on the current production deployment this module could take a real Stripe
+// payment whose order row was never written anywhere. `commerceFetch` /
+// `commerceRpc` serve the identical calls from Cloudflare D1 once
+// DATA_BACKEND=d1 is active; otherwise (null) the original Supabase path below
+// runs unchanged, which keeps the rollback one Worker var away.
+// Fail-closed on purpose: when D1 IS active its result is authoritative and we
+// never silently fall back to Supabase — a fallback would report an order as
+// persisted when it was not.
 // ---------------------------------------------------------------------------
 
 function supabaseBase(): string {
@@ -62,9 +74,17 @@ function serviceRole(): string {
   return (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 }
 
+/** True when an order can be persisted and read back somewhere. */
+export function orderStorageConfigured(): boolean {
+  return commerceDbActive() || Boolean(supabaseBase() && serviceRole());
+}
+
 interface DbResult { ok: boolean; status: number; data: unknown }
 
 async function restFetch(table: string, query: string, init?: { method?: string; body?: unknown; prefer?: string }): Promise<DbResult> {
+  // Cloudflare D1 (commerce) takes precedence when it is the active backend.
+  const d1 = await commerceFetch(table, query, init);
+  if (d1) return d1;
   const base = supabaseBase();
   const key = serviceRole();
   if (!base || !key) return { ok: false, status: 503, data: { error: 'Database is not configured on this deployment.' } };
@@ -90,6 +110,9 @@ async function restFetch(table: string, query: string, init?: { method?: string;
 }
 
 async function rpcFetch(fn: string, body: Record<string, unknown>): Promise<DbResult> {
+  // Cloudflare D1 implements the four inventory RPCs natively when active.
+  const d1 = await commerceRpc(fn, body);
+  if (d1) return d1;
   const base = supabaseBase();
   const key = serviceRole();
   if (!base || !key) return { ok: false, status: 503, data: { error: 'Database is not configured on this deployment.' } };
@@ -304,7 +327,7 @@ export async function configHandler(req: IncomingMessage, res: ServerResponse): 
 export async function onsiteHandler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== 'POST') { sendJson(res, 405, { error: 'Method not allowed' }); return; }
 
-  if (!supabaseBase() || !serviceRole()) {
+  if (!orderStorageConfigured()) {
     sendJson(res, 503, { error: 'Checkout is temporarily unavailable. Please try again shortly.' });
     return;
   }
@@ -493,6 +516,12 @@ export async function onsiteHandler(req: IncomingMessage, res: ServerResponse): 
       return;
     }
     await rpcFetch('release_reservation', { p_reservation_id: reservationId }).catch(() => null);
+    // Server-side diagnosis: the refusal reason names a column or a constraint,
+    // never a secret — and the customer must never see it. Losing this line is
+    // what made the previous "ordered but never persisted" failure invisible.
+    console.error(
+      `[checkout] order persist failed status=${inserted.status} intent=${pi.id} order=${orderNumber} reason=${JSON.stringify(inserted.data).slice(0, 300)}`,
+    );
     sendJson(res, inserted.status, { error: 'Could not start checkout right now. Please try again.' });
     return;
   }

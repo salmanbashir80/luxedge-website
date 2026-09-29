@@ -77,6 +77,8 @@ import imgProxyHandler from '../api/img-proxy';
 import { maybeInjectSeo } from './seo-meta';
 import { buildSitemap, buildEmergencyStaticSitemap } from './sitemap';
 import { setDataRuntime } from './d1/runtime';
+import buyerAuthHandler from '../api/auth/index';
+import adminBuyersHandler from '../api/admin/buyers';
 import { handleDbApi } from './db-api';
 import blogAutomationHandler from '../api/blog-automation/index';
 import adsenseHandler, { setAdSenseRuntimeBindings } from '../api/adsense/index';
@@ -435,6 +437,42 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     // browser's direct Supabase PostgREST calls.
     if (url.pathname.startsWith('/api/db/')) {
       return handleDbApi(request, url);
+    }
+    // Buyer authentication (Cloudflare/D1 native). Supabase Auth is restricted
+    // by the project-wide HTTP 402, so sign-in was impossible; these routes are
+    // routed by path prefix because there are several sub-routes and they must
+    // be able to set (and clear) the HttpOnly session cookie. Admin auth is NOT
+    // touched — it keeps its own verified-JWT guard.
+    if (url.pathname === '/api/auth' || url.pathname.startsWith('/api/auth/')) {
+      const req = makeReq(request, url) as IncomingMessage & { env?: Env };
+      req.env = env;
+      const res = makeRes() as ShimRes;
+      try {
+        await buyerAuthHandler(req, res);
+      } catch {
+        return new Response(JSON.stringify({ error: 'Internal server error' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      const contentType = res._headers['content-type'] || 'text/plain; charset=utf-8';
+      return new Response(res._body || '', { status: res._status, headers: { ...res._headers, 'content-type': contentType } });
+    }
+    // Admin-issued one-time buyer activation/reset codes (requireAdmin-guarded).
+    if (url.pathname === '/api/admin/buyers' || url.pathname.startsWith('/api/admin/buyers/')) {
+      const req = makeReq(request, url) as IncomingMessage & { env?: Env };
+      req.env = env;
+      const res = makeRes() as ShimRes;
+      try {
+        await adminBuyersHandler(req, res);
+      } catch {
+        return new Response(JSON.stringify({ error: 'Internal server error' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      const contentType = res._headers['content-type'] || 'text/plain; charset=utf-8';
+      return new Response(res._body || '', { status: res._status, headers: { ...res._headers, 'content-type': contentType } });
     }
     // Google AdSense earnings API (server-side). Routed by path prefix
     // because it has multiple sub-routes (status/auth/oauth/sync/earnings).

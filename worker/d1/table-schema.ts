@@ -62,6 +62,20 @@ export const TABLE_SCHEMA: Record<string, TableSchema> = {
     bool: ['is_active'],
     json: ['product_ids', 'category_ids'],
   },
+  // -------------------------------------------------------------------------
+  // COMMERCE (migration 0002). These tables are read and written SERVER-SIDE
+  // only: worker/d1/commerce.ts reaches them through its own allowlist, and
+  // they are deliberately absent from PUBLIC_TABLE_COLUMNS in worker/db-api.ts,
+  // so /api/db can never expose an order (or a buyer's address) publicly.
+  // The registry entries exist because the order row IS a real PostgREST-shaped
+  // payload to its callers: `items` and `shipping_address` were jsonb and the
+  // webhook/gift-drop paths read them as objects (`address.city`), which a raw
+  // JSON string would silently break.
+  // -------------------------------------------------------------------------
+  luxedge_orders: { bool: ['payment_required'], json: ['shipping_address', 'items'] },
+  inventory_reservations: { bool: [], json: [] },
+  order_financials: { bool: [], json: [] },
+  processed_webhook_events: { bool: [], json: [] },
   blog_posts: {
     bool: ['automation_locked'],
     json: ['tags', 'secondary_keywords', 'faq', 'internal_links'],

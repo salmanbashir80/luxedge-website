@@ -54,6 +54,18 @@ import { sendJson } from './_lib/providers.js';
 import { verifyWebhookSignature, retrieveCheckoutSessionDetailed } from './_lib/stripe.js';
 import { autoForwardPaidOrder, type OrderRow } from './admin/erp.js';
 import { promotePaidIntent } from './checkout-onsite.js';
+import { commerceFetch, commerceRpc, claimWebhookEvent } from '../worker/d1/commerce';
+
+// ---------------------------------------------------------------------------
+// ORDER PERSISTENCE IS BACKEND-SWITCHED (Supabase -> Cloudflare D1)
+//
+// Supabase PostgREST answers HTTP 402 exceed_egress_quota for the service-role
+// key, so on the current production deployment a verified payment could arrive
+// with nowhere to persist its order. `commerceFetch` / `commerceRpc` serve the
+// identical calls from D1 once DATA_BACKEND=d1 is active; until then (null) the
+// original Supabase path runs unchanged, so rollback is one Worker var away.
+// Once D1 IS active its result is authoritative — never a silent fallback.
+// ---------------------------------------------------------------------------
 
 function serviceRole(): string {
   return (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
@@ -77,6 +89,8 @@ function readRawBody(req: IncomingMessage, maxBytes = 200_000): Promise<string> 
 }
 
 async function restFetch(table: string, query: string, init?: { method?: string; body?: unknown; prefer?: string }): Promise<{ ok: boolean; status: number; data: unknown }> {
+  const d1 = await commerceFetch(table, query, init);
+  if (d1) return d1;
   const base = supabaseBase();
   const key = serviceRole();
   if (!base || !key) return { ok: false, status: 503, data: { error: 'Database is not configured on this deployment.' } };
@@ -103,6 +117,8 @@ async function restFetch(table: string, query: string, init?: { method?: string;
 
 /** Service-role RPC call (inventory reservation functions — migration 0015). */
 async function rpcFetch(fn: string, body: Record<string, unknown>): Promise<{ ok: boolean; status: number; data: unknown }> {
+  const d1 = await commerceRpc(fn, body);
+  if (d1) return d1;
   const base = supabaseBase();
   const key = serviceRole();
   if (!base || !key) return { ok: false, status: 503, data: { error: 'Database is not configured on this deployment.' } };
@@ -237,7 +253,12 @@ async function fulfillPaidOrder(session: CompletedSessionShape): Promise<{ statu
       method: 'PATCH',
       body: { status: 'paid', stripe_payment_intent: session.payment_intent || null, updated_at: new Date().toISOString() },
     });
-    if (!up.ok) return { status: up.status, body: { error: 'database update rejected', detail: up.status } };
+    if (!up.ok) {
+      // A paid order that cannot be promoted is a real incident: log enough to
+      // diagnose it, and answer 5xx so Stripe retries rather than dropping it.
+      console.error(`[webhook] promote failed session=${sessionId} status=${up.status} reason=${JSON.stringify(up.data).slice(0, 300)}`);
+      return { status: up.status >= 500 ? up.status : 500, body: { error: 'database update rejected' } };
+    }
     const { consumed, groupSize } = reservationId ? await consumeReservation(reservationId) : { consumed: -1, groupSize: -1 };
     if (consumed === 0 && groupSize === 0) await decrementFallback(session);
     // Payment confirmed (async path) → forward the now-paid order to ERP.
@@ -253,7 +274,10 @@ async function fulfillPaidOrder(session: CompletedSessionShape): Promise<{ statu
     if (inserted.status === 409 || (inserted.data as { code?: string })?.code === '23505') {
       return { status: 200, body: { received: true, duplicate: true } };
     }
-    return { status: inserted.status, body: { error: 'database write rejected', detail: inserted.status } };
+    // A paid order that could not be written is never answered with a 2xx —
+    // Stripe would stop retrying and the payment would be lost.
+    console.error(`[webhook] order insert failed session=${sessionId} status=${inserted.status} reason=${JSON.stringify(inserted.data).slice(0, 300)}`);
+    return { status: inserted.status >= 500 ? inserted.status : 500, body: { error: 'database write rejected' } };
   }
 
   // Fresh paid order → consume the reservation exactly once.
@@ -321,7 +345,8 @@ async function persistAwaitingOrder(session: CompletedSessionShape): Promise<{ s
     if (inserted.status === 409 || (inserted.data as { code?: string })?.code === '23505') {
       return { status: 200, body: { received: true, duplicate: true } };
     }
-    return { status: inserted.status, body: { error: 'database write rejected', detail: inserted.status } };
+    console.error(`[webhook] awaiting-order insert failed session=${sessionId} status=${inserted.status} reason=${JSON.stringify(inserted.data).slice(0, 300)}`);
+    return { status: inserted.status >= 500 ? inserted.status : 500, body: { error: 'database write rejected' } };
   }
   return { status: 200, body: { received: true, orderNumber: row.order_number as string, awaitingPayment: true } };
 }
@@ -381,6 +406,50 @@ async function syncRefund(charge: RefundEventShape): Promise<{ status: number; b
   return { status: 200, body: { received: true, updated, status: patch.status, refundedAmount: refunded } };
 }
 
+/** Dispatches one verified Stripe event. Returns what to answer with. */
+async function routeEvent(
+  event: { type: string; data?: { object?: unknown } },
+  obj: (CompletedSessionShape & RefundEventShape) & { id: string },
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
+    // Pull the AUTHORITATIVE session (line items + totals) from Stripe — the
+    // webhook event body alone has no line items.
+    const detailed = await retrieveCheckoutSessionDetailed(obj.id);
+    if (!detailed.ok) {
+      // Fail the webhook so Stripe retries — never persist a guessed snapshot.
+      return { status: detailed.status, body: { error: detailed.message, code: detailed.code } };
+    }
+    const session = detailed.data as CompletedSessionShape;
+    if (session.payment_status === 'paid') {
+      return await fulfillPaidOrder(session);
+    }
+    // completed but NOT paid (async methods) → awaiting_payment, no inventory change.
+    return await persistAwaitingOrder(session);
+  }
+
+  if (event.type === 'checkout.session.expired') {
+    return await releaseAndMark(obj as CompletedSessionShape, 'cancelled');
+  }
+
+  if (event.type === 'checkout.session.async_payment_failed') {
+    return await releaseAndMark(obj as CompletedSessionShape, 'failed');
+  }
+
+  if (event.type === 'charge.refunded') {
+    return await syncRefund(obj as RefundEventShape);
+  }
+
+  if (event.type === 'payment_intent.succeeded') {
+    const intentId = obj.id;
+    if (!/^pi_[A-Za-z0-9_]+$/.test(intentId)) {
+      return { status: 400, body: { error: 'Malformed payment intent id.' } };
+    }
+    return await promoteIntentPaid(intentId);
+  }
+
+  return { status: 200, body: { received: true, ignored: event.type } };
+}
+
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== 'POST') { sendJson(res, 405, { error: 'Method not allowed' }); return; }
 
@@ -396,52 +465,15 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   const obj = event.data?.object as (CompletedSessionShape & RefundEventShape) | undefined;
   if (!obj?.id) { sendJson(res, 400, { error: 'Malformed webhook event.' }); return; }
 
-  if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
-    // Pull the AUTHORITATIVE session (line items + totals) from Stripe — the
-    // webhook event body alone has no line items.
-    const detailed = await retrieveCheckoutSessionDetailed(obj.id);
-    if (!detailed.ok) {
-      // Fail the webhook so Stripe retries — never persist a guessed snapshot.
-      sendJson(res, detailed.status, { error: detailed.message, code: detailed.code });
-      return;
-    }
-    const session = detailed.data as CompletedSessionShape;
-    if (session.payment_status === 'paid') {
-      const result = await fulfillPaidOrder(session);
-      sendJson(res, result.status, result.body);
-      return;
-    }
-    // completed but NOT paid (async methods) → awaiting_payment, no inventory change.
-    const result = await persistAwaitingOrder(session);
-    sendJson(res, result.status, result.body);
-    return;
-  }
+  const outcome = await routeEvent(event, obj as (CompletedSessionShape & RefundEventShape) & { id: string });
 
-  if (event.type === 'checkout.session.expired') {
-    const result = await releaseAndMark(obj as CompletedSessionShape, 'cancelled');
-    sendJson(res, result.status, result.body);
-    return;
+  // EVENT-ID IDEMPOTENCY (D1). Recorded only AFTER the event was handled
+  // successfully: a failed delivery must stay unrecorded so Stripe's retry is
+  // processed rather than discarded as a duplicate. Concurrent deliveries of
+  // the same live event are still safe — the order-level unique indexes on
+  // stripe_session_id / stripe_payment_intent are the primary guard.
+  if (outcome.status < 400) {
+    await claimWebhookEvent(event.id, event.type).catch(() => null);
   }
-
-  if (event.type === 'checkout.session.async_payment_failed') {
-    const result = await releaseAndMark(obj as CompletedSessionShape, 'failed');
-    sendJson(res, result.status, result.body);
-    return;
-  }
-
-  if (event.type === 'charge.refunded') {
-    const result = await syncRefund(obj as RefundEventShape);
-    sendJson(res, result.status, result.body);
-    return;
-  }
-
-  if (event.type === 'payment_intent.succeeded') {
-    const intentId = obj.id;
-    if (!/^pi_[A-Za-z0-9_]+$/.test(intentId)) { sendJson(res, 400, { error: 'Malformed payment intent id.' }); return; }
-    const result = await promoteIntentPaid(intentId);
-    sendJson(res, result.status, result.body);
-    return;
-  }
-
-  sendJson(res, 200, { received: true, ignored: event.type });
+  sendJson(res, outcome.status, outcome.body);
 }

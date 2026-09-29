@@ -1,199 +1,136 @@
-# Migration blockers — evidence and the decision the owner must make
+# Cloudflare migration — cutover blockers (updated 2026-09-29, third sprint)
 
-Companion to [CLOUDFLARE_MIGRATION.md](CLOUDFLARE_MIGRATION.md). Every claim here
-was verified against live systems on 2026-09-29; nothing is inferred. Read this
-before approving a production cutover.
+Production is **unchanged and safe**: `luxedge-production` still runs Worker
+`d18b84bb-5a21-486e-80d1-9742271d0f80`, the sitemap is still in emergency mode
+(`x-luxedge-sitemap-mode: emergency`), `/api/auth/*` is still 404 there, and no
+production deploy was made. Everything below was built and verified on
+`luxedge-cloudflare-staging` (version `1355ca21-c436-461d-afde-99e411e7d520`)
+and in the test suite.
 
-## Status summary
+## 1. RESOLVED — order persistence (was "payment without an order")
 
-| Gate | State |
-| --- | --- |
-| D1 schema + storefront read path | ✅ built, verified on staging |
-| Production D1 data | ✅ populated, counts verified |
-| **Buyer auth** | ❌ **cannot be migrated safely at $0** |
-| **Product images** | ❌ **335/427 bytes unreachable** |
-| **Commerce order persistence** | ❌ **broken today by the same 402** |
-| Static-asset routing | ⚠ prepared, not shipped |
-| Production cutover | 🚫 not taken |
+Supabase PostgREST answers HTTP 402 for the service-role key as well, so a
+customer could complete a real Stripe payment whose order row was never written.
+That is now fixed on the D1 path:
 
----
+* `cloudflare/d1/migrations/0002_commerce.sql` — `luxedge_orders`,
+  `inventory_reservations`, `order_financials`, `processed_webhook_events`,
+  including the two idempotency indexes (unique `stripe_session_id`, and the
+  partial unique `stripe_payment_intent`).
+* `worker/d1/commerce.ts` — the D1 implementation of the exact calls
+  `api/checkout-onsite.ts`, `api/webhook.ts` and `api/admin/erp.ts` make, with a
+  table/column allowlist, parameterised SQL, the four inventory RPCs
+  (reserve/consume/release/decrement, upsert-free and atomically guarded
+  against oversell), and Stripe event-id idempotency.
+* Verified end-to-end against real SQLite in `api/__tests__/checkout-d1.test.ts`
+  (checkout → pending order → paid, duplicate → 409, out-of-stock, declined
+  payment, wrong amount, replayed verify) — 9 tests, all reading real rows.
+* Production D1 and staging D1 both carry the schema **and** the 9 historical
+  orders + 2 reservations, count-verified (`scripts/d1-import.mjs verify`).
 
-## 1. Buyer auth (PHASE 2 / 3 / 4 / 5)
+### A second defect this uncovered
 
-### Live reality
+`api/checkout-onsite.ts` writes `shipping_method`, `shipping_carrier`,
+`shipping_service`, `shipping_rate_id`, `paid_at` and `customer_phone` — and
+**none of those columns exist on the live `luxedge_orders` table** (only the
+unused `orders` table has some of them). So the insert was being rejected on the
+Supabase path too: the failure was never only the 402. The columns are added in
+`0002_commerce.sql` and recorded for Supabase in
+`supabase/migrations/0033_luxedge_orders_checkout_columns.sql` (idempotent,
+additive, NOT applied live).
 
-| Fact | Value |
-| --- | --- |
-| `auth.users` total | **17** |
-| email-confirmed | 15 |
-| ever signed in | 13 |
-| **signed in within 30 days** | **12** |
-| password-bearing | 17 |
-| **password hash algorithm** | **`$2a$` bcrypt, length 60 — all 17** |
-| identity providers | `email` ×17 (no OAuth) |
-| account creation window | 2026-08-11 → 2026-09-06 |
-| `public.profiles` | 17 rows |
-| `public.customers` | 3 rows |
-| **`wishlist_items`** | **table does not exist** — the wishlist is `localStorage`-only |
-| `addresses` / `orders` | 0 rows |
-| `luxedge_orders.user_id` | column does not exist |
+## 2. RESOLVED — buyer authentication
 
-### AUTH FEATURE MATRIX
+All "17 buyer accounts" are **QA fixtures**, measured from the live `profiles`
+export: 3 `customer` rows with `buyer-debug-*` / `buyer-contract-*` emails and 14
+`admin` rows on `luxedge.test` / `tmp.lx` / `luxedge.local` (plus the owner's two
+logins). `orders`, `order_items` and `addresses` are all empty. There is no real
+buyer, so no bcrypt hash is migrated and no fixture account is preserved — the
+implementation starts clean (the plan's PATH C).
 
-| Feature | Current implementation | Required for cutover | Replacement |
-| --- | --- | --- | --- |
-| Signup | Supabase GoTrue `signUp` (`src/services/supabase.ts:235`) | yes | Worker + D1 (PBKDF2) |
-| Login | GoTrue `signInWithPassword` (`:218`) | yes | Worker + D1 (PBKDF2 verify) |
-| Logout | GoTrue `signOut` (`:253`) | yes | delete D1 session + clear cookie |
-| Session refresh | GoTrue token refresh (`getSession`, `getFreshAccessToken`) | yes | opaque session + sliding expiry |
-| Password reset | GoTrue email reset — **not implemented in the app** | yes | **blocked — see below** |
-| Email verification | GoTrue `email_confirmed_at` | desirable | **blocked — see below** |
-| Profile | `public.profiles` (17 rows) | yes | D1 (or defer) |
-| Wishlist ownership | `localStorage` only, no server table | no server change | none needed |
-| Cart ownership | `localStorage` | no | none |
-| Order ownership | `orders`/`addresses` empty; no `user_id` on `luxedge_orders` | yes | D1 orders (see §3) |
-| Admin role | separate token route, **not** Supabase Auth | unchanged | leave as-is |
-| API authorization | `getAccessToken()`/`getFreshAccessToken()` (18/11 call sites) | yes | session cookie → server-side resolve |
+* `cloudflare/d1/migrations/0003_buyer_auth.sql` — users, sessions, one-time
+  activation tokens, durable rate limits, auth audit log. Only one-way values
+  are stored: PBKDF2 hashes, and the SHA-256 of every session token / activation
+  code.
+* `worker/auth/password.ts` — PBKDF2-SHA256, versioned
+  (`pbkdf2-sha256$v1$<iters>$<salt>$<hash>`), unique per-user salt, constant-time
+  compare, `needsRehash()` for transparent upgrades. **Measured on the real
+  runtime**: 100 000 iterations works, and the runtime hard-refuses more
+  (`NotSupportedError: iteration counts above 100000 are not supported`), so
+  100 000 is the platform ceiling and is documented as such rather than chosen.
+* `worker/auth/store.ts` — sessions (HttpOnly + Secure + SameSite=Lax cookie;
+  server-side expiry **and** revocation; rotation on every authentication; all
+  other sessions revoked on a password change), activation codes (single use,
+  expiring, regenerating revokes the previous one), durable rate limits, audit.
+* `api/auth/index.ts` — signup / login / logout / me / activate / password, plus
+  a benchmark route that is closed unless `AUTH_BENCH=1`. Identity always comes
+  from the resolved session; no route accepts a user id or a role.
+* `api/admin/buyers.ts` — admin-issued one-time codes (`requireAdmin`, the
+  existing guard, unchanged) + account listing and disable.
+* Client: `src/services/buyerAuth.ts`, wired into `src/store/authStore.ts` and
+  `src/App.tsx` so **buyer** sign-in/up/out use the cookie routes while **admin**
+  sign-in keeps its existing verified-JWT path.
 
-### Why credentials cannot be migrated
+27 security tests (`api/__tests__/auth-routes.test.ts`) cover registration,
+duplicate email, activation (valid/wrong/expired/reused/regenerated/cross-user),
+correct and wrong password, logout, expired/revoked/tampered sessions, protected
+routes, two-user isolation, admin-vs-buyer authorization, login and activation
+rate limits, CSRF/origin enforcement, session rotation and disabled accounts.
+Live-verified on staging too (see the migration doc).
 
-All 17 accounts use **bcrypt `$2a$`**. bcrypt is not available in WebCrypto, so
-verifying it in a Worker means a pure-JS implementation. On the **Workers Free
-plan the CPU budget is 10 ms per request**, and a cost-factor-10 bcrypt verify
-costs far more than that — the request would be killed with Error 1102.
+### The one thing that genuinely does not exist at $0
 
-> Do not weaken password security to fit the CPU budget. Do not re-hash bcrypt
-> with a cheaper KDF.
+**Transaction recovery is delivered by the owner, not by email.** The only
+binding available is Cloudflare's `send_email`, which by design posts to
+*verified destinations* — it cannot mail an arbitrary customer. So an admin
+issues a one-time code and hands it over (phone/in person/another mailbox), and
+the buyer redeems it at `/account`. New signups work immediately and are marked
+`emailVerified: false` honestly, because nothing was sent.
 
-**Therefore PATH B applies: migrate identities (ids/emails/profile ownership) and
-require secure password re-enrollment.** This is safe to choose because those
-accounts are **already locked out today** — Supabase Auth returns 402 — and they
-own no server-side data that could be lost (wishlist is local, orders/addresses
-are empty).
+## 3. STILL BLOCKED — 335 product images
 
-### Why password reset also cannot be delivered at $0
+Unchanged and re-verified live this sprint: every Supabase Storage object still
+returns **HTTP 402 `exceed_egress_quota`**, so recovery is impossible and the
+bytes exist only behind that service. `scripts/supabase-image-recovery.mjs`
+probes one object first and, on 402, exits having changed nothing (run this
+sprint: `probe -> HTTP 402 -> restricted`, no download, no edit). When Storage
+answers 200 it downloads, verifies the real image signature, deduplicates by
+content hash, writes `public/product-media/<hash>.<ext>` (static assets — R2 is
+forbidden, it needs a card) and emits the D1 UPDATE statements for deliberate
+application.
 
-Reset is mandatory for PATH B (`12` accounts signed in within 30 days). The only
-email infrastructure in the repo is the Cloudflare **`send_email` (`SEND_MAIL`)
-binding** (`api/email/send.ts`, `api/email/contact.ts`, `wrangler.toml`), which by
-design delivers **only to verified destination addresses** — it is an owner
-notification channel, not a transactional provider for arbitrary buyer inboxes.
-Adding a real transactional provider means a new (paid, card-requiring) service,
-which the rules forbid.
+69 of the 71 affected products have no other image anywhere. No placeholder or
+lookalike was substituted, because that would be fabricating product data.
 
-Remaining $0-compatible option, for the owner to approve: **admin-issued one-time
-reset codes**. The owner already has authenticated admin access and only 17
-accounts exist, so identity can be confirmed out-of-band and a code issued from
-the admin panel. This needs a small admin endpoint but no email provider.
+## 4. NOT DONE ON PURPOSE — static routing is unchanged
 
-**Auth is therefore BLOCKED pending a decision, not merely unimplemented.**
+`run_worker_first = true` remains. Pattern-array form is supported by the
+installed Wrangler, but enumerating "page routes" is not possible (client routes
+are arbitrary), and with `not_found_handling = "none"` every non-enumerated SPA
+route would 404 from the Asset Worker. The obvious alternative — switching to
+`single-page-application` — is the change `wrangler.toml` records as having
+caused the "stale shell answered with HTML / page hangs on text" incident. This
+needs a browser-level staging pass, not a guess, so it is reported as **not
+optimised** rather than shipped.
 
----
-
-## 2. Product images (PHASE 7 / 8 / 9)
-
-Live `product_images` (427 rows) by host:
-
-| Host | Rows | Reachable |
-| --- | --- | --- |
-| `eidujmfbcfrjjleitaqp.supabase.co` (Storage) | **335** | ❌ HTTP 402 |
-| `cf.cjdropshipping.com` | 42 | ✅ |
-| `ae-pic-a1.aliexpress-media.com` | 24 | ✅ |
-| `oss-cf.cjdropshipping.com` | 11 | ✅ |
-| `images.pexels.com` | 5 | ✅ |
-| `cdn11.bigcommerce.com` | 4 | ✅ |
-| `himalayankoh.com` | 4 | ✅ |
-| `upload.wikimedia.org` | 1 | ✅ |
-| `luxedge.us` | 1 | ✅ |
-
-### Every legitimate recovery source was checked
-
-| Source | Result |
-| --- | --- |
-| Supabase Storage (public object URL) | 402 |
-| Supabase Management API `/storage/buckets` | **402** (same restriction) |
-| Supabase Management API object download | endpoint does not exist (404) |
-| Local repository `public/**` (basename match) | **6 of 335** |
-| `products.image_url` / `og_image` fallback | 2 of 71 affected products |
-| `storage_path` hint → local file | 6 |
-| Working external hosts for the same products | covered only 2 |
-| Local backup artifacts (`.freebuff/audit/imgs*.json`) | partial snapshots, 3 `data:` rows |
-
-**Result: of the 71 affected products, 69 have no working image from any
-legitimate source.** The bytes exist only inside the restricted Storage service.
-
-`scripts/image-recovery-audit.mjs` reproduces this audit. It never substitutes a
-visually similar image and never invents a URL.
-
-### Why R2 / Static Assets cannot solve it
-
-- R2 is **not enabled** (API `10042`) and enabling it requires a payment method → forbidden.
-- Static Assets can host bytes we *have*; we do not have these 335 files.
-
-**This is a genuine capacity/access blocker, not a routing problem.** It resolves
-by itself only if Supabase's egress quota resets or the owner restores the
-project — at which point the same pipeline can mirror the images into the repo or
-R2 if the owner later adds a payment method.
-
----
-
-## 3. Commerce (PHASE 15) — severely broken today
-
-Verified code paths:
-
-- `api/checkout-onsite.ts:484` → `POST /rest/v1/luxedge_orders` (order insert).
-- `api/checkout.ts:62` → `POST /rest/v1/rpc/<fn>` (order RPC).
-- `api/webhook.ts` → Supabase REST writes for payment/fulfilment state.
-- `api/admin/erp.ts` → `luxedge_orders` reads/writes.
-
-With Supabase REST at **402**, these all fail. **A customer can pay and the order
-cannot be persisted.** `luxedge_orders` holds 9 rows; `orders`/`order_items`/
-`payments`/`order_financials` are empty.
-
-Minimum work to clear this gate (not attempted — see §5):
-1. Add `luxedge_orders` (29 columns) to the D1 migration lineage and import its 9 rows.
-2. Move the order insert + webhook state transitions to server-side D1 writes
-   (the Worker already holds the `DB` binding; the service-role key must not be
-   needed for this).
-3. Re-run checkout in Stripe test mode and prove a row lands.
-
-This must not be done hastily: it is the payment path.
-
----
-
-## 4. Static-asset routing (PHASE 10 / 11)
-
-`run_worker_first = true` makes every JS/CSS/image/font request a Worker
-invocation (~8–10 per page view → only ~9–12k page views/day before Error 1027).
-
-Wrangler's installed schema accepts a **pattern array** for `run_worker_first`,
-so static assets can bypass the User Worker. Not shipped: with
-`not_found_handling = "none"` an incorrect enumeration returns a real 404 for SPA
-routes, and the current value exists to stop stale hashed assets being answered
-with HTML (`wrangler.toml` documents that failure). A staging pass is required
-first; staging is where this should be proven.
-
----
-
-## 5. What was deliberately NOT done, and why
+## 5. Deliberately NOT done
 
 | Not done | Reason |
 | --- | --- |
-| Production cutover | Blocked by §2 (media) and §1/§3 per the stated gates |
-| Buyer auth implementation | Reset/verification delivery is undecidable at $0; needs the owner's choice in §1 |
-| Checkout rewire to D1 | Payment path; must be a deliberate, separately verified change |
+| Production cutover | §3 fails the media gate |
+| Any production deploy at all | Not permitted while a mandatory gate is red |
 | Enabling R2 | Requires a payment method — forbidden |
-| Deleting/altering Supabase | Retained as the recovery source and archive |
+| Deleting/altering Supabase or its Storage | Retained as recovery source and archive |
+| Migrating admin auth | It keeps its existing verified-JWT guard |
 | Touching `ads.txt` / AdSense / consent code | Explicitly out of bounds |
+| Committing identity data | The "17 accounts" are fixtures; nothing to migrate |
 
-## 6. Decisions needed from the owner
+## 6. Owner decision still open
 
-1. **Password reset delivery** — approve admin-issued one-time reset codes (only
-   $0 option), or authorise a transactional email provider.
-2. **Images** — accept a cutover with 335 broken images (it is not a regression:
-   they are broken *now*), or wait for Supabase to be restored/renewed before
-   mirroring and cutting over.
-3. **Ordering** — fix commerce persistence (§3) before or after the read cutover.
+**Images.** Either wait for Supabase Storage to be restored/renewed (then run the
+recovery utility, which does the rest), or accept a cutover while 335 images are
+broken — they are broken *today*, so it is not a regression, but it is not a
+quality bar this migration should set on its own.
 
-Until (1) and (2) are answered, the honest verdict stays
-`MIGRATION BLOCKED — AUTH/MEDIA/COMMERCE REQUIREMENT NOT SAFELY MET`.
+Until that is answered the honest verdict stays
+`MIGRATION READY — WAITING FOR SUPABASE STORAGE IMAGE RECOVERY`.

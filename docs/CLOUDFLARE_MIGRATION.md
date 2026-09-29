@@ -4,14 +4,23 @@ Migration of the storefront's Supabase data dependency to Cloudflare D1, with th
 emergency sitemap it was forced by. Status, evidence, runbook and remaining
 blockers live here; update this file whenever the cutover state changes.
 
-## Sprint status (2026-09-29, second sprint)
+## Sprint status (2026-09-29, third sprint)
 
 | Item | State |
 | --- | --- |
-| Production D1 `luxedge-production-db` | **populated + count-verified** (products 117, categories 11, product_images 427, coupons 14, blog_posts 10, media_videos 27 — all equal to source) |
-| Staging D1 + read path | verified (sitemap dynamic, `/shop` 32 products) |
-| Production cutover | **NOT taken** — see [MIGRATION_BLOCKERS.md](MIGRATION_BLOCKERS.md) |
-| Blockers | buyer auth (bcrypt + no transactional email), 335 unreachable images, **order persistence broken by the 402** |
+| Production D1 `luxedge-production-db` | populated + count-verified; **now also carries the commerce + buyer-auth schema and the 9 historical orders** (117/427/11/14/10/27, orders 9, holds 2) |
+| Staging D1 (`luxedge-cloudflare-staging` v `1355ca21-c436-461d-afde-99e411e7d520`) | migrations 0001–0003 applied; buyer auth live-verified end-to-end |
+| Order persistence (`DATA_BACKEND=d1`) | **fixed and tested** (was: payment could succeed with no order) |
+| Buyer authentication | **implemented, tested, live on staging** (was: impossible — Supabase Auth 402) |
+| Product images | **still blocked** — Storage returns 402; nothing recoverable |
+| Static routing | **not optimised** (deliberate — see §4 of the blockers doc) |
+| Production cutover | **NOT taken** — and no production deploy was made at all |
+| Remaining blocker | the 335 unreachable images only |
+
+Earlier sprint status, kept for continuity: production D1 was first populated
+and count-verified in the second sprint (products 117, categories 11,
+product_images 427, coupons 14, blog_posts 10, media_videos 27), while buyer
+auth, images and order persistence were open.
 
 The production D1 binding is deliberately **inert**: `DATA_BACKEND` is unset on the
 production Worker, so populating D1 changed nothing at runtime.
@@ -93,6 +102,16 @@ Read from the official docs, not from memory:
 | Column type-coercion registry | `worker/d1/table-schema.ts` |
 | Public allowlisted read API | `worker/db-api.ts` |
 | Client adapter + switch | `src/services/db.ts` (`WorkerDbAdapter`) |
+| Commerce schema (orders/holds/financials/webhook idempotency) | `cloudflare/d1/migrations/0002_commerce.sql` |
+| Commerce D1 layer (allowlisted writes, inventory RPCs, joins) | `worker/d1/commerce.ts` |
+| Buyer-auth schema | `cloudflare/d1/migrations/0003_buyer_auth.sql` |
+| Password KDF (versioned PBKDF2) | `worker/auth/password.ts` |
+| Token primitives (CSPRNG, hashing, codes) | `worker/auth/tokens.ts` |
+| Sessions, activations, rate limits, audit, CSRF | `worker/auth/store.ts` |
+| Buyer auth endpoints | `api/auth/index.ts` |
+| Admin-issued activation codes | `api/admin/buyers.ts` |
+| Buyer auth client | `src/services/buyerAuth.ts` (+ `src/store/authStore.ts`, `src/App.tsx`) |
+| Safe image recovery utility | `scripts/supabase-image-recovery.mjs` |
 
 ### Architecture
 
@@ -220,6 +239,60 @@ back to `index.html`), and the current value exists to stop stale hashed assets
 being answered with HTML — the "page hangs on text" bug documented in
 `wrangler.toml`. It needs a staging verification pass before it goes to
 production.
+
+## Third sprint — what changed (2026-09-29)
+
+### Password KDF: measured, not assumed
+
+The staging-only route `/api/auth/_bench` (enabled with `AUTH_BENCH=1`, closed
+otherwise) ran PBKDF2-SHA256 on the real runtime:
+
+| Iterations | Result |
+| --- | --- |
+| 10 000 / 20 000 / 50 000 / 100 000 | HTTP 200 |
+| 120 000 / 150 000 / 210 000 / 600 000 | `NotSupportedError: Pbkdf2 failed: iteration counts above 100000 are not supported` |
+
+So **100 000 is the platform ceiling**, not a tuning preference — workerd's
+WebCrypto refuses more. OWASP's current PBKDF2-SHA256 guidance (600 000) is
+unreachable here, which is recorded honestly rather than papered over; the
+compensating controls are a 10-character minimum, durable per-account **and**
+per-IP rate limits, single-use expiring activation codes, and a versioned hash
+format so existing users can be upgraded the moment a higher cost is possible.
+
+A request performing 8 derivations at 100 000 iterations (≈0.33 s wall) returned
+**200**, so this Worker is *not* being held to the 10 ms Workers-Free CPU ceiling
+the plan table quotes. The account's own plan could not be read back (the
+credential has no billing scope), so that is stated as an observation, not a
+claim. Timings inside the Worker cannot be self-reported: `Date.now()` does not
+advance during CPU-bound work, which is why the route returns wall time per run
+as 0 and the conclusion is drawn from status codes and external wall time.
+
+### Buyer auth, live on staging
+
+```
+no Origin header            -> 403 {"error":"Missing Origin header."}
+signup (Origin + JSON)      -> 200 + Set-Cookie: lx_buyer=…; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000
+me with cookie              -> 200 (the same user)
+me without cookie           -> 401
+login                       -> 200 (new token issued)
+wrong password              -> 401 {"error":"Email or password is incorrect."}
+logout then replay cookie   -> 401 (revocation is server-side, not just a cleared cookie)
+```
+
+On production those paths still answer 404, because production was not
+deployed — that is the proof that this sprint changed nothing live.
+
+### Where the cutover switch now is
+
+Nothing was flipped. The two switches stay explicit and inert:
+
+```
+DATA_BACKEND=d1        (Worker var)   -> Worker reads/writes D1 (storefront + orders + buyer auth)
+VITE_DATA_BACKEND=d1   (build env)    -> SPA reads /api/db (D1)
+```
+
+Production has the `DB` binding and the full schema (0001–0003 applied) but no
+`DATA_BACKEND`, so every code path there still behaves exactly as before.
 
 ## Security notes
 

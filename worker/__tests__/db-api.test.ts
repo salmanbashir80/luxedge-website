@@ -19,9 +19,26 @@ import { TABLE_SCHEMA } from '../d1/table-schema';
 import { resetDataRuntime, setDataRuntime } from '../d1/runtime';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const MIGRATION = 'cloudflare/d1/migrations/0001_storefront_read.sql';
+const MIGRATIONS_DIR = path.join(ROOT, 'cloudflare', 'd1', 'migrations');
 
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+/**
+ * The whole D1 migration lineage, concatenated.
+ *
+ * The column-drift contract is "this column exists in the D1 schema", not "it
+ * exists in file 0001": the storefront read surface lives in the generated
+ * 0001 and commerce in the hand-authored 0002 (commerce is not public, so it is
+ * not in the generator's table list). Reading one file would make the contract
+ * silently stop covering whichever half it does not name.
+ */
+const readMigrations = () =>
+  fs
+    .readdirSync(MIGRATIONS_DIR)
+    .filter((f) => f.endsWith('.sql'))
+    .sort()
+    .map((f) => fs.readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8'))
+    .join('\n');
 
 /**
  * Column names declared for `table` in the D1 migration.
@@ -190,8 +207,8 @@ describe('column-drift contract', () => {
     }
   });
 
-  it('every public API column exists in the generated D1 migration', () => {
-    const ddl = read(MIGRATION);
+  it('every public API column exists in the D1 migration lineage', () => {
+    const ddl = readMigrations();
     for (const table of PUBLIC_TABLES) {
       const declared = ddlColumns(ddl, table);
       expect(declared.size, `no DDL for ${table}`).toBeGreaterThan(0);
@@ -201,8 +218,8 @@ describe('column-drift contract', () => {
     }
   });
 
-  it('every column named in the coercion registry exists in the D1 migration', () => {
-    const ddl = read(MIGRATION);
+  it('every column named in the coercion registry exists in the D1 migration lineage', () => {
+    const ddl = readMigrations();
     for (const [table, schema] of Object.entries(TABLE_SCHEMA)) {
       const declared = ddlColumns(ddl, table);
       expect(declared.size, `no DDL for ${table}`).toBeGreaterThan(0);
