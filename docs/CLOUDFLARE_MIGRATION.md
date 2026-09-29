@@ -4,6 +4,18 @@ Migration of the storefront's Supabase data dependency to Cloudflare D1, with th
 emergency sitemap it was forced by. Status, evidence, runbook and remaining
 blockers live here; update this file whenever the cutover state changes.
 
+## Sprint status (2026-09-29, second sprint)
+
+| Item | State |
+| --- | --- |
+| Production D1 `luxedge-production-db` | **populated + count-verified** (products 117, categories 11, product_images 427, coupons 14, blog_posts 10, media_videos 27 — all equal to source) |
+| Staging D1 + read path | verified (sitemap dynamic, `/shop` 32 products) |
+| Production cutover | **NOT taken** — see [MIGRATION_BLOCKERS.md](MIGRATION_BLOCKERS.md) |
+| Blockers | buyer auth (bcrypt + no transactional email), 335 unreachable images, **order persistence broken by the 402** |
+
+The production D1 binding is deliberately **inert**: `DATA_BACKEND` is unset on the
+production Worker, so populating D1 changed nothing at runtime.
+
 ## Why this migration exists (the incident)
 
 Supabase project `eidujmfbcfrjjleitaqp` is hard-restricted:
