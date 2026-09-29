@@ -63,9 +63,19 @@ export function buildIssueContent(report, { repo = process.env.GITHUB_REPOSITORY
     '',
     '### Summary',
     `- Sitemap (\`${report.sitemap?.url || '?'}\`): \`${report.sitemap?.state || 'unknown'}\`${report.sitemap?.issues?.length ? ` — ${report.sitemap.issues.join(', ')}` : ''}`,
+  ];
+  if (report.sitemap_mode) lines.push(`- Sitemap mode: **${report.sitemap_mode}**`);
+  if (report.sitemap?.mode === 'degraded-emergency') {
+    lines.push(
+      '',
+      '**DEGRADED-EMERGENCY, not a total outage:** the site serves a valid minimal static sitemap while the database is unavailable. Product/category/blog URLs are deliberately withheld until the live DB-backed feed recovers — this issue stays open until `HEALTHY-DYNAMIC` mode is verified.',
+    );
+  }
+  if (report.sitemap?.body_excerpt) lines.push('', `Sitemap response excerpt: \`${String(report.sitemap.body_excerpt).slice(0, 160)}\``);
+  lines.push(
     `- robots.txt: \`${report.robots?.state || 'unknown'}\`${report.robots?.issues?.length ? ` — ${report.robots.issues.join(', ')}` : ''}`,
     `- Pages checked: ${report.summary.checked_urls ?? 0}, failed: ${report.summary.failed_urls ?? 0}`,
-  ];
+  );
   if (failed.length) {
     lines.push('', `### Failed URLs (${failed.length})`);
     for (const page of failed.slice(0, 20)) {

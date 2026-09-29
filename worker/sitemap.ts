@@ -114,6 +114,30 @@ export function sitemapLinks(groups: SitemapGroups): SitemapLink[] {
   return [...groups.pages, ...groups.categories, ...groups.guides, ...groups.products];
 }
 
+/**
+ * Emergency fallback, used ONLY when the live database cannot be reached.
+ *
+ * The 503 the worker otherwise returns is honest, but it withdraws the site
+ * from crawling entirely while the outage lasts. This builder answers with a
+ * MINIMAL, always-true URL set instead: only confirmed static, non-database
+ * pages that exist in the shipped app regardless of catalog state. Nothing
+ * database-derived ever enters this list — no /shop, no /blog, no /category/*,
+ * no /product/* — and it is NOT the built public/sitemap.xml (that file is a
+ * snapshot and can carry stale DB-derived URLs).
+ *
+ * Mirrors the DB-independent subset of STATIC_ROUTES so the emergency feed can
+ * never drift from the routes the worker actually serves.
+ */
+export const EMERGENCY_STATIC_HREFS: readonly string[] = STATIC_ROUTES.filter(
+  (r) => r.href !== '/shop' && r.href !== '/blog',
+).map((r) => r.href);
+
+/** Minimal emergency XML feed for crawlers during a database outage. */
+export function buildEmergencyStaticSitemap(): string {
+  const body = EMERGENCY_STATIC_HREFS.map((href) => `  <url><loc>${root}${xmlEscape(href)}</loc></url>`).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
+}
+
 /** XML feed for crawlers. Returns null on DB failure so the caller can 503. */
 export async function buildSitemap(): Promise<string | null> {
   const groups = await buildSitemapGroups();

@@ -75,7 +75,7 @@ import aiKeysHandler from '../api/admin/ai-keys';
 import googleFeedHandler from '../api/google-feed';
 import imgProxyHandler from '../api/img-proxy';
 import { maybeInjectSeo } from './seo-meta';
-import { buildSitemap } from './sitemap';
+import { buildSitemap, buildEmergencyStaticSitemap } from './sitemap';
 import blogAutomationHandler from '../api/blog-automation/index';
 import adsenseHandler, { setAdSenseRuntimeBindings } from '../api/adsense/index';
 
@@ -403,12 +403,26 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
           headers: {
             'content-type': 'application/xml; charset=utf-8',
             'cache-control': 'public, max-age=300',
+            // Diagnostic only — never secrets, never internal error detail.
+            'x-luxedge-sitemap-mode': 'dynamic',
           },
         });
       }
-      return new Response('Sitemap temporarily unavailable. Please retry.', {
-        status: 503,
-        headers: { 'content-type': 'text/plain; charset=utf-8', 'retry-after': '300', 'cache-control': 'no-store' },
+      // Database unavailable (e.g. Supabase quota/pause). Fail open to a
+      // MINIMAL, always-true feed instead of withdrawing the site from
+      // crawling with a 503: only confirmed static, non-database pages ship
+      // here — no /shop, no /blog, no /category/*, no /product/*, and never
+      // the snapshot public/sitemap.xml (stale DB-derived URLs). Withheld
+      // URLs stay unpublishable until the live feed recovers.
+      return new Response(buildEmergencyStaticSitemap(), {
+        status: 200,
+        headers: {
+          'content-type': 'application/xml; charset=utf-8',
+          // Emergency mode may flip back to dynamic (and grow) within minutes
+          // of recovery — do not let caches pin the reduced feed.
+          'cache-control': 'public, max-age=60',
+          'x-luxedge-sitemap-mode': 'emergency',
+        },
       });
     }
     if (url.pathname === '/video-sitemap.xml') {

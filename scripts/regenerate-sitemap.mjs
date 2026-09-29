@@ -32,9 +32,10 @@ if (!URL_BASE || !KEY) { console.error('env missing VITE_SUPABASE_URL / SUPABASE
 
 const HEAD = { apikey: KEY, Authorization: `Bearer ${KEY}` };
 
+class DbUnavailableError extends Error {}
 const get = async (path) => {
   const res = await fetch(`${URL_BASE}/rest/v1/${path}`, { headers: HEAD });
-  if (!res.ok) throw new Error(`${path} -> ${res.status}`);
+  if (!res.ok) throw new DbUnavailableError(`${path} -> ${res.status}`);
   return res.json();
 };
 
@@ -47,13 +48,32 @@ const PRODUCT_FIELDS = [
 
 // Every query is explicitly ordered: PostgREST does not guarantee row order
 // without one, which made the generated file churn between identical runs.
-const [prods, cats, blogs] = await Promise.all([
-  get(`products?select=${PRODUCT_FIELDS}&status=in.(active,published)&order=slug.asc&limit=500`),
-  get('categories?select=slug&is_active=eq.true&order=slug.asc&limit=200'),
-  get('blog_posts?select=slug&status=eq.published&order=slug.asc&limit=500'),
-]);
+//
+// A database outage (quota restriction, pause, network) must NOT fail the
+// production build: the worker's live /sitemap.xml route degrades to a minimal
+// emergency static feed in that case (worker/index.ts), so deploys keep
+// shipping. The committed public/sitemap.xml is left byte-for-byte untouched —
+// it is never silently rewritten with partial data.
+let dbUp = true;
+let prods, cats, blogs;
+try {
+  [prods, cats, blogs] = await Promise.all([
+    get(`products?select=${PRODUCT_FIELDS}&status=in.(active,published)&order=slug.asc&limit=500`),
+    get('categories?select=slug&is_active=eq.true&order=slug.asc&limit=200'),
+    get('blog_posts?select=slug&status=eq.published&order=slug.asc&limit=500'),
+  ]);
+} catch (error) {
+  if (!(error instanceof DbUnavailableError)) throw error;
+  const existing = fs.existsSync('public/sitemap.xml');
+  console.warn(`sitemap: DATABASE UNAVAILABLE (${error.message}) — keeping the committed sitemap.xml unchanged (${existing ? 'stale snapshot; the live worker serves the minimal emergency feed until the DB recovers' : 'no file present'})`);
+  // End naturally — process.exit() here races stdio on Windows (libuv
+  // async.c assertion) and the build step needs a clean exit 0.
+  dbUp = false;
+}
 
-const listable = prods.filter((p) => !isHeldProduct(p.slug) && isPubliclyListableProduct(p));
+if (dbUp) {
+
+  const listable = prods.filter((p) => !isHeldProduct(p.slug) && isPubliclyListableProduct(p));
 
 // Must stay identical (order included) to STATIC_ROUTES in worker/sitemap.ts —
 // the live /sitemap.xml is served by the worker while this file ships in the
@@ -64,15 +84,16 @@ const urls = ['/', '/shop', '/blog', '/about', '/contact', '/faq', '/shipping-po
   // inventory, so the static file drops it exactly as buildSitemapGroups does.
   // The literal above keeps /blog so this list stays comparable to STATIC_ROUTES.
   .filter((u) => isBlogPublic() || u !== '/blog');
-for (const c of cats) urls.push(`/category/${c.slug}`);
-if (isBlogPublic()) for (const b of blogs) if (!isHeldBlog(b.slug)) urls.push(`/blog/${b.slug}`);
-for (const p of listable) urls.push(`/product/${p.slug || p.id}`);
+  for (const c of cats) urls.push(`/category/${c.slug}`);
+  if (isBlogPublic()) for (const b of blogs) if (!isHeldBlog(b.slug)) urls.push(`/blog/${b.slug}`);
+  for (const p of listable) urls.push(`/product/${p.slug || p.id}`);
 
-const xml = `<?xml version="1.0" encoding="UTF-8"?>
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `  <url><loc>https://luxedge.us${u}</loc></url>`).join('\n')}
 </urlset>
 `;
-fs.writeFileSync('public/sitemap.xml', xml);
-const publishedGuides = isBlogPublic() ? blogs.filter((b) => !isHeldBlog(b.slug)).length : 0;
-console.log(`sitemap: ${urls.length} URLs (${publishedGuides} published blogs, ${cats.length} categories, ${listable.length} publicly listable products)`);
+  fs.writeFileSync('public/sitemap.xml', xml);
+  const publishedGuides = isBlogPublic() ? blogs.filter((b) => !isHeldBlog(b.slug)).length : 0;
+  console.log(`sitemap: ${urls.length} URLs (${publishedGuides} published blogs, ${cats.length} categories, ${listable.length} publicly listable products)`);
+}

@@ -76,12 +76,21 @@ export default async function handler(_req: IncomingMessage, res: ServerResponse
   const [prodRes, imgRes, catRes] = await Promise.all([
     restFetch<Array<Omit<FeedProduct, 'images' | 'category'> & { category_id?: string | null }>>(
       'products',
-      '?select=id,slug,name,description,price,category_id,brand,sku,supplier_product_ref&status=eq.active&limit=500',
+      // Columns are exactly what the feed renders/filters on — no wide selects:
+      // sku/supplier_product_ref were read for years but never emitted.
+      '?select=id,slug,name,description,price,category_id,brand&status=eq.active&limit=500',
       key,
     ),
+    // Server-side PostgREST filter (url NOT LIKE 'data:%'): product_images
+    // carries ~9 MB of junk inline base64 rows, and fetching them just to
+    // discard them burned Supabase egress quota (the 2026-09-29 outage).
+    // Excluded rows never leave the database. Same live-proven filter as
+    // worker/seo-meta.ts getProductImages(). A product whose ONLY images are
+    // base64 blobs therefore drops out of the feed — correct: the feed
+    // requires at least one real http(s) image.
     restFetch<{ product_id: string; url: string; sort_order: number; is_primary: boolean }[]>(
       'product_images',
-      '?select=product_id,url,sort_order,is_primary&limit=5000',
+      '?select=product_id,url,sort_order,is_primary&url=not.like.data:*&limit=5000',
       key,
     ),
     restFetch<{ id: string; name: string }[]>('categories', '?select=id,name&limit=500', key),
