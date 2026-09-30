@@ -163,6 +163,8 @@ describe('buyer auth — registration and sign-in', () => {
     expect(cap.setCookie).toContain('HttpOnly');
     expect(cap.setCookie).toContain('Secure');
     expect(cap.setCookie).toContain('SameSite=Lax');
+    // Server-derived role: a public signup can only ever be a buyer.
+    expect((cap.body.user as { role?: string }).role).toBe('buyer');
     // Only a hash of the token is persisted.
     const session = db.prepare(`SELECT token_hash FROM buyer_sessions`).get() as { token_hash: string };
     expect(session.token_hash).not.toBe(token);
@@ -476,13 +478,81 @@ describe('admin buyer endpoints', () => {
   it('refuses a buyer session and an anonymous caller (admin claim required)', async () => {
     const cap = await signup('a@example.com');
     const token = cookieToken(cap)!;
-    // A buyer cookie is not an admin credential: the admin guard reads the
-    // Authorization bearer claim, never a buyer session.
+    // A live buyer session is recognised as exactly that: authenticated, but
+    // decisively NOT an admin (403 — the role is re-read from the session's
+    // user row server-side, never taken from the cookie).
     const asBuyer = await adminCall('GET', '/api/admin/buyers', { cookie: cookieHeader(token), origin: null });
-    expect(asBuyer.status).toBe(401);
+    expect(asBuyer.status).toBe(403);
+    // No session at all is 401 — sign in first.
     const anon = await adminCall('GET', '/api/admin/buyers', { origin: null });
     expect(anon.status).toBe(401);
     expect(JSON.stringify(asBuyer.body)).not.toContain('a@example.com');
+  });
+
+  it('authorizes an admin session cookie and re-derives the role from the stored row', async () => {
+    const cap = await signup('boss@example.com');
+    const token = cookieToken(cap)!;
+    // Before promotion: a real session, still not an admin.
+    expect((await adminCall('GET', '/api/admin/buyers', { cookie: cookieHeader(token), origin: null })).status).toBe(403);
+
+    // Promote exactly the way scripts/bootstrap-admin.mjs does — a server-side
+    // row update, never an HTTP call and never a client-supplied role.
+    db.exec(`UPDATE buyer_users SET role = 'admin' WHERE email_normalized = 'boss@example.com'`);
+    const admin = await adminCall('GET', '/api/admin/buyers', { cookie: cookieHeader(token), origin: null });
+    expect(admin.status).toBe(200);
+    expect(JSON.stringify(admin.body)).toContain('boss@example.com');
+
+    // The role lives in the row, not in the cookie: demoting locks the same
+    // cookie out immediately (server-side revocation semantics).
+    db.exec(`UPDATE buyer_users SET role = 'buyer' WHERE email_normalized = 'boss@example.com'`);
+    expect((await adminCall('GET', '/api/admin/buyers', { cookie: cookieHeader(token), origin: null })).status).toBe(403);
+  });
+
+  it('rejects expired, revoked, disabled and tampered admin session cookies', async () => {
+    const cap = await signup('boss2@example.com');
+    const token = cookieToken(cap)!;
+    db.exec(`UPDATE buyer_users SET role = 'admin' WHERE email_normalized = 'boss2@example.com'`);
+    expect((await adminCall('GET', '/api/admin/buyers', { cookie: cookieHeader(token), origin: null })).status).toBe(200);
+
+    // Expired: every failure mode must fall through to 401, never to a bypass.
+    db.exec(`UPDATE buyer_sessions SET expires_at = '2000-01-01T00:00:00.000Z'`);
+    expect((await adminCall('GET', '/api/admin/buyers', { cookie: cookieHeader(token), origin: null })).status).toBe(401);
+
+    // Revoked (logout elsewhere / admin disable).
+    db.exec(`UPDATE buyer_sessions SET revoked_at = '2026-01-01T00:00:00.000Z', expires_at = '2099-01-01T00:00:00.000Z'`);
+    expect((await adminCall('GET', '/api/admin/buyers', { cookie: cookieHeader(token), origin: null })).status).toBe(401);
+
+    // Tampered token (hash mismatch -> unknown session).
+    db.exec(`UPDATE buyer_sessions SET revoked_at = NULL`);
+    expect((await adminCall('GET', '/api/admin/buyers', { cookie: cookieHeader(`${token}x`), origin: null })).status).toBe(401);
+
+    // Disabled account: the session still exists but must not authenticate.
+    db.exec(`UPDATE buyer_users SET disabled_at = '2026-01-01T00:00:00.000Z' WHERE email_normalized = 'boss2@example.com'`);
+    expect((await adminCall('GET', '/api/admin/buyers', { cookie: cookieHeader(token), origin: null })).status).toBe(401);
+  });
+
+  it('refuses a state-changing admin request from a foreign origin (cookie CSRF)', async () => {
+    const cap = await signup('boss3@example.com');
+    const token = cookieToken(cap)!;
+    db.exec(`UPDATE buyer_users SET role = 'admin' WHERE email_normalized = 'boss3@example.com'`);
+
+    const crossSite = await adminCall('POST', '/api/admin/buyers?action=code', {
+      body: { email: 'target@example.com' },
+      cookie: cookieHeader(token),
+      origin: 'https://evil.example',
+    });
+    expect(crossSite.status).toBe(403);
+    // Nothing was written by the refused request.
+    expect(count(`SELECT COUNT(*) AS n FROM buyer_activation_tokens`)).toBe(0);
+
+    // Same-origin passes the guard and reaches the handler (unknown account is
+    // a handler-level refusal, not an auth failure).
+    const sameOrigin = await adminCall('POST', '/api/admin/buyers?action=code', {
+      body: { email: 'nobody-here@example.com' },
+      cookie: cookieHeader(token),
+      origin: 'https://luxedge.us',
+    });
+    expect([401, 403]).not.toContain(sameOrigin.status);
   });
 
   it('issuing a code for an unknown account is refused, and the guard runs before any lookup', async () => {

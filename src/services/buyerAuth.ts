@@ -7,10 +7,13 @@
 // read — that is the point of moving off Supabase Auth, where the session lived
 // in JS-accessible storage.
 //
-// ADMIN AUTH IS DELIBERATELY UNTOUCHED: admin sign-in still uses the existing
-// verified-JWT path in src/services/supabase.ts. This module never handles an
-// admin credential and never reads a role — an admin role must keep coming from
-// a verified server-side claim, never from a buyer session.
+// ADMIN SIGN-IN ALSO COMES THROUGH HERE (same routes, stricter gate): Supabase
+// Auth — which used to mint the admin JWT — is restricted by the project-wide
+// HTTP 402, so the Admin Console login form answered "HTTP 402" and locked the
+// owner out. The admin role itself is never taken from this response for
+// authorization purposes: it is re-derived server-side from the session row in
+// api/_lib/auth.ts on every guarded request, so a client that lied about its
+// role would still be refused.
 //
 // HONESTY RULES:
 //   * No client-side availability guessing beyond a probe of /api/auth/me.
@@ -24,6 +27,8 @@ export interface BuyerUser {
   displayName: string | null;
   emailVerified: boolean;
   requiresActivation: boolean;
+  /** Server-derived (migration 0004). Display/gating only — never trusted. */
+  role: 'admin' | 'buyer';
 }
 
 export interface BuyerResult {

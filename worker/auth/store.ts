@@ -45,16 +45,29 @@ export interface BuyerUser {
   created_at: string;
   last_login_at: string | null;
   password_hash: string | null;
+  /**
+   * 'buyer' (default) or 'admin'. Written only by trusted server-side code —
+   * public signup never mentions this column, so it cannot be self-granted.
+   * Read from the session's user row, never from the request.
+   */
+  role: string;
 }
 
 // ---------------------------------------------------------------------------
 // Backend
 // ---------------------------------------------------------------------------
 
-/** The D1 binding when it is the active backend, else null. */
+/**
+ * The D1 binding, whenever one exists — deliberately NOT gated on
+ * DATA_BACKEND. The buyer_* tables are new and self-contained, so sign-in must
+ * keep working while the storefront reads are still pointed at Supabase (that
+ * cutover is a separate, evidence-gated decision). Gating auth on the storefront
+ * backend would 503 the Admin Console on production until the full cutover,
+ * which is exactly the lockout this system was built to end.
+ */
 function authDb(): D1DatabaseLike | null {
   const rt = getDataRuntime();
-  return rt.backend === 'd1' && rt.db ? rt.db : null;
+  return rt.db;
 }
 
 /**

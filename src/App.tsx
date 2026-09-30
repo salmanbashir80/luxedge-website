@@ -23,6 +23,7 @@ import AIAssistant from './components/AIAssistant';
 import { trackEvent, utmParams } from './lib/marketing';
 import { useAuthStore } from './store/authStore';
 import { isSupabaseConfigured, updatePassword, updateUserMetadata, getAccessToken, getFreshAccessToken } from './services/supabase';
+import { buyerActivate } from './services/buyerAuth';
 import { loadProductByIdOrSlug, loadStorefrontCatalog, loadStorefrontPromotions, type CatalogProduct, type CatalogCategory, type StoreCoupon } from './services/catalog';
 import { rankProducts, probeVisualQuality, markBrokenImage, subscribeVisualQuality, getVisualQualityVersion, type MerchStats } from './features/catalog/merchandising';
 import { loadMerchStats } from './services/merch';
@@ -341,7 +342,7 @@ interface Ctx {
   products: Product[]; users: AppUser[]; reviews: Review[]; categories: AdminCategory[];
   blogs: BlogPost[]; setBlogs: React.Dispatch<React.SetStateAction<BlogPost[]>>;
   reloadBlogs: (forceFresh?: boolean) => Promise<void>;
-  login: (e: string, p: string, admin?: boolean) => Promise<string | null>;
+  login: (e: string, p: string, admin?: boolean) => Promise<{ message: string | null; code?: string }>;
   guestLogin: () => void;
   logout: () => void; signup: (n: string, e: string, p: string) => Promise<string | null>;
   changePassword: (current: string, newPass: string) => Promise<{ ok: boolean; msg: string }>;
@@ -373,7 +374,7 @@ const defaultAppContext: Ctx = {
   blogs: [],
   setBlogs: () => {},
   reloadBlogs: async () => {},
-  login: async () => null,
+  login: async () => ({ message: null }),
   guestLogin: () => {},
   logout: () => {},
   signup: async () => null,
@@ -601,24 +602,27 @@ function AppProvider({ children }: { children: ReactNode }) {
     } catch { /* storage full or unavailable */ }
   }, [user]);
 
-  const login = async (e: string, p: string, admin = false): Promise<string | null> => {
+  const login = async (e: string, p: string, admin = false): Promise<{ message: string | null; code?: string }> => {
     // TWO SEPARATE AUTH PATHS, ON PURPOSE.
     //
-    // Buyers sign in against the Cloudflare/D1 routes, which set an HttpOnly
-    // cookie — the browser never holds a token. Admins keep the existing
-    // verified-JWT path, because an admin role must keep coming from a verified
-    // server-side claim and must never be satisfiable by a buyer session.
+    // Buyers AND admins sign in against the Cloudflare/D1 routes, which set an
+    // HttpOnly cookie — the browser never holds a token. Supabase Auth (the
+    // old admin JWT mint) is restricted by the project-wide HTTP 402, so the
+    // Admin Console used to answer "HTTP 402" on every attempt. The admin role
+    // still comes from a server-side claim: the server re-derives it from the
+    // session row on every guarded request, so a buyer session can never
+    // satisfy an admin check.
     const store = useAuthStore.getState();
-    const result = admin ? await store.signIn(e, p) : await store.signInBuyer(e, p);
-    if (!result.success) return result.message;
+    const result = admin ? await store.signInAdmin(e, p) : await store.signInBuyer(e, p);
+    if (!result.success) return { message: result.message, code: result.code };
     const sbUser = result.user;
-    if (!sbUser) return 'Sign-in did not return a session.';
+    if (!sbUser) return { message: 'Sign-in did not return a session.' };
     if (admin && sbUser.role !== 'admin') {
-      return 'This account does not have admin access.';
+      return { message: 'This account does not have admin access.', code: 'NOT_ADMIN' };
     }
     setUser({ id: sbUser.id, email: sbUser.email, name: sbUser.name, role: sbUser.role, joined: new Date().toISOString().slice(0, 10) });
     notify(admin ? 'Welcome Admin!' : 'Login successful!');
-    return null;
+    return { message: null };
   };
 
   const guestLogin = () => {
@@ -3429,8 +3433,8 @@ function LoginPage() {
     ev.preventDefault();
     setLoading(true);
     await new Promise(r => setTimeout(r, 400));
-    const errMsg = await login(e, p);
-    if (errMsg) { setErr(errMsg); setLoading(false); return; }
+    const res = await login(e, p);
+    if (res.message) { setErr(res.message); setLoading(false); return; }
     // Admin accounts go straight to the admin dashboard; customers go home.
     nav(useAuthStore.getState().isAdmin ? '/admin' : '/');
   };
@@ -3646,17 +3650,46 @@ function AdminLoginPage() {
   const [p, setP] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  // 'activate' = redeem the admin-issued one-time code and choose the first
+  // password. There is no transactional email at $0, so the code is handed over
+  // out-of-band and the form never pretends a message was sent.
+  const [mode, setMode] = useState<'login' | 'activate'>('login');
+  const [code, setCode] = useState('');
+  const [newPass, setNewPass] = useState('');
   const { login } = useApp();
   const nav = useNavigate();
 
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     setErr('');
-    if (!isSupabaseConfigured()) { setErr('Admin authentication is not configured yet (Supabase).'); return; }
     setLoading(true);
-    const errMsg = await login(e, p, true);
+    const res = await login(e, p, true);
     setLoading(false);
-    if (errMsg) { setErr(errMsg); return; }
+    if (res.message) {
+      setErr(res.message);
+      // The server told us this account has not chosen a password yet: reveal
+      // the one-time activation-code form instead of leaving a dead end.
+      if (res.code === 'ACTIVATION_REQUIRED') setMode('activate');
+      return;
+    }
+    nav('/admin');
+  };
+
+  const handleActivate = async (ev: React.FormEvent) => {
+    ev.preventDefault();
+    setErr('');
+    if (newPass.length < 10) { setErr('Your password must be at least 10 characters.'); return; }
+    setLoading(true);
+    const result = await buyerActivate(e.trim(), code.trim(), newPass);
+    if (!result.ok) {
+      setLoading(false);
+      setErr(result.message || 'Activation failed. Please check the code and try again.');
+      return;
+    }
+    // The account now has a password: sign in with it and enter the console.
+    const res = await login(e, newPass, true);
+    setLoading(false);
+    if (res.message) { setErr(res.message); return; }
     nav('/admin');
   };
 
@@ -3678,31 +3711,54 @@ function AdminLoginPage() {
           <p className="text-xs text-gray-500 mt-1">Authorized store management access</p>
         </div>
 
-        {!isSupabaseConfigured() && (
-          <div className="p-3 mb-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs leading-relaxed">
-            Admin authentication is not configured yet — add <code className="font-mono">VITE_SUPABASE_URL</code> + <code className="font-mono">VITE_SUPABASE_ANON_KEY</code> and promote your admin user (<code className="font-mono">app_metadata.role = 'admin'</code>). No demo credentials exist.
-          </div>
-        )}
-
         {err && (
           <div className="flex items-center gap-2 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
             <AlertTriangle strokeWidth={1.5} size={16} />{err}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Email</label>
-            <input type="email" placeholder="Enter admin email" value={e} onChange={ev => setE(ev.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-luxe-gold focus:ring-2 focus:ring-luxe-gold/20" required />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Password</label>
-            <input type="password" placeholder="Enter password" value={p} onChange={ev => setP(ev.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-luxe-gold focus:ring-2 focus:ring-luxe-gold/20" required />
-          </div>
-          <button type="submit" disabled={loading} className="w-full py-3 bg-luxe-gold hover:bg-luxe-gold-dark text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-gold disabled:opacity-70">
-            {loading ? <Loading01 strokeWidth={1.5} size={16} className="animate-spin" /> : <Lock01 strokeWidth={1.5} size={16} />} {loading ? 'Signing in…' : 'Access Dashboard'}
-          </button>
-        </form>
+        {mode === 'activate' ? (
+          <form onSubmit={handleActivate} className="space-y-4">
+            <div className="p-3 bg-[#EBF3EE] border border-[#1E4636]/10 rounded-xl text-[#1E4636] text-xs leading-relaxed">
+              Enter the one-time activation code issued for this account, then choose a new password. The code works once and expires after 14 days.
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Email</label>
+              <input type="email" placeholder="Enter admin email" value={e} onChange={ev => setE(ev.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-luxe-gold focus:ring-2 focus:ring-luxe-gold/20" required />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Activation code</label>
+              <input type="text" placeholder="XXXX-XXXX-XX" value={code} onChange={ev => setCode(ev.target.value)} autoComplete="one-time-code" className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm uppercase tracking-widest focus:outline-none focus:border-luxe-gold focus:ring-2 focus:ring-luxe-gold/20" required />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">New password</label>
+              <input type="password" placeholder="At least 10 characters" value={newPass} onChange={ev => setNewPass(ev.target.value)} minLength={10} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-luxe-gold focus:ring-2 focus:ring-luxe-gold/20" required />
+            </div>
+            <button type="submit" disabled={loading} className="w-full py-3 bg-luxe-gold hover:bg-luxe-gold-dark text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-gold disabled:opacity-70">
+              {loading ? <Loading01 strokeWidth={1.5} size={16} className="animate-spin" /> : <Lock01 strokeWidth={1.5} size={16} />} {loading ? 'Activating…' : 'Activate & sign in'}
+            </button>
+            <button type="button" onClick={() => { setMode('login'); setErr(''); }} className="w-full text-center text-xs text-gray-500 hover:text-gray-700">
+              ← Back to sign in
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Email</label>
+              <input type="email" placeholder="Enter admin email" value={e} onChange={ev => setE(ev.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-luxe-gold focus:ring-2 focus:ring-luxe-gold/20" required />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Password</label>
+              <input type="password" placeholder="Enter password" value={p} onChange={ev => setP(ev.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-luxe-gold focus:ring-2 focus:ring-luxe-gold/20" required />
+            </div>
+            <button type="submit" disabled={loading} className="w-full py-3 bg-luxe-gold hover:bg-luxe-gold-dark text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-gold disabled:opacity-70">
+              {loading ? <Loading01 strokeWidth={1.5} size={16} className="animate-spin" /> : <Lock01 strokeWidth={1.5} size={16} />} {loading ? 'Signing in…' : 'Access Dashboard'}
+            </button>
+            <button type="button" onClick={() => { setMode('activate'); setErr(''); }} className="w-full text-center text-xs text-gray-500 hover:text-gray-700">
+              Have an activation code? Use it →
+            </button>
+          </form>
+        )}
 
         <div className="mt-6 flex items-center gap-2 text-xs text-gray-400 justify-center">
           <ShieldTick strokeWidth={1.5} size={12} /> Protected admin area

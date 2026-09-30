@@ -24,6 +24,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { verifyJwtHs256, isAdminClaim, type VerifiedJwt } from './jwt.js';
 import { sendJson } from './providers.js';
+import { allowedOrigins, readCookie, resolveSession, SESSION_COOKIE } from '../../worker/auth/store';
 
 export interface AuthResult {
   ok: true;
@@ -90,8 +91,63 @@ async function remoteVerifyAdmin(token: string, requireAdmin = true): Promise<Au
   };
 }
 
+/**
+ * Admin verification through the Cloudflare/D1 session cookie — the path that
+ * works while Supabase Auth is restricted (HTTP 402) and therefore cannot mint
+ * the JWTs this guard used to require.
+ *
+ * Security properties:
+ *   * The identity is resolved server-side from the session row (D1), never
+ *     from the request body or a client-supplied id/role.
+ *   * The cookie is HttpOnly + Secure + SameSite=Lax, so a cross-site form
+ *     cannot carry it at all; as defence in depth, a state-changing request
+ *     whose Origin is present but not one of ours is refused outright.
+ *   * A dead/expired/revoked cookie returns null, so the caller falls through
+ *     to the JWT paths below — rollback behaviour is completely unchanged.
+ *
+ * Returns null when the request carries no usable session cookie.
+ */
+async function sessionAdmin(req: IncomingMessage): Promise<AuthDecision | null> {
+  const rawCookie = req.headers.cookie;
+  const header = Array.isArray(rawCookie) ? rawCookie.join('; ') : rawCookie;
+  const token = readCookie(header || undefined, SESSION_COOKIE);
+  if (!token) return null;
+
+  const resolved = await resolveSession(token);
+  if (!resolved) return null; // unknown/expired/revoked/disabled -> fall through
+
+  if (resolved.user.role !== 'admin') {
+    return { ok: false, status: 403, error: 'Forbidden — admin role required.' };
+  }
+
+  const method = String(req.method || 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+    const origin = String(req.headers.origin || '').trim().toLowerCase();
+    if (origin && !allowedOrigins().includes(origin)) {
+      return { ok: false, status: 403, error: 'Cross-origin request refused.' };
+    }
+  }
+
+  return {
+    ok: true,
+    payload: {
+      sub: resolved.user.id,
+      email: resolved.user.email,
+      app_metadata: { role: 'admin' },
+      user_metadata: {},
+    },
+  };
+}
+
 /** Verify the admin identity from the request. Never trusts client input. */
 export async function adminAuth(req: IncomingMessage): Promise<AuthDecision> {
+  // 1) D1 session cookie (primary): works with Supabase Auth restricted. A
+  //    decisive failure (live session that is not an admin) returns immediately
+  //    so a buyer cookie can never be laundered through a stale JWT below.
+  const fromSession = await sessionAdmin(req);
+  if (fromSession) return fromSession;
+
+  // 2) Legacy Supabase JWT paths — kept intact for rollback.
   const token = getBearerToken(req);
   if (!token) {
     return { ok: false, status: 401, error: 'Unauthorized — sign in to the admin dashboard first.' };

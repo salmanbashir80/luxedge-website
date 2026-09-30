@@ -9,9 +9,10 @@ blockers live here; update this file whenever the cutover state changes.
 | Item | State |
 | --- | --- |
 | Production D1 `luxedge-production-db` | populated + count-verified; **now also carries the commerce + buyer-auth schema and the 9 historical orders** (117/427/11/14/10/27, orders 9, holds 2) |
-| Staging D1 (`luxedge-cloudflare-staging` v `1355ca21-c436-461d-afde-99e411e7d520`) | migrations 0001–0003 applied; buyer auth live-verified end-to-end |
+| Staging D1 (`luxedge-cloudflare-staging` v `2d92f6b6-171a-4794-888d-2ab20cd59120`) | migrations 0001–0004 applied; buyer auth **and** admin auth live-verified end-to-end |
 | Order persistence (`DATA_BACKEND=d1`) | **fixed and tested** (was: payment could succeed with no order) |
 | Buyer authentication | **implemented, tested, live on staging** (was: impossible — Supabase Auth 402) |
+| Admin authentication | **fixed, live on staging** (was: Admin Console "HTTP 402" lockout — admin sign-in still called the restricted Supabase Auth) |
 | Product images | **still blocked** — Storage returns 402; nothing recoverable |
 | Static routing | **not optimised** (deliberate — see §4 of the blockers doc) |
 | Production cutover | **NOT taken** — and no production deploy was made at all |
@@ -105,6 +106,8 @@ Read from the official docs, not from memory:
 | Commerce schema (orders/holds/financials/webhook idempotency) | `cloudflare/d1/migrations/0002_commerce.sql` |
 | Commerce D1 layer (allowlisted writes, inventory RPCs, joins) | `worker/d1/commerce.ts` |
 | Buyer-auth schema | `cloudflare/d1/migrations/0003_buyer_auth.sql` |
+| Admin role column (`buyer_users.role`) | `cloudflare/d1/migrations/0004_buyer_roles.sql` |
+| Admin bootstrap CLI (first admin, one-time code) | `scripts/bootstrap-admin.mjs` (+ parity test) |
 | Password KDF (versioned PBKDF2) | `worker/auth/password.ts` |
 | Token primitives (CSPRNG, hashing, codes) | `worker/auth/tokens.ts` |
 | Sessions, activations, rate limits, audit, CSRF | `worker/auth/store.ts` |
@@ -282,6 +285,41 @@ logout then replay cookie   -> 401 (revocation is server-side, not just a cleare
 On production those paths still answer 404, because production was not
 deployed — that is the proof that this sprint changed nothing live.
 
+### Admin auth, live on staging (fourth sprint, 2026-09-30)
+
+The Admin Console at `https://luxedge.us/admin/login` answered **HTTP 402**:
+buyers had been moved to the D1 cookie routes, but admin sign-in still called
+Supabase Auth (`/auth/v1/token?grant_type=password`), which the project-wide
+`exceed_egress_quota` restriction answers 402. Admins now authenticate against
+the same D1 sessions, with the role read **server-side from the session row** —
+no request can declare itself admin:
+
+```
+login before activation -> 403 {"code":"ACTIVATION_REQUIRED"}   (was: HTTP 402)
+activate (one-time code) -> 200 + role=admin
+login after activation  -> 200 + Set-Cookie: lx_buyer=… + role=admin
+GET /api/auth/me        -> 200 (role=admin, from the D1 row)
+GET /api/admin/buyers   -> 200 with admin cookie / 401 without / 403 with a buyer cookie
+/admin                  -> 200; UI login lands on the rendered dashboard
+POST /api/auth/signup   -> 200 role=buyer; buyer cookie on admin API -> 403
+```
+
+The first admin cannot be created over HTTP (issuing a code already requires an
+authenticated admin — the chicken-and-egg), so `scripts/bootstrap-admin.mjs`
+breaks it locally through `wrangler d1 execute`: it ensures the identity row
+with `role='admin'` and prints a ONE-TIME activation code exactly once (only
+its SHA-256 is stored; re-running revokes the previous code). The owner
+redeems it at `/admin/login` → "Have an activation code?" → chooses a password.
+
+Role is never accepted over HTTP: `api/_lib/auth.ts` `sessionAdmin()` resolves
+the cookie and re-reads `role` from `buyer_users`, and `adminAuth` returns those
+decisions immediately so a buyer cookie cannot fall through to the legacy JWT
+paths (the Supabase-JWT and remote-verify branches remain as rollback paths).
+
+All of the above ran against `luxedge-cloudflare-staging` v `2d92f6b6`
+(live network evidence in `docs/DEPLOYMENT_PROVENANCE.md`); production was not
+deployed, so `luxedge.us/admin/login` still shows the 402 until the fix ships.
+
 ### Where the cutover switch now is
 
 Nothing was flipped. The two switches stay explicit and inert:
@@ -291,8 +329,10 @@ DATA_BACKEND=d1        (Worker var)   -> Worker reads/writes D1 (storefront + or
 VITE_DATA_BACKEND=d1   (build env)    -> SPA reads /api/db (D1)
 ```
 
-Production has the `DB` binding and the full schema (0001–0003 applied) but no
+Production has the `DB` binding and the full schema (0001–0004 applied) but no
 `DATA_BACKEND`, so every code path there still behaves exactly as before.
+(Exception: admin sign-in needs only the `DB` binding, so the 402 lockout clears
+on production as soon as the Worker is deployed there — no cutover required.)
 
 ## Security notes
 

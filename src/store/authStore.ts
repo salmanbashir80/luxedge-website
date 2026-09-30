@@ -40,7 +40,9 @@ function toSbUser(user: BuyerUser): SbUser {
     id: user.id,
     email: user.email,
     name: user.displayName || user.email.split('@')[0] || 'Customer',
-    role: 'buyer',
+    // Server-derived from the stored row; the server re-checks it on every
+    // guarded request, so this is display/gating only.
+    role: user.role === 'admin' ? 'admin' : 'buyer',
   };
 }
 
@@ -59,6 +61,8 @@ export interface AuthResult {
   success: boolean;
   message: string;
   user: SbUser | null;
+  /** Machine-readable failure reason (e.g. ACTIVATION_REQUIRED) when known. */
+  code?: string;
 }
 
 interface AuthStore {
@@ -72,6 +76,13 @@ interface AuthStore {
   signUp: (name: string, email: string, password: string) => Promise<AuthResult>;
   /** Buyer sign-in via the Cloudflare/D1 routes (cookie session, no JS token). */
   signInBuyer: (email: string, password: string) => Promise<AuthResult>;
+  /**
+   * Admin sign-in: same D1 routes as buyers, but the response must carry the
+   * server-derived 'admin' role or it is refused here (and again server-side).
+   * The Supabase JWT path above is kept for rollback only — it cannot work
+   * while Supabase Auth is HTTP 402-restricted.
+   */
+  signInAdmin: (email: string, password: string) => Promise<AuthResult>;
   /** Buyer registration via the Cloudflare/D1 routes. */
   signUpBuyer: (name: string, email: string, password: string) => Promise<AuthResult>;
   /** Ends BOTH session kinds; each is a no-op when it does not apply. */
@@ -216,6 +227,32 @@ export const useAuthStore = create<AuthStore>()((set) => ({
       applyUser(set, buyer);
       syncCustomerProfile(buyer);
       return { success: true, message: 'Signed in successfully.', user: buyer };
+    } catch (e) {
+      return { success: false, message: (e as Error).message || 'Sign-in failed.', user: null };
+    }
+  },
+
+  signInAdmin: async (email, password) => {
+    try {
+      const result = await buyerSignIn(email.trim(), password);
+      if (!result.ok || !result.user) {
+        const code = result.code;
+        const message =
+          code === 'ACTIVATION_REQUIRED'
+            ? 'This admin account still needs its one-time activation code.'
+            : buyerSignInMessage(result);
+        return { success: false, message, user: null, code };
+      }
+      if (result.user.role !== 'admin') {
+        // A real sign-in happened (cookie is set), but this account is not an
+        // admin — refuse it here even though the server will also refuse it on
+        // every guarded request.
+        return { success: false, message: 'This account does not have admin access.', user: null, code: 'NOT_ADMIN' };
+      }
+      const admin = toSbUser(result.user);
+      applyUser(set, admin);
+      // No customer-profile sync for admins: an admin is not a shopper.
+      return { success: true, message: 'Signed in successfully.', user: admin };
     } catch (e) {
       return { success: false, message: (e as Error).message || 'Sign-in failed.', user: null };
     }

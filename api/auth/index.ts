@@ -64,6 +64,8 @@ interface BuyerRow {
   display_name: string | null;
   email_verified: number;
   requires_activation: number;
+  /** Present since migration 0004; treated as 'buyer' when absent. */
+  role?: string | null;
 }
 
 /** Public projection of a buyer — never includes a hash, id-free of secrets. */
@@ -76,6 +78,9 @@ function publicUser(user: BuyerRow) {
     // stays false until a mailbox is actually proven. It is never faked true.
     emailVerified: user.email_verified === 1,
     requiresActivation: user.requires_activation === 1,
+    // Server-derived from the stored row (0004) — the client checks it, the
+    // server never accepts it. Anything that is not 'admin' is a buyer.
+    role: user.role === 'admin' ? 'admin' : 'buyer',
   };
 }
 

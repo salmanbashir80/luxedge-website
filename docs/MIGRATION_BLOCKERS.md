@@ -68,8 +68,8 @@ implementation starts clean (the plan's PATH C).
 * `api/admin/buyers.ts` — admin-issued one-time codes (`requireAdmin`, the
   existing guard, unchanged) + account listing and disable.
 * Client: `src/services/buyerAuth.ts`, wired into `src/store/authStore.ts` and
-  `src/App.tsx` so **buyer** sign-in/up/out use the cookie routes while **admin**
-  sign-in keeps its existing verified-JWT path.
+  `src/App.tsx` so **buyer** sign-in/up/out use the cookie routes. **Admin**
+  sign-in uses the same routes too, gated by a server-derived role (see below).
 
 27 security tests (`api/__tests__/auth-routes.test.ts`) cover registration,
 duplicate email, activation (valid/wrong/expired/reused/regenerated/cross-user),
@@ -77,6 +77,34 @@ correct and wrong password, logout, expired/revoked/tampered sessions, protected
 routes, two-user isolation, admin-vs-buyer authorization, login and activation
 rate limits, CSRF/origin enforcement, session rotation and disabled accounts.
 Live-verified on staging too (see the migration doc).
+
+### 2b. RESOLVED (2026-09-30) — Admin Console HTTP 402 lockout
+
+Admin sign-in was deliberately left on Supabase Auth while buyers moved to D1 —
+and Supabase Auth answers the project-wide 402, so `https://luxedge.us/admin/login`
+showed **HTTP 402** and the owner was locked out of their own store.
+
+* `cloudflare/d1/migrations/0004_buyer_roles.sql` — `buyer_users.role`
+  (`'buyer'` default) + index; applied to **staging and production** D1.
+* `api/_lib/auth.ts` `sessionAdmin()` — resolves the cookie server-side and
+  re-reads `role` from the row; `adminAuth` checks it first, so a buyer cookie
+  gets 403 and can never fall through to the legacy JWT/remote-verify paths
+  (which stay as rollback routes).
+* `src/App.tsx` / `src/store/authStore.ts` — admin sign-in calls
+  `POST /api/auth/login`; `ACTIVATION_REQUIRED` switches the login card to an
+  activation form (code + new password ≥ 10 chars).
+* `scripts/bootstrap-admin.mjs` — breaks the first-admin chicken-and-egg locally
+  via `wrangler d1 execute` (issuing a code already requires an admin): ensures
+  the identity with `role='admin'`, prints ONE activation code (SHA-256 only is
+  stored; re-running revokes the old code). Parity with `worker/auth/tokens.ts`
+  is asserted by `scripts/bootstrap-admin.test.ts`.
+
+Verified live on staging v `2d92f6b6`: login-before-activation `403
+ACTIVATION_REQUIRED` (not 402), activate `200`, login `200 role=admin` +
+`lx_buyer` cookie, `/api/admin/buyers` `200`/`401`/`403` (cookie/none/buyer),
+UI login renders the dashboard, buyer signup/login unchanged and still barred
+from admin routes. **Production not deployed** — `luxedge.us/admin/login` still
+shows the 402 until the Worker ships there.
 
 ### The one thing that genuinely does not exist at $0
 
