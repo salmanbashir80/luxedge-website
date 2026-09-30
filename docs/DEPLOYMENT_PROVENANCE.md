@@ -146,6 +146,50 @@ disabled.
 
 ---
 
+### Entry 5 — Admin Console 402 unlock (STAGING ONLY)
+
+| Field | Value |
+| --- | --- |
+| Feature | Admin sign-in moved off the restricted Supabase Auth to D1 sessions (server-derived `role`) + first-admin bootstrap CLI |
+| Environment | `luxedge-cloudflare-staging` — **not production** |
+| **Staging Worker version** | `2d92f6b6-171a-4794-888d-2ab20cd59120` |
+| Deploy date | `2026-09-30` |
+| **Commit that is live on staging** | `237d08b3d716b1ad8fd21217f91c89d6a6100cc5` |
+| Commit subject | `fix(auth): unlock the Admin Console from the Supabase 402 lockout` |
+| Base (parent) commit | `f0618aa95b950d41e4b4b93762d96b1ef4d14681` |
+| D1 migrations applied | `0004_buyer_roles.sql` — to **staging and production** D1 (additive: `buyer_users.role` + index) |
+
+Ordering note (same as Entry 1): the Worker was deployed from the working
+tree *before* the commit existed; `237d08b` was then created from that same
+tree and is byte-for-byte the code that is live on staging.
+
+**Production is unchanged by this entry.** `luxedge-production` still runs
+`d18b84bb-5a21-486e-80d1-9742271d0f80`, so `https://luxedge.us/admin/login`
+still shows the 402 until the fix is deployed there. Production D1 carries the
+0004 schema (harmless: no code reads `role` until the Worker ships) and the
+`DB` binding is still inert (no `DATA_BACKEND` var).
+
+**Evidence gathered against staging (live network, 2026-09-30)**
+
+| Check | Result |
+| --- | --- |
+| `POST /api/auth/login` before activation | `403 {"code":"ACTIVATION_REQUIRED"}` — was `HTTP 402` from Supabase Auth |
+| `node scripts/bootstrap-admin.mjs --db staging` | identity ensured with `role='admin'`; one-time code printed once (hash only in D1), expires 14 days |
+| `POST /api/auth/activate` (email + code + password) | `200` `role:"admin"`, `requiresActivation:false` |
+| `POST /api/auth/login` after activation | `200` + `Set-Cookie: lx_buyer=…` + `role:"admin"` |
+| `GET /api/auth/me` with that cookie | `200` (role re-derived from the D1 row) |
+| `GET /api/admin/buyers` cookie / none / buyer cookie | `200` / `401` / `403 "admin role required"` |
+| UI login at `/admin/login` (browser) | lands on the rendered `/admin` dashboard; network shows `POST /api/auth/login → 200`, no auth 402 |
+| Buyer regression | signup `200 role:"buyer"`, login `200`, buyer cookie on admin API `403`; QA account deleted afterwards |
+| Remaining console 402s on `/admin` | only `supabase.co/rest/v1/{products,product_variants,product_images,categories}` — the known storefront-read gate, out of scope for this fix |
+
+Suite state at deploy: `npx vitest run` 1,741 passed / 8 skipped / 0 failed
+(134 files, incl. `scripts/bootstrap-admin.test.ts` parity + 3 new admin-auth
+security tests); `tsc --noEmit` still reports exactly the 6 pre-existing
+baseline errors; `npm run build` clean.
+
+---
+
 ## Adding an entry
 
 1. Note the Worker version `npx wrangler deployments list` reports for the deploy (with
