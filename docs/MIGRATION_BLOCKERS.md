@@ -1,11 +1,11 @@
 # Cloudflare migration — cutover blockers (updated 2026-09-29, third sprint)
 
-Production is **unchanged and safe**: `luxedge-production` still runs Worker
-`d18b84bb-5a21-486e-80d1-9742271d0f80`, the sitemap is still in emergency mode
-(`x-luxedge-sitemap-mode: emergency`), `/api/auth/*` is still 404 there, and no
-production deploy was made. Everything below was built and verified on
-`luxedge-cloudflare-staging` (version `1355ca21-c436-461d-afde-99e411e7d520`)
-and in the test suite.
+Production runs Worker `cd544ac9-2672-44ac-a786-1f6f6a2078e3` (deployed
+2026-09-30 with the admin-auth fix — §2b), the sitemap is still in emergency
+mode (`x-luxedge-sitemap-mode: emergency`), the cutover switches (`DATA_BACKEND`)
+remain unset, and the media gate (§3) is unchanged. Everything below was built
+and verified on `luxedge-cloudflare-staging` (versions `1355ca21` → `2d92f6b6`)
+and in the test suite; §2b was then re-verified live on production as well.
 
 ## 1. RESOLVED — order persistence (was "payment without an order")
 
@@ -103,8 +103,16 @@ Verified live on staging v `2d92f6b6`: login-before-activation `403
 ACTIVATION_REQUIRED` (not 402), activate `200`, login `200 role=admin` +
 `lx_buyer` cookie, `/api/admin/buyers` `200`/`401`/`403` (cookie/none/buyer),
 UI login renders the dashboard, buyer signup/login unchanged and still barred
-from admin routes. **Production not deployed** — `luxedge.us/admin/login` still
-shows the 402 until the Worker ships there.
+from admin routes.
+
+**Shipped to production** (2026-09-30): v `704d9643`, then `cd544ac9` which
+fixed a 503 the first deploy exposed — `api/admin/buyers.ts` had its own
+`rt.backend === 'd1'` gate, so with `DATA_BACKEND` unset an admin could sign in
+but not list accounts; it now keys off the `DB` binding like `authDb()` (the
+`isD1Backend()` storefront cutover gates are untouched). Re-verified on
+`luxedge.us`: `ACTIVATION_REQUIRED` (not 402) → activate `200` → login `200
+role=admin` → admin list `200`/`401`, browser login renders the dashboard, and
+`POST /api/auth/login` no longer produces any auth 402.
 
 ### The one thing that genuinely does not exist at $0
 

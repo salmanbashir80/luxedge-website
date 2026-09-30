@@ -34,9 +34,18 @@ import {
   issueActivationCode,
 } from '../../worker/auth/store';
 
+/**
+ * The D1 binding, whenever one exists — deliberately NOT gated on
+ * DATA_BACKEND, for the same reason as authDb() in worker/auth/store.ts: the
+ * buyer_* tables are self-contained, so buyer administration must work while
+ * the storefront still reads Supabase. Gating this on the storefront backend
+ * answers 503 "Database unavailable." on production (where DATA_BACKEND is
+ * unset) even though login itself succeeds — the admin can sign in but not
+ * manage accounts.
+ */
 function db() {
   const rt = getDataRuntime();
-  return rt.backend === 'd1' && rt.db ? rt.db : null;
+  return rt.db ?? null;
 }
 
 interface BuyerAdminRow {

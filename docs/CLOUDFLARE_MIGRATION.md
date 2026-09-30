@@ -15,7 +15,8 @@ blockers live here; update this file whenever the cutover state changes.
 | Admin authentication | **fixed, live on staging** (was: Admin Console "HTTP 402" lockout — admin sign-in still called the restricted Supabase Auth) |
 | Product images | **still blocked** — Storage returns 402; nothing recoverable |
 | Static routing | **not optimised** (deliberate — see §4 of the blockers doc) |
-| Production cutover | **NOT taken** — and no production deploy was made at all |
+| Production Worker (`luxedge-production` v `cd544ac9-2672-44ac-a786-1f6f6a2078e3`) | **deployed 2026-09-30** — auth routes + admin fix live (`keep_vars` preserved); cutover switches still unset |
+| Production cutover | **NOT taken** — `DATA_BACKEND` still unset, storefront reads still Supabase |
 | Remaining blocker | the 335 unreachable images only |
 
 Earlier sprint status, kept for continuity: production D1 was first populated
@@ -23,8 +24,10 @@ and count-verified in the second sprint (products 117, categories 11,
 product_images 427, coupons 14, blog_posts 10, media_videos 27), while buyer
 auth, images and order persistence were open.
 
-The production D1 binding is deliberately **inert**: `DATA_BACKEND` is unset on the
-production Worker, so populating D1 changed nothing at runtime.
+The production D1 binding is deliberately **inert for storefront reads**:
+`DATA_BACKEND` is unset on the production Worker, so populating D1 changed
+nothing at runtime. (Buyer/admin auth uses the `DB` binding directly and is now
+live on production — the cutover gate governs reads only.)
 
 ## Why this migration exists (the incident)
 
@@ -316,9 +319,12 @@ the cookie and re-reads `role` from `buyer_users`, and `adminAuth` returns those
 decisions immediately so a buyer cookie cannot fall through to the legacy JWT
 paths (the Supabase-JWT and remote-verify branches remain as rollback paths).
 
-All of the above ran against `luxedge-cloudflare-staging` v `2d92f6b6`
-(live network evidence in `docs/DEPLOYMENT_PROVENANCE.md`); production was not
-deployed, so `luxedge.us/admin/login` still shows the 402 until the fix ships.
+All of the above ran against `luxedge-cloudflare-staging` v `2d92f6b6` first,
+then shipped to production (v `704d9643`, followed by `cd544ac9` which fixed a
+503 in `/api/admin/buyers`: its local `db()` was still gated on `DATA_BACKEND`,
+so an admin could sign in but not list accounts — it now keys off the `DB`
+binding like `authDb()`, while the storefront cutover gates are untouched).
+Live evidence for both is in `docs/DEPLOYMENT_PROVENANCE.md`.
 
 ### Where the cutover switch now is
 
@@ -330,9 +336,9 @@ VITE_DATA_BACKEND=d1   (build env)    -> SPA reads /api/db (D1)
 ```
 
 Production has the `DB` binding and the full schema (0001–0004 applied) but no
-`DATA_BACKEND`, so every code path there still behaves exactly as before.
-(Exception: admin sign-in needs only the `DB` binding, so the 402 lockout clears
-on production as soon as the Worker is deployed there — no cutover required.)
+`DATA_BACKEND`, so every storefront code path there still behaves exactly as
+before. (Exception: admin sign-in needs only the `DB` binding — the 402 lockout
+cleared on production with the 2026-09-30 deploy, no cutover required.)
 
 ## Security notes
 
