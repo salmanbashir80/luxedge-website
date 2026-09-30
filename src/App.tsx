@@ -4200,8 +4200,6 @@ const AdminSection = lazy(() => import('./admin/AdminSection'));
 
 // Blog storefront pages are their own lazy chunk — the homepage never
 // downloads them (or the ads they mount) until /blog is visited.
-const MediaHubPage = lazy(() => import('./media/MediaHubPages').then((m) => ({ default: m.MediaHubPage })));
-const MediaVideoPage = lazy(() => import('./media/MediaHubPages').then((m) => ({ default: m.MediaVideoPage })));
 const BlogListPage = lazy(() => import('./pages/BlogPages').then((m) => ({ default: m.BlogListPage })));
 const BlogDetailPage = lazy(() => import('./pages/BlogPages').then((m) => ({ default: m.BlogDetailPage })));
 const BlogWritePage = lazy(() => import('./pages/BlogPages').then((m) => ({ default: m.BlogWritePage })));

@@ -146,6 +146,9 @@ export interface ProductRow {
   supplier_product_ref?: string | null;
   cost_price?: number | null;
   commerce_readiness?: string | null;
+  /** Postgres text[] arrives as an array, but legacy rows hold a comma
+   * separated string, so the cat-category tag check below handles both. */
+  tags?: string[] | string | null;
   /** Embedded category name via categories(name) — the REST key is the
    * relation name `categories`. */
   categories?: { name?: string } | null;
@@ -471,6 +474,16 @@ const STATIC_PAGES: Record<string, { title: string; description: string }> = {
     title: 'Sitemap — Every Page on Luxedge',
     description:
       'Browse every page on Luxedge in one place: the full product catalog, shop categories, care guides, and our shipping, returns, privacy and terms pages.',
+  },
+  '/careers': {
+    // Registered so the pre-render below actually runs. CareersPage is a live
+    // client route with an injectCareersBody() twin, but without this entry
+    // STATIC_PAGES lookup missed and /careers fell through to the trailing
+    // 404 branch — the page 404'd for crawlers and cold visits even though the
+    // SPA rendered it fine.
+    title: 'Careers at Luxedge — Join the Team',
+    description:
+      'Join the Luxedge team. Open roles in product curation, content and customer support, fully remote, plus the chance to reach out about work that is not listed yet.',
   },
   '/shipping-policy': {
     // Describes what the page actually contains. The retired description
