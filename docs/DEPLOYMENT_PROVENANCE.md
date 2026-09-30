@@ -190,6 +190,42 @@ baseline errors; `npm run build` clean.
 
 ---
 
+### Entry 6 — Admin Console 402 unlock, LIVE ON PRODUCTION
+
+| Field | Value |
+| --- | --- |
+| Feature | Admin sign-in on D1 sessions + first-admin bootstrap, shipped to `luxedge.us` (incl. the `/api/admin/buyers` 503 fix) |
+| Environment | **`luxedge-production` — live** |
+| **Live Worker version** | `cd544ac9-2672-44ac-a786-1f6f6a2078e3` (first upload `704d9643-e915-4be1-b534-ae4d029f600a`) |
+| Deploy date | `2026-09-30` |
+| **Commit that is live** | `7f31e2d4ef3181d132eb5946a613d0c11714c42f` |
+| Commit subjects | `fix(auth): unlock the Admin Console from the Supabase 402 lockout` (`237d08b`), `fix(auth): let admins manage buyer accounts without DATA_BACKEND` (`7f31e2d`) |
+| Base (parent) commit | `a751e99109c16a41dfd11a74a9165184f5a5fea6` |
+| Deploy command | `env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID npx wrangler deploy --keep-vars` (bindings verified intact: `SEND_MAIL`, `DB (luxedge-production-db)`, all vars) |
+| D1 migrations | `0004_buyer_roles.sql` applied to production D1 **before** the deploy (additive, inert until this Worker) |
+
+Ordering note (same as Entries 1 and 5): the first deploy (`704d9643`) came
+from the working tree before the fix commit existed; the follow-up deploy
+(`cd544ac9`) carried the `api/admin/buyers.ts` gate fix; `7f31e2d` was then
+committed from that tree and is byte-for-byte the code now serving production.
+
+**Evidence gathered against `https://luxedge.us` (live, 2026-09-30)**
+
+| Check | Result |
+| --- | --- |
+| `POST /api/auth/login` before activation (the reported bug) | `403 {"code":"ACTIVATION_REQUIRED"}` — previously `HTTP 402` from Supabase Auth |
+| `node scripts/bootstrap-admin.mjs --db production` | identity `admin@luxedge.us` created with `role=admin`; one-time code printed once (SHA-256 stored only) |
+| `POST /api/auth/activate` → `POST /api/auth/login` | `200 role:"admin"` → `200 role:"admin"` + `Set-Cookie: lx_buyer=…` |
+| `GET /api/admin/buyers` cookie / none | `200` (account list) / `401` — after the `cd544ac9` gate fix (first deploy answered `503 "Database unavailable."`) |
+| Browser login at `luxedge.us/admin/login` | renders dashboard as Store Owner; `POST /api/auth/login → 200`, no auth 402 |
+| `GET /sitemap.xml` after deploy | `200`, `x-luxedge-sitemap-mode: emergency`, 12 URLs — unchanged |
+| Storefront reads | still `supabase.co/rest/v1` 402 (cutover switches remain unset — by design, see blockers doc) |
+
+Suite state at deploy: `npx vitest run` 1,741 passed / 8 skipped / 0 failed;
+`tsc --noEmit` exactly the 6 baseline errors; `npm run build` clean.
+
+---
+
 ## Adding an entry
 
 1. Note the Worker version `npx wrangler deployments list` reports for the deploy (with
