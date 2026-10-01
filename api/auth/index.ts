@@ -11,6 +11,7 @@
 //   POST /api/auth/logout    (authenticated)             -> revokes the session
 //   GET  /api/auth/me        (authenticated)             -> the signed-in buyer
 //   POST /api/auth/activate  email + one-time code + new password
+//   POST /api/auth/forgot    email                     -> code mailed to the operator
 //   POST /api/auth/password  current + new password (authenticated)
 //   GET  /api/auth/_bench    KDF benchmark, ONLY when AUTH_BENCH=1 (staging)
 //
@@ -99,6 +100,87 @@ function unavailable(res: ServerResponse): void {
     error: 'Buyer accounts are temporarily unavailable. Please try again shortly.',
     code: 'AUTH_UNAVAILABLE',
   });
+}
+
+// ---------------------------------------------------------------------------
+// Self-service recovery delivery
+//
+// The $0 constraint, stated plainly: Cloudflare's only email binding is
+// `send_email`, and on the free plan it will deliver to addresses verified in
+// the account — not to an arbitrary recipient. So a code CANNOT be mailed to
+// whoever typed their address into a form. It is mailed to the one verified
+// destination the account owns (the store operator), who then hands it over.
+// That is not a workaround for a missing feature: it is the same trust model as
+// the admin-issued codes this replaces, with the request automated. The
+// recipient is a server constant and is never taken from the request, so this
+// route cannot be turned into a relay that mails attacker-controlled content
+// anywhere.
+// ---------------------------------------------------------------------------
+
+/** The verified Cloudflare destination address (wrangler.toml [[send_email]]). */
+export const RECOVERY_MAIL_TO = '8002salman@gmail.com';
+const RECOVERY_MAIL_FROM = 'sales@luxedge.us';
+
+interface MailBinding {
+  send: (msg: { from: string; to: string; subject: string; html?: string; text?: string }) => Promise<void>;
+}
+
+interface EnvWithMail {
+  SEND_MAIL?: MailBinding;
+  /** Optional override of the operator inbox; absent in both deployments. */
+  AUTH_RECOVERY_EMAIL?: string;
+}
+
+function mailEnv(req: IncomingMessage): EnvWithMail | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (req as any).env as EnvWithMail | undefined;
+}
+
+/**
+ * Mails a one-time code to the operator inbox. Returns whether the message was
+ * actually handed to the binding — never a lie, and never the code itself in the
+ * response. `to` is chosen server-side only.
+ */
+async function deliverRecoveryCode(
+  req: IncomingMessage,
+  input: { accountEmail: string; code: string; expiresAt: string },
+): Promise<{ configured: boolean; sent: boolean; destination: string | null; error?: string }> {
+  const env = mailEnv(req);
+  const binding = env?.SEND_MAIL;
+  const override = String(env?.AUTH_RECOVERY_EMAIL || '').trim();
+  const to = override || RECOVERY_MAIL_TO;
+  if (!binding) return { configured: false, sent: false, destination: null };
+
+  const code = input.code;
+  const text = [
+    'LUXEDGE — one-time account recovery code',
+    '',
+    `Account : ${input.accountEmail}`,
+    `Code    : ${code}`,
+    `Expires : ${input.expiresAt}`,
+    '',
+    'The account holder enters this code on the sign-in page together with a',
+    'new password (minimum 10 characters). The code works once and expires.',
+    '',
+    'If you did not expect this request, ignore it — the account password is',
+    'unchanged until the code is redeemed.',
+  ].join('\n');
+  const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;color:#111"><p><strong>Luxedge — one-time account recovery code</strong></p><p>Account: <code>${input.accountEmail}</code><br/>Code: <strong style="font-size:20px;letter-spacing:2px">${code}</strong><br/>Expires: ${input.expiresAt}</p><p>The account holder enters this code on the sign-in page together with a new password (minimum 10 characters). The code works once and expires.</p><p style="color:#666">If you did not expect this request, ignore it — the account password is unchanged until the code is redeemed.</p></div>`;
+
+  try {
+    await binding.send({
+      from: RECOVERY_MAIL_FROM,
+      to,
+      subject: `Luxedge recovery code for ${input.accountEmail}`,
+      text,
+      html,
+    });
+    return { configured: true, sent: true, destination: to };
+  } catch (e) {
+    const msg = (e as Error)?.message || String(e);
+    await audit('recovery_code_mail_failed', { actor: 'system', detail: msg.slice(0, 200) });
+    return { configured: true, sent: false, destination: to, error: msg.slice(0, 200) };
+  }
 }
 
 function guardStateChanging(req: IncomingMessage, res: ServerResponse): boolean {
@@ -311,6 +393,79 @@ async function activate(req: IncomingMessage, res: ServerResponse): Promise<void
 }
 
 // ---------------------------------------------------------------------------
+// POST /api/auth/forgot — "send me a one-time code"
+//
+// Deliberately indistinguishable for known and unknown addresses: same status,
+// same body, same code path. A route that answered differently would be an
+// account-enumeration oracle for a form anyone can post to. The only difference
+// is server-side (whether a code was actually issued), and the code goes to the
+// operator inbox — never to the requester.
+// ---------------------------------------------------------------------------
+async function forgot(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (!guardStateChanging(req, res)) return;
+  const ip = clientIp(req);
+
+  let body: Record<string, unknown>;
+  try { body = await readJsonBody(req); } catch { sendJson(res, 400, { error: 'Invalid request body.' }); return; }
+
+  const email = String(body.email || '').trim();
+  if (!validEmail(email)) { sendJson(res, 400, { error: 'Please enter a valid email address.' }); return; }
+
+  // Per-IP bounds automated abuse across many accounts; per-address bounds
+  // repeated requests against one account (each issue revokes the previous
+  // code, so a flood would also keep invalidating a legitimate code).
+  if (!(await limitOr429(res, `forgot:ip:${ip}`, 10, 3600))) return;
+  if (!(await limitOr429(res, `forgot:email:${email.toLowerCase()}`, 3, 3600))) return;
+
+  const env = mailEnv(req);
+  const user = await findUserByEmail(email);
+  const deliverable = !!env?.SEND_MAIL;
+
+  // Only issue when the code can actually reach a human. Issuing into a
+  // deployment that cannot deliver would revoke a previously relayed code that
+  // the account holder may still be about to use, for no benefit at all.
+  if (deliverable && user && !user.disabled_at) {
+    const issued = await issueActivationCode({
+      userId: user.id,
+      createdBy: 'self-service',
+      // Never lock a working account just because someone typed its address: the
+      // requester cannot read the code, so a request must not be able to deny
+      // the real owner their existing password.
+      markRequiresActivation: !user.password_hash,
+    });
+    if (issued) {
+      await audit('recovery_code_requested', { actor: 'buyer', subjectUserId: user.id });
+      // Logged as its own event so "was the code actually mailed?" is
+      // answerable from the audit trail without ever storing the code.
+      const outcome = await deliverRecoveryCode(req, {
+        accountEmail: user.email,
+        code: issued.code,
+        expiresAt: issued.expiresAt,
+      });
+      // Whether anything was actually mailed is deliberately NOT part of the
+      // response: that flag differs between a known and an unknown address and
+      // would turn this route into the very enumeration oracle the identical
+      // wording exists to prevent. The audit log records it instead.
+      if (outcome.sent) await audit('recovery_code_mailed', { actor: 'system', subjectUserId: user.id });
+    }
+  }
+
+  // The wording reflects the delivery channel (a deployment-wide fact, equal
+  // for every caller), never the account (a secret).
+  sendJson(res, 200, {
+    ok: true,
+    // Email is the only channel here, so when the binding is absent the honest
+    // answer is "ask us" — a dead end is worse than a slightly less crisp
+    // message, and pretending a message was sent would be a lie.
+    channel: deliverable ? 'email-operator' : 'operator-manual',
+    delivery: { configured: deliverable },
+    message: deliverable
+      ? 'If that email has an account here, a one-time code has been emailed to the store owner, who will pass it on to the account holder. It expires in 14 days and works once.'
+      : 'If that email has an account here, a one-time reset code can be issued for it. Automated email is not available on this deployment, so please contact us and we will send it to you directly.',
+  });
+}
+
+// ---------------------------------------------------------------------------
 // POST /api/auth/password — authenticated password change
 // ---------------------------------------------------------------------------
 async function changePassword(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -384,6 +539,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     case 'POST /api/auth/logout': await logout(req, res); return;
     case 'GET /api/auth/me': await me(req, res); return;
     case 'POST /api/auth/activate': await activate(req, res); return;
+    case 'POST /api/auth/forgot': await forgot(req, res); return;
     case 'POST /api/auth/password': await changePassword(req, res); return;
     default:
       sendJson(res, 404, { error: 'Not found' });

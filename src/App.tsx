@@ -23,7 +23,7 @@ import AIAssistant from './components/AIAssistant';
 import { trackEvent, utmParams } from './lib/marketing';
 import { useAuthStore } from './store/authStore';
 import { isSupabaseConfigured, updatePassword, updateUserMetadata, getAccessToken, getFreshAccessToken } from './services/supabase';
-import { buyerActivate } from './services/buyerAuth';
+import { buyerActivate, buyerRequestCode } from './services/buyerAuth';
 import { loadProductByIdOrSlug, loadStorefrontCatalog, loadStorefrontPromotions, type CatalogProduct, type CatalogCategory, type StoreCoupon } from './services/catalog';
 import { rankProducts, probeVisualQuality, markBrokenImage, subscribeVisualQuality, getVisualQualityVersion, type MerchStats } from './features/catalog/merchandising';
 import { loadMerchStats } from './services/merch';
@@ -3426,8 +3426,25 @@ function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  // Recovery: ask the server to issue a one-time code. At $0 the only
+  // deliverable address is the store owner's verified inbox, so the notice
+  // repeats the server's own wording rather than promising a message to the
+  // address typed in — the code is relayed by the owner from there.
+  const [notice, setNotice] = useState('');
+  const [recovering, setRecovering] = useState(false);
   const { login, guestLogin, cart } = useApp();
   const nav = useNavigate();
+
+  const requestCode = async () => {
+    setErr('');
+    setNotice('');
+    if (!e.trim()) { setErr('Enter your email address first and then tap “Forgot password?”'); return; }
+    setRecovering(true);
+    const result = await buyerRequestCode(e.trim());
+    setRecovering(false);
+    if (!result.ok) { setErr(result.message || 'Could not request a code. Please try again.'); return; }
+    setNotice(result.message);
+  };
 
   const sub = async (ev: React.FormEvent) => {
     ev.preventDefault();
@@ -3466,6 +3483,7 @@ function LoginPage() {
           <p className="text-sm text-gray-500 mb-8">Sign in to your account to continue</p>
 
           {err && <div className="mb-5 p-3 bg-sale-bg border border-sale/30 rounded-xl text-sale text-sm text-center animate-scale-in">{err}</div>}
+          {notice && <div className="mb-5 p-3 bg-luxe-light border border-luxe-gold/30 rounded-xl text-luxe-black text-xs leading-relaxed animate-scale-in">{notice}</div>}
           {!isSupabaseConfigured() && (
             <div className="mb-5 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs leading-relaxed">
               Account sign-in is not configured yet (Supabase env vars missing). You can still shop as a guest — no account needed.
@@ -3492,7 +3510,9 @@ function LoginPage() {
                 <input type="checkbox" className="w-4 h-4 rounded border-gray-300 accent-luxe-gold" defaultChecked />
                 Remember me
               </label>
-              <Link to="/contact" className="text-luxe-gold hover:text-luxe-gold-dark transition-colors">Need help signing in?</Link>
+              <button type="button" onClick={requestCode} disabled={recovering} className="text-luxe-gold hover:text-luxe-gold-dark transition-colors disabled:opacity-60">
+                {recovering ? 'Requesting code…' : 'Forgot password?'}
+              </button>
             </div>
 
             <button type="submit" disabled={loading}
@@ -3650,12 +3670,15 @@ function AdminLoginPage() {
   const [p, setP] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
-  // 'activate' = redeem the admin-issued one-time code and choose the first
-  // password. There is no transactional email at $0, so the code is handed over
-  // out-of-band and the form never pretends a message was sent.
-  const [mode, setMode] = useState<'login' | 'activate'>('login');
+  // 'activate' = redeem a one-time code and choose a password. 'forgot' = ask
+  // the server to issue one. At $0 the only deliverable address is the store
+  // owner's verified inbox, so the code is emailed there and the form says so
+  // plainly instead of implying a message went to the address you typed.
+  const [mode, setMode] = useState<'login' | 'activate' | 'forgot'>('login');
   const [code, setCode] = useState('');
   const [newPass, setNewPass] = useState('');
+  // Success text from the server (never a guess made up on the client).
+  const [notice, setNotice] = useState('');
   const { login } = useApp();
   const nav = useNavigate();
 
@@ -3675,9 +3698,25 @@ function AdminLoginPage() {
     nav('/admin');
   };
 
+  const handleForgot = async (ev: React.FormEvent) => {
+    ev.preventDefault();
+    setErr('');
+    setNotice('');
+    if (!e.trim()) { setErr('Please enter the email address of the admin account.'); return; }
+    setLoading(true);
+    const result = await buyerRequestCode(e.trim());
+    setLoading(false);
+    if (!result.ok) { setErr(result.message || 'Could not request a code. Please try again.'); return; }
+    setNotice(result.message);
+    // Straight into the redemption form: the next step is always to type the
+    // code, whether it was emailed automatically or must be relayed by hand.
+    setMode('activate');
+  };
+
   const handleActivate = async (ev: React.FormEvent) => {
     ev.preventDefault();
     setErr('');
+    if (!code.trim()) { setErr('Please enter the one-time code.'); return; }
     if (newPass.length < 10) { setErr('Your password must be at least 10 characters.'); return; }
     setLoading(true);
     const result = await buyerActivate(e.trim(), code.trim(), newPass);
@@ -3717,10 +3756,36 @@ function AdminLoginPage() {
           </div>
         )}
 
-        {mode === 'activate' ? (
+        {notice && (
+          <div className="flex items-start gap-2 p-3 mb-4 bg-[#EBF3EE] border border-[#1E4636]/20 rounded-lg text-[#1E4636] text-xs leading-relaxed">
+            <Mail01 strokeWidth={1.5} size={16} className="mt-0.5 shrink-0" />
+            <span>{notice}</span>
+          </div>
+        )}
+
+        {mode === 'forgot' ? (
+          <form onSubmit={handleForgot} className="space-y-4">
+            <div className="p-3 bg-[#EBF3EE] border border-[#1E4636]/10 rounded-xl text-[#1E4636] text-xs leading-relaxed">
+              Enter the admin email and we will issue a fresh one-time code. It is emailed to the store owner&apos;s verified inbox
+              (<span className="font-semibold">8002salman@gmail.com</span>) because Cloudflare can only deliver to a verified
+              address — then enter it on the next screen with a new password. Requests are rate limited, and the code works once
+              and expires after 14 days.
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Email</label>
+              <input type="email" placeholder="Enter admin email" value={e} onChange={ev => setE(ev.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-luxe-gold focus:ring-2 focus:ring-luxe-gold/20" required />
+            </div>
+            <button type="submit" disabled={loading} className="w-full py-3 bg-luxe-gold hover:bg-luxe-gold-dark text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-gold disabled:opacity-70">
+              {loading ? <Loading01 strokeWidth={1.5} size={16} className="animate-spin" /> : <Mail01 strokeWidth={1.5} size={16} />} {loading ? 'Requesting…' : 'Send me a one-time code'}
+            </button>
+            <button type="button" onClick={() => { setMode('login'); setErr(''); setNotice(''); }} className="w-full text-center text-xs text-gray-500 hover:text-gray-700">
+              ← Back to sign in
+            </button>
+          </form>
+        ) : mode === 'activate' ? (
           <form onSubmit={handleActivate} className="space-y-4">
             <div className="p-3 bg-[#EBF3EE] border border-[#1E4636]/10 rounded-xl text-[#1E4636] text-xs leading-relaxed">
-              Enter the one-time activation code issued for this account, then choose a new password. The code works once and expires after 14 days.
+              Enter the one-time recovery code issued for this account, then choose a new password. The code works once and expires after 14 days. If you have not requested one yet, go back and use <span className="font-semibold">Send me a one-time code</span>.
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Email</label>
@@ -3737,7 +3802,7 @@ function AdminLoginPage() {
             <button type="submit" disabled={loading} className="w-full py-3 bg-luxe-gold hover:bg-luxe-gold-dark text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-gold disabled:opacity-70">
               {loading ? <Loading01 strokeWidth={1.5} size={16} className="animate-spin" /> : <Lock01 strokeWidth={1.5} size={16} />} {loading ? 'Activating…' : 'Activate & sign in'}
             </button>
-            <button type="button" onClick={() => { setMode('login'); setErr(''); }} className="w-full text-center text-xs text-gray-500 hover:text-gray-700">
+            <button type="button" onClick={() => { setMode('login'); setErr(''); setNotice(''); }} className="w-full text-center text-xs text-gray-500 hover:text-gray-700">
               ← Back to sign in
             </button>
           </form>
@@ -3754,9 +3819,14 @@ function AdminLoginPage() {
             <button type="submit" disabled={loading} className="w-full py-3 bg-luxe-gold hover:bg-luxe-gold-dark text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-gold disabled:opacity-70">
               {loading ? <Loading01 strokeWidth={1.5} size={16} className="animate-spin" /> : <Lock01 strokeWidth={1.5} size={16} />} {loading ? 'Signing in…' : 'Access Dashboard'}
             </button>
-            <button type="button" onClick={() => { setMode('activate'); setErr(''); }} className="w-full text-center text-xs text-gray-500 hover:text-gray-700">
-              Have an activation code? Use it →
-            </button>
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <button type="button" onClick={() => { setMode('forgot'); setErr(''); setNotice(''); }} className="text-[#1E4636] hover:text-luxe-gold font-semibold">
+                Forgot password?
+              </button>
+              <button type="button" onClick={() => { setMode('activate'); setErr(''); setNotice(''); }} className="text-gray-500 hover:text-gray-700">
+                Have an activation code? Use it →
+              </button>
+            </div>
           </form>
         )}
 

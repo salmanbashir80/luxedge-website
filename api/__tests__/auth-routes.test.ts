@@ -21,7 +21,7 @@ import { DatabaseSync } from 'node:sqlite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import authHandler from '../auth/index.js';
+import authHandler, { RECOVERY_MAIL_TO } from '../auth/index.js';
 import adminBuyersHandler from '../admin/buyers.js';
 import { resetDataRuntime } from '../../worker/d1/runtime';
 import { SESSION_COOKIE } from '../../worker/auth/store';
@@ -90,7 +90,7 @@ function makeRes(): { server: ServerResponse; cap: Captured } {
 function makeReq(
   method: string,
   url: string,
-  opts: { body?: unknown; cookie?: string | null; origin?: string | null; contentType?: string | null; ip?: string } = {},
+  opts: { body?: unknown; cookie?: string | null; origin?: string | null; contentType?: string | null; ip?: string; env?: unknown } = {},
 ): IncomingMessage {
   const raw = opts.body === undefined ? '' : JSON.stringify(opts.body);
   const headers: Record<string, string> = {};
@@ -101,6 +101,10 @@ function makeReq(
     method,
     url,
     headers,
+    // The Worker runtime attaches `env` to the request; the tests do the same
+    // so bindings (SEND_MAIL) can be exercised for real rather than stubbed out
+    // at a level the handler does not use.
+    env: opts.env,
     socket: { remoteAddress: opts.ip || '203.0.113.10' },
   } as unknown as IncomingMessage;
   Object.defineProperty(req, 'on', {
@@ -583,5 +587,189 @@ describe('buyer auth — password hashing', () => {
     expect(needsRehash(a)).toBe(false);
     // A downgrade below the floor is refused outright.
     expect(parseHashRecord(a.replace('$100000$', '$1000$'))).toBeNull();
+  });
+});
+
+// ============================================================================
+// SELF-SERVICE RECOVERY CODES (POST /api/auth/forgot)
+//
+// The $0 reality under test: Cloudflare's send_email binding delivers to
+// addresses verified in the account, not to an arbitrary recipient, so a code
+// can only be mailed to the operator inbox. These tests pin the consequences —
+// no enumeration oracle, no attacker-chosen recipient, and no way for a
+// request to deny the real owner their existing password.
+// ============================================================================
+
+interface MailMessage {
+  from: string;
+  to: string;
+  subject: string;
+  text?: string;
+  html?: string;
+}
+
+function fakeMail(): { sent: MailMessage[]; binding: { send: (m: MailMessage) => Promise<void> } } {
+  const sent: MailMessage[] = [];
+  return { sent, binding: { send: async (m: MailMessage) => { sent.push(m); } } };
+}
+
+/** Pulls the first code-shaped token out of a delivered message. */
+function codeFromMail(message: MailMessage | undefined): string {
+  const found = /([A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{2})/.exec(`${message?.text || ''}\n${message?.html || ''}`);
+  return found ? found[1] : '';
+}
+
+describe('buyer auth — self-service recovery codes', () => {
+  beforeEach(() => fresh());
+  afterEach(() => resetDataRuntime({}));
+
+  it('answers identically for a known and an unknown address, and names neither', async () => {
+    await signup('known@example.com');
+    const mail = fakeMail();
+    db.exec('DELETE FROM buyer_rate_limits');
+    const known = await call('POST', '/api/auth/forgot', { body: { email: 'known@example.com' }, env: { SEND_MAIL: mail.binding } });
+    const unknown = await call('POST', '/api/auth/forgot', { body: { email: 'nobody@example.com' }, env: { SEND_MAIL: mail.binding } });
+
+    expect(known.status).toBe(200);
+    expect(unknown.status).toBe(200);
+    // Byte-identical, including the delivery wording: the response must describe
+    // the deployment, never the account, or it becomes an existence oracle.
+    expect(unknown.body).toEqual(known.body);
+    expect(known.body.channel).toBe('email-operator');
+    expect(JSON.stringify(known.body)).not.toContain('known@example.com');
+    expect(JSON.stringify(known.body)).not.toContain('nobody@example.com');
+
+    // The difference that does exist is server-side only: exactly one message.
+    expect(mail.sent).toHaveLength(1);
+    expect(codeFromMail(mail.sent[0])).toMatch(
+      /^[ABCDEFGHJKMNPQRSTVWXYZ23456789]{4}-[ABCDEFGHJKMNPQRSTVWXYZ23456789]{4}-[ABCDEFGHJKMNPQRSTVWXYZ23456789]{2}$/,
+    );
+    // …and the code is never echoed to the caller.
+    expect(JSON.stringify(known.body)).not.toContain(codeFromMail(mail.sent[0]));
+  });
+
+  it('mails the code only to the server-chosen operator inbox, never to a caller-supplied address', async () => {
+    await signup('known@example.com');
+    const mail = fakeMail();
+    await call('POST', '/api/auth/forgot', {
+      // A caller asking for delivery to an attacker address must be ignored.
+      body: { email: 'known@example.com', to: 'attacker@evil.example', replyTo: 'attacker@evil.example' },
+      env: { SEND_MAIL: mail.binding },
+    });
+    expect(mail.sent).toHaveLength(1);
+    expect(mail.sent[0].to).toBe(RECOVERY_MAIL_TO);
+    expect(mail.sent[0].to).not.toBe('attacker@evil.example');
+    expect(mail.sent[0].from).toBe('sales@luxedge.us');
+    expect(JSON.stringify(mail.sent[0])).not.toContain('attacker@evil.example');
+    // The owner can tell which account the code belongs to.
+    expect(mail.sent[0].text).toContain('known@example.com');
+  });
+
+  it('stores only the hash of the mailed code, and the code redeems end-to-end', async () => {
+    await signup('reset@example.com');
+    const mail = fakeMail();
+    await call('POST', '/api/auth/forgot', { body: { email: 'reset@example.com' }, env: { SEND_MAIL: mail.binding } });
+    const code = codeFromMail(mail.sent[0]);
+    expect(code).toBeTruthy();
+
+    // Plaintext is never persisted — only SHA-256 of the normalized code.
+    const rows = db.prepare(`SELECT token_hash FROM buyer_activation_tokens`).all() as Array<{ token_hash: string }>;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].token_hash).toHaveLength(64);
+    expect(rows[0].token_hash).not.toContain(code);
+
+    db.exec('DELETE FROM buyer_rate_limits');
+    const activated = await call('POST', '/api/auth/activate', {
+      body: { email: 'reset@example.com', code, password: PASSWORD_2 },
+    });
+    expect(activated.status).toBe(200);
+    expect(cookieToken(activated)).toBeTruthy();
+
+    db.exec('DELETE FROM buyer_rate_limits');
+    expect((await call('POST', '/api/auth/login', { body: { email: 'reset@example.com', password: PASSWORD_2 } })).status).toBe(200);
+    expect((await call('POST', '/api/auth/login', { body: { email: 'reset@example.com', password: PASSWORD } })).status).toBe(401);
+  });
+
+  it('cannot be used to lock a working account out of its own password', async () => {
+    await signup('live@example.com');
+    const mail = fakeMail();
+    const cap = await call('POST', '/api/auth/forgot', { body: { email: 'live@example.com' }, env: { SEND_MAIL: mail.binding } });
+    expect(cap.status).toBe(200);
+    // The requester cannot read the code, so a request must not disable the
+    // existing password — otherwise anyone could lock any account by typing it.
+    expect(count(`SELECT COUNT(*) AS n FROM buyer_users WHERE requires_activation = 1`)).toBe(0);
+    db.exec('DELETE FROM buyer_rate_limits');
+    expect((await call('POST', '/api/auth/login', { body: { email: 'live@example.com', password: PASSWORD } })).status).toBe(200);
+  });
+
+  it('reports honestly and changes nothing when the deployment has no mail binding', async () => {
+    await signup('nomail@example.com');
+    const cap = await call('POST', '/api/auth/forgot', { body: { email: 'nomail@example.com' } });
+    expect(cap.status).toBe(200);
+    expect(cap.body.ok).toBe(true);
+    expect(cap.body.channel).toBe('operator-manual');
+    // The response describes the deployment (no binding here), not the account.
+    expect(cap.body.delivery).toEqual({ configured: false });
+    // No code is minted that nobody could ever read, so a code relayed earlier
+    // stays valid.
+    expect(count(`SELECT COUNT(*) AS n FROM buyer_activation_tokens`)).toBe(0);
+    expect(String(cap.body.message)).toMatch(/not available/i);
+  });
+
+  it('issues nothing for a disabled account, without saying so', async () => {
+    await signup('off@example.com');
+    db.prepare(`UPDATE buyer_users SET disabled_at = ?`).run(new Date().toISOString());
+    const mail = fakeMail();
+    const cap = await call('POST', '/api/auth/forgot', { body: { email: 'off@example.com' }, env: { SEND_MAIL: mail.binding } });
+    expect(cap.status).toBe(200);
+    expect(cap.body.ok).toBe(true);
+    // Still the generic, delivery-capable wording: a caller must not be able to
+    // read "nothing was sent" as "this account is disabled".
+    expect(cap.body.channel).toBe('email-operator');
+    expect(mail.sent).toHaveLength(0);
+    expect(count(`SELECT COUNT(*) AS n FROM buyer_activation_tokens`)).toBe(0);
+  });
+
+  it('rate limits per address, so repeated requests cannot keep invalidating a live code', async () => {
+    await signup('flood@example.com');
+    const mail = fakeMail();
+    for (let i = 0; i < 3; i++) {
+      const cap = await call('POST', '/api/auth/forgot', { body: { email: 'flood@example.com' }, env: { SEND_MAIL: mail.binding } });
+      expect(cap.status).toBe(200);
+    }
+    const fourth = await call('POST', '/api/auth/forgot', { body: { email: 'flood@example.com' }, env: { SEND_MAIL: mail.binding } });
+    expect(fourth.status).toBe(429);
+    expect(fourth.body.code).toBe('RATE_LIMITED');
+    expect(mail.sent).toHaveLength(3);
+    // Exactly one live code exists — each issue revoked the previous one.
+    expect(count(`SELECT COUNT(*) AS n FROM buyer_activation_tokens WHERE revoked_at IS NULL AND used_at IS NULL`)).toBe(1);
+  });
+
+  it('rejects a cross-origin request and mints no code for it', async () => {
+    await signup('csrf@example.com');
+    const mail = fakeMail();
+    const crossSite = await call('POST', '/api/auth/forgot', {
+      body: { email: 'csrf@example.com' },
+      origin: 'https://evil.example',
+      env: { SEND_MAIL: mail.binding },
+    });
+    expect(crossSite.status).toBe(403);
+    expect(mail.sent).toHaveLength(0);
+    expect(count(`SELECT COUNT(*) AS n FROM buyer_activation_tokens`)).toBe(0);
+
+    const noOrigin = await call('POST', '/api/auth/forgot', {
+      body: { email: 'csrf@example.com' },
+      origin: null,
+      env: { SEND_MAIL: mail.binding },
+    });
+    expect(noOrigin.status).toBe(403);
+    expect(count(`SELECT COUNT(*) AS n FROM buyer_activation_tokens`)).toBe(0);
+  });
+
+  it('validates the address before touching the datastore', async () => {
+    const mail = fakeMail();
+    const bad = await call('POST', '/api/auth/forgot', { body: { email: 'not-an-email' }, env: { SEND_MAIL: mail.binding } });
+    expect(bad.status).toBe(400);
+    expect(mail.sent).toHaveLength(0);
   });
 });

@@ -226,6 +226,50 @@ Suite state at deploy: `npx vitest run` 1,741 passed / 8 skipped / 0 failed;
 
 ---
 
+### Entry 7 — Self-service recovery codes, LIVE ON PRODUCTION
+
+| Field | Value |
+| --- | --- |
+| Feature | `POST /api/auth/forgot` + "Forgot password?" on `/admin/login` and the buyer sign-in page; code mailed to the account's verified inbox |
+| Environment | **`luxedge-production` — live** (staging `luxedge-cloudflare-staging` also live) |
+| **Live Worker version** | production `22386778-f0ad-49d2-8469-222956fde8d2`; staging `eaf095f4-1746-4720-b3de-ab8d1f3a7a25` (first staging upload `0d4f7e6a-977c-4498-b051-b49215637198`) |
+| Deploy date | `2026-10-01` |
+| **Commit that is live** | the commit that adds this entry — subject `feat(auth): let accounts request their own one-time recovery code`. Deployed from the working tree before it was committed (same ordering note as Entries 1, 5, 6). |
+| Base (parent) commit | `1116c23e6e1b0baf4e5673aab40feb82159b265f` (docs entry 6) |
+| Deploy commands | `env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID npx wrangler deploy --env staging`, then `… npx wrangler deploy --keep-vars` (production bindings verified intact: `SEND_MAIL`, `DB (luxedge-production-db)`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ZONE_ID`, `YOUTUBE_*`) |
+| Config change | `[[env.staging.send_email]] name = "SEND_MAIL"` added to `wrangler.toml` — staging had no mail binding, so the one path that matters (a real code reaching the inbox) was untestable before shipping |
+| D1 migrations | none (no schema change; `issueActivationCode` gained an option only) |
+
+Ordering note (same as Entries 1, 5 and 6): the staging deploy ran before the
+edit that added the staging mail binding — the first staging upload therefore
+honestly answered `channel: "operator-manual"` — and the second upload
+(`eaf095f4`) is the one that can deliver.
+
+**Hash-level proof**
+
+```
+sha256(dist/assets/index-C7Otebn4.js) = 20f417cca44427b0017b496b88f426e10d17cdbddc4b2468f4b1c0af8d74aa0d
+sha256(curl https://luxedge.us/assets/index-C7Otebn4.js) = 20f417cca44427b0017b496b88f426e10d17cdbddc4b2468f4b1c0af8d74aa0d
+```
+
+**Evidence gathered live (2026-10-01)**
+
+* `POST /api/auth/forgot` on `luxedge.us` → `200 {ok:true, channel:
+  "email-operator", delivery:{configured:true}}`; the **same body** for an
+  address with no account (no enumeration oracle).
+* Cross-origin POST (`Origin: https://evil.example`) → `403`, nothing written.
+* A caller-supplied `to` is ignored: the mail still goes to
+  `RECOVERY_MAIL_TO` and `attacker@evil.example` never appears in the message.
+* `buyer_auth_audit` on production shows `recovery_code_requested` followed by
+  **`recovery_code_mailed`** for `admin@luxedge.us` — Cloudflare accepted the
+  send (a rejection would have logged `recovery_code_mail_failed` instead).
+  The same pair appears on staging.
+* `/admin/login` renders both **Forgot password?** and **Have an activation
+  code? Use it →**, and the forgot card names the verified inbox it will mail.
+* No regression: `GET /sitemap.xml` still `200`; `npx tsc --noEmit` exactly the
+  6 baseline errors; `npx vitest run` 1750 passed / 8 skipped / 0 failed;
+  `npm run build` clean.
+
 ## Adding an entry
 
 1. Note the Worker version `npx wrangler deployments list` reports for the deploy (with

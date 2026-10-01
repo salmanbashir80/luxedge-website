@@ -86,6 +86,14 @@ migrations_dir = "cloudflare/d1/migrations"
 [env.staging]
 name = "luxedge-cloudflare-staging"
 
+# Staging needs the same outbound email binding as production, otherwise the
+# self-service "send me a code" flow (POST /api/auth/forgot) cannot deliver
+# anything here and the one path that matters — does a real code actually reach
+# the verified inbox? — is untestable before it ships. Delivery is limited to
+# the account's verified destination address on every plan.
+[[env.staging.send_email]]
+name = "SEND_MAIL"
+
 [env.staging.vars]
 VERCEL_ENV = "preview"
 DEPLOYMENT_ENV = "staging"

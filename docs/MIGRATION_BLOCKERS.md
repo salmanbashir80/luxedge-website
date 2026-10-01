@@ -62,20 +62,22 @@ implementation starts clean (the plan's PATH C).
   server-side expiry **and** revocation; rotation on every authentication; all
   other sessions revoked on a password change), activation codes (single use,
   expiring, regenerating revokes the previous one), durable rate limits, audit.
-* `api/auth/index.ts` — signup / login / logout / me / activate / password, plus
-  a benchmark route that is closed unless `AUTH_BENCH=1`. Identity always comes
-  from the resolved session; no route accepts a user id or a role.
+* `api/auth/index.ts` — signup / login / logout / me / activate / forgot /
+  password, plus a benchmark route that is closed unless `AUTH_BENCH=1`. Identity
+  always comes from the resolved session; no route accepts a user id or a role.
 * `api/admin/buyers.ts` — admin-issued one-time codes (`requireAdmin`, the
   existing guard, unchanged) + account listing and disable.
 * Client: `src/services/buyerAuth.ts`, wired into `src/store/authStore.ts` and
   `src/App.tsx` so **buyer** sign-in/up/out use the cookie routes. **Admin**
   sign-in uses the same routes too, gated by a server-derived role (see below).
 
-27 security tests (`api/__tests__/auth-routes.test.ts`) cover registration,
+39 security tests (`api/__tests__/auth-routes.test.ts`) cover registration,
 duplicate email, activation (valid/wrong/expired/reused/regenerated/cross-user),
 correct and wrong password, logout, expired/revoked/tampered sessions, protected
 routes, two-user isolation, admin-vs-buyer authorization, login and activation
-rate limits, CSRF/origin enforcement, session rotation and disabled accounts.
+rate limits, CSRF/origin enforcement, session rotation, disabled accounts, and
+self-service recovery (indistinguishable answers for known/unknown addresses,
+no caller-chosen recipient, no lockout of a working account).
 Live-verified on staging too (see the migration doc).
 
 ### 2b. RESOLVED (2026-09-30) — Admin Console HTTP 402 lockout
@@ -114,14 +116,49 @@ but not list accounts; it now keys off the `DB` binding like `authDb()` (the
 role=admin` → admin list `200`/`401`, browser login renders the dashboard, and
 `POST /api/auth/login` no longer produces any auth 402.
 
+### 2c. RESOLVED (2026-10-01) — self-service "send me a code"
+
+Recovery no longer needs the owner to be sitting in the Admin Console first.
+`POST /api/auth/forgot` takes an email address, issues a one-time code through
+the same `issueActivationCode()` the admin route uses, and mails it with the
+`SEND_MAIL` binding. `src/App.tsx` exposes it as **Forgot password? → Send me a
+one-time code** on `/admin/login`, and as **Forgot password?** on the buyer
+sign-in page (which now shows the server's own wording in a notice banner).
+
+Three properties are load-bearing and each has a test:
+
+* **No enumeration oracle.** Known and unknown addresses get a byte-identical
+  200, including the delivery wording. The response describes the *deployment*
+  (does this Worker have a mail binding?), never the account. Whether a message
+  actually went out is recorded in `buyer_auth_audit`, not returned.
+* **No caller-chosen recipient.** The destination is a server constant — the
+  account's verified address (`8002salman@gmail.com`, `RECOVERY_MAIL_TO`). A
+  `to` in the request body is ignored, so the route cannot be repurposed as a
+  relay. This is the same trust model as the admin-issued codes, automated.
+* **No lockout.** Self-service issuance passes `markRequiresActivation: false`,
+  so a request can never set `requires_activation = 1` on an account that has a
+  working password. Anyone can type anyone's address into a public form; if that
+  could disable the password, the form would be a denial-of-service for every
+  account. Redemption still replaces the password. Rate limited 10/h per IP and
+  3/h per address (each issue revokes the previous code, so a flood would also
+  keep invalidating a legitimate one).
+
+`[[env.staging.send_email]]` was added to `wrangler.toml`: without it, staging
+could not deliver and the only path that matters — does a real code actually
+reach the inbox? — was untestable before shipping. Verified live on both: the
+audit log shows `recovery_code_requested` followed by `recovery_code_mailed`
+(Cloudflare accepted the message) on staging v `eaf095f4` and production v
+`22386778`.
+
 ### The one thing that genuinely does not exist at $0
 
-**Transaction recovery is delivered by the owner, not by email.** The only
+**Email goes to the owner's verified inbox, not to the customer.** The only
 binding available is Cloudflare's `send_email`, which by design posts to
-*verified destinations* — it cannot mail an arbitrary customer. So an admin
-issues a one-time code and hands it over (phone/in person/another mailbox), and
-the buyer redeems it at `/account`. New signups work immediately and are marked
-`emailVerified: false` honestly, because nothing was sent.
+*verified destinations* — it cannot mail an arbitrary customer. So a recovery
+request mails the code to the operator, who relays it, and the buyer redeems it
+at `/account` or `/admin/login`. New signups work immediately and are marked
+`emailVerified: false` honestly, because nothing was sent. Sending to arbitrary
+recipients would need the Workers Paid plan (or a real transactional provider).
 
 ## 3. STILL BLOCKED — 335 product images
 

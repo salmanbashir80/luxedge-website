@@ -338,6 +338,17 @@ export async function issueActivationCode(input: {
   userId: string;
   createdBy?: string | null;
   ttlSeconds?: number;
+  /**
+   * Whether issuing the code must also disable the current password
+   * (`requires_activation = 1`). Admin issuance wants this: an intercepted
+   * code is useless while the old password still works. Self-service requests
+   * (POST /api/auth/forgot) MUST pass false, because anyone who knows an email
+   * could otherwise request a code and lock the real owner out of their own
+   * account with no chance to refuse — the code is delivered to the operator,
+   * not to the requester, so the requester gains nothing but a denial of
+   * service. Redemption still replaces the password either way.
+   */
+  markRequiresActivation?: boolean;
 }): Promise<{ code: string; expiresAt: string } | null> {
   const db = authDb();
   if (!db) return null;
@@ -359,8 +370,10 @@ export async function issueActivationCode(input: {
       )
       .bind(crypto.randomUUID(), input.userId, tokenHash, nowIso(), expiresAt, input.createdBy || null)
       .run?.();
-    // The account now requires activation: the old password must not keep working.
-    await db.prepare(`UPDATE buyer_users SET requires_activation = 1, updated_at = ? WHERE id = ?`).bind(nowIso(), input.userId).run?.();
+    if (input.markRequiresActivation !== false) {
+      // The account now requires activation: the old password must not keep working.
+      await db.prepare(`UPDATE buyer_users SET requires_activation = 1, updated_at = ? WHERE id = ?`).bind(nowIso(), input.userId).run?.();
+    }
   } catch {
     return null;
   }

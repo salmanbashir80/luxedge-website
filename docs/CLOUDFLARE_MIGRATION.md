@@ -326,6 +326,36 @@ so an admin could sign in but not list accounts — it now keys off the `DB`
 binding like `authDb()`, while the storefront cutover gates are untouched).
 Live evidence for both is in `docs/DEPLOYMENT_PROVENANCE.md`.
 
+### Self-service recovery codes, live on staging and production (2026-10-01)
+
+Recovery no longer requires the owner to be the first one at the keyboard.
+`POST /api/auth/forgot` takes `{email}`, issues a one-time code through the same
+`issueActivationCode()` the admin route uses, and mails it with the `SEND_MAIL`
+binding. The **Forgot password? → Send me a one-time code** path on
+`/admin/login` (and **Forgot password?** on the buyer sign-in page) posts to it
+and then drops into the existing activation form.
+
+```
+POST /api/auth/forgot {email}  -> 200 {ok, channel, delivery:{configured}, message}
+                                   identical for known and unknown addresses
+POST … Origin: https://evil.example -> 403 (state-changing route, CSRF-guarded)
+```
+
+The `send_email` binding only delivers to addresses **verified in the account**,
+so the recipient is a server constant (`RECOVERY_MAIL_TO` =
+`8002salman@gmail.com`) and a `to` in the request body is ignored. The response
+says whether the *deployment* can deliver, never whether a message went out for
+the address that was posted; the audit log (`recovery_code_requested` →
+`recovery_code_mailed` / `recovery_code_mail_failed`) is where the truth lives.
+Self-service issuance also passes `markRequiresActivation: false`, so a request
+cannot disable the password of an account that already has one — otherwise the
+public form would be a denial-of-service for every account it named.
+
+`[[env.staging.send_email]] name = "SEND_MAIL"` was added to `wrangler.toml`:
+staging had no mail binding, so `channel` was honestly `operator-manual` there
+and the delivery path could not be exercised before shipping. Production's
+top-level `[[send_email]]` was already present and survives `--keep-vars`.
+
 ### Where the cutover switch now is
 
 Nothing was flipped. The two switches stay explicit and inert:

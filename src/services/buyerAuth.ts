@@ -104,6 +104,52 @@ export function buyerActivate(email: string, code: string, password: string): Pr
   return call('/activate', { method: 'POST', body: JSON.stringify({ email, code, password }) });
 }
 
+export interface BuyerForgotResult {
+  ok: boolean;
+  message: string;
+  /** Server-chosen description of the delivery channel (no personal data). */
+  channel?: 'email-operator' | 'operator-manual';
+  /**
+   * Whether this deployment can email the code at all. A deployment-wide fact —
+   * deliberately not "was a message sent for this address", which would tell
+   * anyone posting the form whether an account exists.
+   */
+  deliverable?: boolean;
+}
+
+/**
+ * Ask for a one-time recovery code for an email address.
+ *
+ * The server never says whether the address has an account (that would be an
+ * enumeration oracle) and never lets the caller choose the recipient: at $0 the
+ * only deliverable address is the operator's verified inbox, so the honest
+ * outcome is "the code was emailed to the store owner". The returned message is
+ * the server's own, so nothing here can claim a delivery that did not happen.
+ */
+export async function buyerRequestCode(email: string): Promise<BuyerForgotResult> {
+  try {
+    const res = await fetch(`${BASE}/forgot`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    let body: Record<string, unknown> = {};
+    try { body = (await res.json()) as Record<string, unknown>; } catch { /* non-JSON */ }
+    if (!res.ok) {
+      return { ok: false, message: String(body.error || `Request failed (HTTP ${res.status}).`) };
+    }
+    return {
+      ok: true,
+      message: String(body.message || 'If that email has an account here, a one-time code has been issued for it.'),
+      channel: body.channel as BuyerForgotResult['channel'],
+      deliverable: body.channel === 'email-operator',
+    };
+  } catch {
+    return { ok: false, message: 'Could not reach the store. Please check your connection and try again.' };
+  }
+}
+
 export function buyerChangePassword(currentPassword: string, newPassword: string): Promise<BuyerResult> {
   return call('/password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) });
 }
@@ -116,7 +162,7 @@ export function buyerChangePassword(currentPassword: string, newPassword: string
 export function buyerSignInMessage(result: BuyerResult): string {
   switch (result.code) {
     case 'ACTIVATION_REQUIRED':
-      return 'This account needs a one-time activation code first — please contact us and we will send you one.';
+      return 'This account needs a one-time activation code first — use “Send me a recovery code” below and one will be emailed to the store owner.';
     case 'DISABLED':
       return result.message;
     case 'RATE_LIMITED':
