@@ -1,11 +1,10 @@
-# Cloudflare migration — cutover blockers (updated 2026-09-29, third sprint)
+# Cloudflare migration — cutover blockers (updated 2026-10-01, fourth sprint)
 
-Production runs Worker `cd544ac9-2672-44ac-a786-1f6f6a2078e3` (deployed
-2026-09-30 with the admin-auth fix — §2b), the sitemap is still in emergency
-mode (`x-luxedge-sitemap-mode: emergency`), the cutover switches (`DATA_BACKEND`)
-remain unset, and the media gate (§3) is unchanged. Everything below was built
-and verified on `luxedge-cloudflare-staging` (versions `1355ca21` → `2d92f6b6`)
-and in the test suite; §2b was then re-verified live on production as well.
+**The production cutover is TAKEN (2026-10-01, Worker v `a50cd5fd`):**
+`DATA_BACKEND=d1` is live, the sitemap is dynamic (65 URLs), the feed is served
+from D1, and the media gate (§3) is resolved for every publicly visible product
+— see `docs/DEPLOYMENT_PROVENANCE.md` Entry 8 for the full evidence. The
+historical record below is kept for context.
 
 ## 1. RESOLVED — order persistence (was "payment without an order")
 

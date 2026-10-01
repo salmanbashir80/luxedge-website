@@ -4,6 +4,17 @@ Migration of the storefront's Supabase data dependency to Cloudflare D1, with th
 emergency sitemap it was forced by. Status, evidence, runbook and remaining
 blockers live here; update this file whenever the cutover state changes.
 
+## Sprint status (2026-10-01, fourth sprint — **PRODUCTION CUTOVER TAKEN**)
+
+| Item | State |
+| --- | --- |
+| **Production cutover** | **TAKEN (2026-10-01)** — `DATA_BACKEND=d1` on production Worker v `a50cd5fd`; live-verified (see `docs/DEPLOYMENT_PROVENANCE.md` Entry 8) |
+| Sitemap | **dynamic** again — 65 URLs (32 products + 9 blogs + 24 static), was emergency/12 |
+| `/google-products.xml` | 200, 32 items — now reads through the shared D1/Supabase data runtime |
+| Media gate | **RESOLVED for the storefront** — migration `0005` repointed the 2 active products' 6 image rows at their verified `/img/` local mirrors; 329 remaining Supabase-Storage refs belong to inactive/archived products |
+| Supabase | every surface still 402 `exceed_egress_quota` (PostgREST, Storage, Auth) — retained as archive/recovery source, now read-dependency-free |
+| Admin writes | still target Supabase (D1 adapter loudly refuses writes — no split-brain possible) |
+
 ## Sprint status (2026-09-29, third sprint)
 
 | Item | State |

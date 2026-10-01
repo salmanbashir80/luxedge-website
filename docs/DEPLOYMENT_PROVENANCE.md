@@ -280,6 +280,73 @@ that same hash on both sides before the rebase.)
   the former 6 baselines were fixed by PR #139, not suppressed; `npx vitest run`
   1765 passed / 8 skipped / 0 failed; `npm run build` clean.
 
+### Entry 8 — Supabase → D1 production cutover (LIVE, 2026-10-01)
+
+Supabase project `eidujmfbcfrjjleitaqp` answered **402 exceed_egress_quota on
+every surface** (PostgREST, Storage, Auth — anon and service-role keys, re-probed
+2026-10-01). Production symptoms: `/api/db/*` and `/blog` 503, product/category
+pages 503, `/google-products.xml` 502, sitemap stuck in `x-luxedge-sitemap-mode:
+emergency` (12 static URLs). The prepared D1 migration (Entries 3–4) had been
+waiting behind the media gate.
+
+**Media gate resolved before cutover.** Re-verified live: of 117 products, 32
+active / 27 commerce-ready; only **2 active products** referenced Supabase
+Storage as their primary image, and every one of their 6 `product_images` rows
+already carried a working site-relative mirror in `public_url` (`/img/hk/*.jpg`,
+files present in the asset bundle). New migration
+`cloudflare/d1/migrations/0005_mirror_supabase_image_urls.sql` (idempotent)
+repoints `url` → `public_url` **only** where a verified local mirror exists:
+6 image rows + 2 product rows on both D1 databases; the other 329 Supabase
+Storage references (non-primary, no mirror) are left untouched — no fabrication,
+originals still recoverable from the Supabase export. R2 remains forbidden
+(needs a payment method).
+
+**Data completeness re-proven against the LIVE source** via the Supabase
+Management API SQL endpoint (independent of the 402): D1 row counts equal the
+live counts (products 117/117, categories 11/11, product_images 427/427,
+blog_posts 10/10, media_videos 27/27, coupons 14/14, variants 1/1) and
+`MAX(products.updated_at)` is microsecond-identical on both sides
+(`2026-09-28 02:41:52.864112+00`) — no stale migration, no drift.
+
+**Code changes** (`84bfe25` line continues; new commits in this entry):
+
+| Change | Why |
+| --- | --- |
+| `api/google-feed.ts` reads through `worker/d1/read.ts` | the feed was the one public read still hard-wired to Supabase (its 502); identical PostgREST path strings, so D1 and Vercel/Supabase behavior are unchanged |
+| Feed images use `url \|\| public_url`, absolutized | Merchant Center needs absolute URLs; post-0005 local mirrors feed `https://luxedge.us/img/...` |
+| `src/content/productEligibility.ts` accepts site-relative images | `usableImage()` = `https?://` **or** `/...` — otherwise migration 0005 would have silently failed the salt products' PDP eligibility (fail-closed check, definition aligned with site reality, bare tokens still rejected) |
+| `worker/seo-meta.ts` `is_primary` coercion `!!` not `=== true` | D1 returns 0/1 integers; the strict compare broke primary-first image ordering on D1 |
+| `wrangler.toml` production `DATA_BACKEND = "d1"` | the cutover switch itself |
+
+**Deploys:** staging v `9968d4ed` → `bba9d2d1` → `34b8475b` (all on
+`DATA_BACKEND=d1`, full surface verified) → **production v `a50cd5fd`** (cutover,
+asset `index-D8mU0Fu2.js`-era build with `VITE_DATA_BACKEND=d1` baked).
+Staging D1 migration 0005 applied before its deploys; production D1 before the
+cutover deploy.
+
+**Live evidence (2026-10-01, `luxedge.us`):** `/api/db/categories?select=id&limit=1`
+200 with a row; `/api/db/products` 200; `/blog` 200; `/shop` 200 rendering **32
+products** in the browser (was 0); `/google-products.xml` 200 with **32 items**;
+`/sitemap.xml` 200 with **65 URLs** (32 product + 9 blog + 24 static) and
+**`x-luxedge-sitemap-mode: dynamic`** (was emergency/12); salt-block PDP 200 with
+real title and JSON-LD images `https://luxedge.us/img/hk/*.jpg`; `/img/hk/
+hk-salt-lump.jpg` 200 image/jpeg; CJ-proxied images 200; `robots.txt` and
+`ads.txt` untouched and 200; Googlebot-UA and browser-UA receive **byte-identical
+HTML** (md5 match). `npx tsc --noEmit` zero errors; `npx vitest run` **1775
+passed / 8 skipped / 0 failed** (9 new feed tests + 1 eligibility test).
+
+**Rollback** (none of it destructive): remove `DATA_BACKEND` from `[vars]` and
+redeploy (reads return to Supabase — currently 402, so the real fallback is the
+version roll-back below); `wrangler rollback` to `3187495b` or earlier restores
+the exact pre-cutover worker; migration 0005 is reversible with the documented
+LIKE patterns; Supabase data untouched throughout.
+
+**Remaining honest caveats:** admin catalog/blog writes still target Supabase
+(the D1 adapter loudly refuses writes — no split-brain possible, and Supabase
+writes are 402-broken today anyway, so the console is read-broken-by-quota, not
+silently diverging); the 329 mirrored-less Supabase image rows belong to
+inactive/archived products and surface nowhere public.
+
 ## Adding an entry
 
 1. Note the Worker version `npx wrangler deployments list` reports for the deploy (with

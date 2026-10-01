@@ -23,4 +23,15 @@ describe('public PDP eligibility', () => {
     expect(isPubliclyListableProduct({ ...qualified, slug: 'grooming-kit', description: `${qualified.description} 12-piece grooming kit, 10-piece grooming kit.` })).toBe(false);
     expect(isPubliclyListableProduct({ ...qualified, slug: 'water-trough', description: `${qualified.description} 30-gallon trough water bladder.` })).toBe(false);
   });
+  it('accepts a site-relative local-mirror image but never a bare token', () => {
+    // Post-migration-0005 shape: product_images.url points at the site's own
+    // static assets (/img/...) instead of the restricted Supabase Storage.
+    const localMirror = {
+      ...qualified,
+      image_url: '',
+      product_images: [{ url: '/img/hk/hk-salt-lump.jpg', public_url: '/img/hk/hk-salt-lump.jpg' }],
+    };
+    expect(isPubliclyListableProduct(localMirror)).toBe(true);
+    expect(publicProductIneligibilityReason({ ...qualified, image_url: 'not-a-url' })).toBe('missing usable product image');
+  });
 });

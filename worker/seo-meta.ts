@@ -234,9 +234,11 @@ async function getProducts(): Promise<ProductRow[] | null> {
           const list = byProduct.get(p.id);
           if (list) {
             // Keep the same ordering consumers expect: primary first, then sort.
+            // is_primary arrives as boolean (Postgres) or 0/1 (D1) — Number()
+            // normalizes both; a strict === true would break D1 ordering.
             p.product_images = list.slice().sort(
               (a, b) =>
-                (Number(b.is_primary === true) - Number(a.is_primary === true)) ||
+                (Number(!!b.is_primary) - Number(!!a.is_primary)) ||
                 ((a.sort_order ?? 0) - (b.sort_order ?? 0)),
             );
           }
@@ -600,7 +602,7 @@ export function productImageUrls(p: ProductRow): string[] {
   };
   const rows = (p.product_images || []).slice().sort(
     (a, b) =>
-      Number(b.is_primary === true) - Number(a.is_primary === true) ||
+      Number(!!b.is_primary) - Number(!!a.is_primary) ||
       (a.sort_order ?? 0) - (b.sort_order ?? 0),
   );
   const urls = rows.map((r) => abs(r.url || r.public_url)).filter((u): u is string => !!u);

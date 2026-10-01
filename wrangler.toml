@@ -43,6 +43,12 @@ name = "SEND_MAIL"
 [vars]
 VERCEL_ENV = "production"
 DEPLOYMENT_ENV = "production"
+# D1 CUTOVER (2026-10-01): the Worker's public reads (storefront via /api/db,
+# sitemap, google-products.xml, SSR SEO) now read Cloudflare D1 instead of the
+# quota-blocked Supabase PostgREST. Staging has run this way since staging had
+# the same switch; staging verified the full surface first (65-URL dynamic
+# sitemap, 32-item feed, salt-block product page with local-mirror images).
+DATA_BACKEND = "d1"
 # Cloudflare Email Routing management (self-service addresses). The API token
 # itself is a SECRET (wrangler secret put CLOUDFLARE_API_TOKEN).
 CLOUDFLARE_ACCOUNT_ID = "f542683e97458480452b0b8ef37a898a"
@@ -97,8 +103,7 @@ name = "SEND_MAIL"
 [env.staging.vars]
 VERCEL_ENV = "preview"
 DEPLOYMENT_ENV = "staging"
-# Staging reads D1. Production stays on Supabase until the D1 cutover is
-# explicitly verified and flipped there too.
+# Staging reads D1 — same as production since the 2026-10-01 cutover.
 DATA_BACKEND = "d1"
 
 [[env.staging.d1_databases]]
