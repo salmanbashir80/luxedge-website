@@ -320,9 +320,11 @@ blog_posts 10/10, media_videos 27/27, coupons 14/14, variants 1/1) and
 
 **Deploys:** staging v `9968d4ed` → `bba9d2d1` → `34b8475b` (all on
 `DATA_BACKEND=d1`, full surface verified) → **production v `a50cd5fd`** (cutover,
-asset `index-D8mU0Fu2.js`-era build with `VITE_DATA_BACKEND=d1` baked).
-Staging D1 migration 0005 applied before its deploys; production D1 before the
-cutover deploy.
+build with `VITE_DATA_BACKEND=d1` baked). Staging D1 migration 0005 applied
+before its deploys; production D1 before the cutover deploy. Commit: `c7619a0`
+(`feat(data): cut production reads over to Cloudflare D1`); as with Entries 1,
+5–7 the deploys ran from the working tree before the commit existed — the hash
+proof below closes that gap.
 
 **Live evidence (2026-10-01, `luxedge.us`):** `/api/db/categories?select=id&limit=1`
 200 with a row; `/api/db/products` 200; `/blog` 200; `/shop` 200 rendering **32
@@ -334,6 +336,13 @@ hk-salt-lump.jpg` 200 image/jpeg; CJ-proxied images 200; `robots.txt` and
 `ads.txt` untouched and 200; Googlebot-UA and browser-UA receive **byte-identical
 HTML** (md5 match). `npx tsc --noEmit` zero errors; `npx vitest run` **1775
 passed / 8 skipped / 0 failed** (9 new feed tests + 1 eligibility test).
+
+**Hash-level proof**
+
+```
+sha256(dist/assets/index-Ck8U1wRG.js) = 3f17d9531a29e094cb1a2dd79ffb151ab168d5f8af1feb5fc479fee342faacde
+sha256(curl https://luxedge.us/assets/index-Ck8U1wRG.js) = 3f17d9531a29e094cb1a2dd79ffb151ab168d5f8af1feb5fc479fee342faacde
+```
 
 **Rollback** (none of it destructive): remove `DATA_BACKEND` from `[vars]` and
 redeploy (reads return to Supabase — currently 402, so the real fallback is the
