@@ -234,7 +234,7 @@ Suite state at deploy: `npx vitest run` 1,741 passed / 8 skipped / 0 failed;
 | Environment | **`luxedge-production` — live** (staging `luxedge-cloudflare-staging` also live) |
 | **Live Worker version** | production `22386778-f0ad-49d2-8469-222956fde8d2`; staging `eaf095f4-1746-4720-b3de-ab8d1f3a7a25` (first staging upload `0d4f7e6a-977c-4498-b051-b49215637198`) |
 | Deploy date | `2026-10-01` |
-| **Commit that is live** | the commit that adds this entry — subject `feat(auth): let accounts request their own one-time recovery code`. Deployed from the working tree before it was committed (same ordering note as Entries 1, 5, 6). |
+| **Commit that is live** | `4286949a82f67c328c6f30d0f89e2eceb829bbd0` — `feat(auth): let accounts request their own one-time recovery code` |
 | Base (parent) commit | `1116c23e6e1b0baf4e5673aab40feb82159b265f` (docs entry 6) |
 | Deploy commands | `env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID npx wrangler deploy --env staging`, then `… npx wrangler deploy --keep-vars` (production bindings verified intact: `SEND_MAIL`, `DB (luxedge-production-db)`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ZONE_ID`, `YOUTUBE_*`) |
 | Config change | `[[env.staging.send_email]] name = "SEND_MAIL"` added to `wrangler.toml` — staging had no mail binding, so the one path that matters (a real code reaching the inbox) was untestable before shipping |
