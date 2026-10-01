@@ -392,30 +392,47 @@ export class WorkerDbAdapter implements DbAdapter {
     return rows.length ? rows[0] : null;
   }
 
-  private readOnly(operation: string): never {
-    throw new Error(
-      `D1 adapter is read-only (${operation} on ${this.base}). Public reads are migrated; authorized writes are not yet.`,
-    );
+  private adminUrl(table: string): string {
+    return `/api/admin/db/${encodeURIComponent(table)}`;
   }
 
-  async insert<T extends { id: string }>(_table: string, _row: T): Promise<T> {
-    return this.readOnly('insert');
+  private async mutate<T>(url: string, init: RequestInit): Promise<T> {
+    const res = await fetch(url, {
+      ...init,
+      headers: { ...init.headers, 'Content-Type': 'application/json', accept: 'application/json' },
+      credentials: 'same-origin'
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`D1 Admin API ${res.status}: ${text.slice(0, 200)}`);
+    }
+    if (res.status === 204) return null as unknown as T;
+    const rows = (await res.json()) as T[];
+    return rows[0] as T;
   }
 
-  async insertRaw<T>(_table: string, _row: T): Promise<T> {
-    return this.readOnly('insertRaw');
+  async insert<T extends { id: string }>(table: string, row: T): Promise<T> {
+    return this.mutate<T>(this.adminUrl(table), { method: 'POST', body: JSON.stringify(row) });
   }
 
-  async update<T extends { id: string }>(_table: string, _id: string, _patch: Partial<T>): Promise<T | null> {
-    return this.readOnly('update');
+  async insertRaw<T>(table: string, row: T): Promise<T> {
+    return this.mutate<T>(this.adminUrl(table), { method: 'POST', body: JSON.stringify(row) });
   }
 
-  async updateBy<T>(_table: string, _column: string, _value: string, _patch: Partial<T>): Promise<T | null> {
-    return this.readOnly('updateBy');
+  async update<T extends { id: string }>(table: string, id: string, patch: Partial<T>): Promise<T | null> {
+    return this.updateBy(table, 'id', id, patch);
   }
 
-  async remove(_table: string, _id: string): Promise<void> {
-    this.readOnly('remove');
+  async updateBy<T>(table: string, column: string, value: string, patch: Partial<T>): Promise<T | null> {
+    const url = new URL(this.adminUrl(table), typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    url.searchParams.append(column, `eq.${value}`);
+    return this.mutate<T | null>(url.toString(), { method: 'PATCH', body: JSON.stringify(patch) });
+  }
+
+  async remove(table: string, id: string): Promise<void> {
+    const url = new URL(this.adminUrl(table), typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    url.searchParams.append('id', `eq.${id}`);
+    await this.mutate<void>(url.toString(), { method: 'DELETE' });
   }
 
   /** Real probe: reads one public row through the Worker the way the store does. */

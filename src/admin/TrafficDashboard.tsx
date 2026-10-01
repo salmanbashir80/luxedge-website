@@ -1,18 +1,22 @@
 // ============================================================================
 // TRAFFIC OVERVIEW — first-party analytics dashboard (Admin)
 //
-// Reads `site_events` (Supabase, migration 0023) as a signed-in admin and shows
-// real visitor traffic with charts: page views, visitors, sessions, funnel,
-// daily trend, wishlist saves, top pages, traffic sources, devices, top
-// products. This is independent of Google — data is what this site itself
-// records.
+// Reads `site_events` through the Worker's /api/admin/traffic route (D1,
+// migration 0006) as a signed-in admin and shows real visitor traffic with
+// charts: page views, visitors, sessions, funnel, daily trend, wishlist saves,
+// top pages, traffic sources, devices, top products. This is independent of
+// Google — data is what this site itself records.
+//
+// Supabase fallback: deployments that still run Supabase Auth (pre-D1
+// rollback) read the legacy direct-PostgREST path when the route is missing.
 // ============================================================================
 import { useEffect, useMemo, useState } from 'react';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
   BarChart, Bar, PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import { fetchSiteEvents, type SiteEventRow } from '../services/siteEvents';
+import { fetchTrafficEvents, type SiteEventRow } from '../services/traffic';
+import { fetchSiteEvents } from '../services/siteEvents';
 
 const DAY_OPTIONS = [7, 14, 30, 90];
 const COLORS = ['#2563eb', '#0ea5e9', '#16a34a', '#f59e0b', '#8b5cf6', '#ec4899', '#10b981', '#f43f5e'];
@@ -48,20 +52,37 @@ export default function TrafficDashboard() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchSiteEvents(days)
-      .then((r) => {
-        if (cancelled) return;
-        setRows(r);
+    const load = async (): Promise<string> => {
+      // D1 route first; only a genuinely missing route falls back to the
+      // legacy direct-Supabase read (rollback deployments).
+      const t = await fetchTrafficEvents(days);
+      if (cancelled) return 'cancelled';
+      if (t.source === 'd1') {
+        setRows(t.rows);
+        setError(t.error || null);
+        return t.error || 'loaded';
+      }
+      if (t.error !== 'route-missing') {
+        setRows([]);
+        setError(t.error || 'Could not load analytics.');
+        return 'error';
+      }
+      try {
+        const legacy = await fetchSiteEvents(days);
+        if (cancelled) return 'loaded';
+        setRows(legacy);
         setError(null);
-      })
-      .catch((e) => {
-        if (cancelled) return;
+        return 'loaded';
+      } catch (e) {
+        if (cancelled) return 'error';
         setRows([]);
         setError((e as Error).message || 'Could not load analytics.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+        return 'error';
+      }
+    };
+    load().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
     return () => {
       cancelled = true;
     };
@@ -405,7 +426,7 @@ export default function TrafficDashboard() {
           </div>
 
           <p className="text-[11px] text-gray-400">
-            Data source: Supabase <code className="px-1 rounded bg-gray-100">site_events</code> (events your storefront records via{' '}
+            Data source: D1 <code className="px-1 rounded bg-gray-100">site_events</code> (events your storefront records via{' '}
             <code className="px-1 rounded bg-gray-100">recordSiteEvent</code>). Admin-only read; visitors can write events but never read them.
             GA4 still receives the same events separately.
           </p>

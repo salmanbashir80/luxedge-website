@@ -79,9 +79,11 @@ import { buildSitemap, buildEmergencyStaticSitemap } from './sitemap';
 import { setDataRuntime } from './d1/runtime';
 import buyerAuthHandler from '../api/auth/index';
 import adminBuyersHandler from '../api/admin/buyers';
+import adminTrafficHandler from '../api/admin/traffic';
 import { handleDbApi } from './db-api';
 import blogAutomationHandler from '../api/blog-automation/index';
 import adsenseHandler, { setAdSenseRuntimeBindings } from '../api/adsense/index';
+import adminDbHandler from '../api/admin/db';
 
 type NodeHandler = (req: IncomingMessage, res: ServerResponse) => Promise<void>;
 
@@ -459,6 +461,24 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       return new Response(res._body || '', { status: res._status, headers: { ...res._headers, 'content-type': contentType } });
     }
     // Admin-issued one-time buyer activation/reset codes (requireAdmin-guarded).
+    // First-party traffic analytics on D1 (migration 0006): GET is
+    // admin-gated (the dashboard read), POST is the public cookie-less
+    // storefront ingest — both through the same route like /api/auth.
+    if (url.pathname === '/api/admin/traffic' || url.pathname.startsWith('/api/admin/traffic/')) {
+      const req = makeReq(request, url) as IncomingMessage & { env?: Env };
+      req.env = env;
+      const res = makeRes() as ShimRes;
+      try {
+        await adminTrafficHandler(req, res);
+      } catch {
+        return new Response(JSON.stringify({ error: 'Internal server error' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      const contentType = res._headers['content-type'] || 'text/plain; charset=utf-8';
+      return new Response(res._body || '', { status: res._status, headers: { ...res._headers, 'content-type': contentType } });
+    }
     if (url.pathname === '/api/admin/buyers' || url.pathname.startsWith('/api/admin/buyers/')) {
       const req = makeReq(request, url) as IncomingMessage & { env?: Env };
       req.env = env;
@@ -466,6 +486,22 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       try {
         await adminBuyersHandler(req, res);
       } catch {
+        return new Response(JSON.stringify({ error: 'Internal server error' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      const contentType = res._headers['content-type'] || 'text/plain; charset=utf-8';
+      return new Response(res._body || '', { status: res._status, headers: { ...res._headers, 'content-type': contentType } });
+    }
+    // Admin DB API for D1 mutations (server-side, admin-JWT).
+    if (url.pathname.startsWith('/api/admin/db/')) {
+      const req = makeReq(request, url) as IncomingMessage & { env?: Env };
+      req.env = env;
+      const res = makeRes() as ShimRes;
+      try {
+        await adminDbHandler(req, res);
+      } catch (err) {
         return new Response(JSON.stringify({ error: 'Internal server error' }), {
           status: 500,
           headers: { 'content-type': 'application/json' },

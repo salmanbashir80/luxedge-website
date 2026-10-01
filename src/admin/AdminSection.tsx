@@ -6162,7 +6162,7 @@ function AMarketingTraffic() {
       )}
 
       <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-xs text-gray-500 leading-relaxed">
-        <strong className="text-gray-700">Global deployment note:</strong> This project is a static site served by Vercel with no backend. Browser
+        <strong className="text-gray-700">Global deployment note:</strong> This project is a Cloudflare Worker backed by D1 SQLite and SPA asset serving. Browser
         localStorage only previews changes on this device. To make settings apply to <em>all</em> visitors, download
         <code className="bg-white px-1 rounded"> site-config.json </code>, commit it to the repo at
         <code className="bg-white px-1 rounded"> public/site-config.json </code>, and deploy. The <code className="bg-white px-1 rounded">ads.txt</code>

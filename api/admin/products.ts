@@ -22,6 +22,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { requireAdmin } from '../_lib/auth.js';
 import { sendJson, readJsonBody } from '../_lib/providers.js';
+import { isD1Backend, getDataRuntime } from '../../worker/d1/runtime.js';
 
 const TAX_CODE = 'txcd_99999999';
 
@@ -97,15 +98,23 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   }
 
   try {
-    // Unique slug: base slug, then -2, -3… until free.
+    const isD1 = isD1Backend();
     let slug = slugify(title);
     for (let n = 2; n < 100; n++) {
-      const hit = await fetch(`${base}/rest/v1/products?select=slug&slug=eq.${slug}`, {
-        headers: { apikey: key, Authorization: `Bearer ${key}` },
-        signal: AbortSignal.timeout(10_000),
-      });
-      const rows: { slug: string }[] = hit.ok ? ((await hit.json()) as { slug: string }[]) : [];
-      if (rows.length === 0) break;
+      let hitCount = 0;
+      if (isD1) {
+        const db = getDataRuntime().db!;
+        const hit = await db.prepare('SELECT slug FROM products WHERE slug = ?').bind(slug).first();
+        if (hit) hitCount = 1;
+      } else {
+        const hit = await fetch(`${base}/rest/v1/products?select=slug&slug=eq.${slug}`, {
+          headers: { apikey: key, Authorization: `Bearer ${key}` },
+          signal: AbortSignal.timeout(10_000),
+        });
+        const rows: { slug: string }[] = hit.ok ? ((await hit.json()) as { slug: string }[]) : [];
+        hitCount = rows.length;
+      }
+      if (hitCount === 0) break;
       slug = `${slugify(title)}-${n}`;
     }
 
@@ -147,22 +156,33 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       created_at: now,
       updated_at: now,
     };
-    const insertRes = await fetch(`${base}/rest/v1/products`, {
-      method: 'POST',
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation',
-      },
-      body: JSON.stringify(product),
-      signal: AbortSignal.timeout(15_000),
-    });
-    const inserted = (await insertRes.json()) as Array<{ id: string }> | { message?: string };
-    const productId = Array.isArray(inserted) ? inserted[0]?.id : undefined;
-    if (!insertRes.ok || !productId) {
-      sendJson(res, 502, { error: 'Failed to create product in the database' });
-      return;
+
+    let productId: string | undefined = undefined;
+    if (isD1) {
+      const db = getDataRuntime().db!;
+      const cols = Object.keys(product).map(k => `"${k}"`);
+      const placeholders = Object.keys(product).map(() => '?');
+      const values = Object.values(product).map(v => typeof v === 'boolean' ? (v ? 1 : 0) : (v !== null && typeof v === 'object' ? JSON.stringify(v) : v));
+      await db.prepare(`INSERT INTO products (${cols.join(', ')}) VALUES (${placeholders.join(', ')})`).bind(...values).run();
+      productId = product.id;
+    } else {
+      const insertRes = await fetch(`${base}/rest/v1/products`, {
+        method: 'POST',
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify(product),
+        signal: AbortSignal.timeout(15_000),
+      });
+      const inserted = (await insertRes.json()) as Array<{ id: string }> | { message?: string };
+      productId = Array.isArray(inserted) ? inserted[0]?.id : undefined;
+      if (!insertRes.ok || !productId) {
+        sendJson(res, 502, { error: 'Failed to create product in the database' });
+        return;
+      }
     }
 
     // product_images legacy NOT NULLs: storage_path, public_url, alt_text.
@@ -181,33 +201,50 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         sort_order: i,
         created_at: now,
       };
-      let imgRes = await fetch(`${base}/rest/v1/product_images`, {
-        method: 'POST',
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(row),
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (!imgRes.ok) {
-        // LIVE-db quirk: product_images.storage_path has an out-of-band UNIQUE
-        // constraint (not in migrations), so a URL already used by another
-        // product 409s. Keep the real display url/public_url and uniquify only
-        // the legacy storage_path so the listing still carries its image.
-        imgRes = await fetch(`${base}/rest/v1/product_images`, {
+      
+      if (isD1) {
+        const db = getDataRuntime().db!;
+        try {
+          const cols = Object.keys(row).map(k => `"${k}"`);
+          const placeholders = Object.keys(row).map(() => '?');
+          const values = Object.values(row).map(v => typeof v === 'boolean' ? (v ? 1 : 0) : v);
+          await db.prepare(`INSERT INTO product_images (${cols.join(', ')}) VALUES (${placeholders.join(', ')})`).bind(...values).run();
+          imagesSaved++;
+        } catch (e) {
+          try {
+            row.storage_path = `${url}#api-${productId.slice(0, 8)}`;
+            const cols = Object.keys(row).map(k => `"${k}"`);
+            const placeholders = Object.keys(row).map(() => '?');
+            const values = Object.values(row).map(v => typeof v === 'boolean' ? (v ? 1 : 0) : v);
+            await db.prepare(`INSERT INTO product_images (${cols.join(', ')}) VALUES (${placeholders.join(', ')})`).bind(...values).run();
+            imagesSaved++;
+          } catch (e2) {}
+        }
+      } else {
+        let imgRes = await fetch(`${base}/rest/v1/product_images`, {
           method: 'POST',
           headers: {
             apikey: key,
             Authorization: `Bearer ${key}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ ...row, storage_path: `${url}#api-${productId.slice(0, 8)}` }),
+          body: JSON.stringify(row),
           signal: AbortSignal.timeout(15_000),
         });
+        if (!imgRes.ok) {
+          imgRes = await fetch(`${base}/rest/v1/product_images`, {
+            method: 'POST',
+            headers: {
+              apikey: key,
+              Authorization: `Bearer ${key}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ...row, storage_path: `${url}#api-${productId.slice(0, 8)}` }),
+            signal: AbortSignal.timeout(15_000),
+          });
+        }
+        if (imgRes.ok) imagesSaved++;
       }
-      if (imgRes.ok) imagesSaved++;
     }
 
     sendJson(res, 201, { ok: true, id: productId, slug, url: `/product/${slug}`, status: live ? 'active' : 'draft', images: imagesSaved });
