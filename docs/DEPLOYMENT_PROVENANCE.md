@@ -232,25 +232,34 @@ Suite state at deploy: `npx vitest run` 1,741 passed / 8 skipped / 0 failed;
 | --- | --- |
 | Feature | `POST /api/auth/forgot` + "Forgot password?" on `/admin/login` and the buyer sign-in page; code mailed to the account's verified inbox |
 | Environment | **`luxedge-production` — live** (staging `luxedge-cloudflare-staging` also live) |
-| **Live Worker version** | production `22386778-f0ad-49d2-8469-222956fde8d2`; staging `eaf095f4-1746-4720-b3de-ab8d1f3a7a25` (first staging upload `0d4f7e6a-977c-4498-b051-b49215637198`) |
+| **Live Worker version** | production `3187495b-a887-480b-be7a-f0fd896239b5` (first upload of the feature `22386778-f0ad-49d2-8469-222956fde8d2`, from the pre-merge tree); staging `eaf095f4-1746-4720-b3de-ab8d1f3a7a25` (first staging upload `0d4f7e6a-977c-4498-b051-b49215637198`) |
 | Deploy date | `2026-10-01` |
-| **Commit that is live** | `4286949a82f67c328c6f30d0f89e2eceb829bbd0` — `feat(auth): let accounts request their own one-time recovery code` |
-| Base (parent) commit | `1116c23e6e1b0baf4e5673aab40feb82159b265f` (docs entry 6) |
+| **Commit that is live** | `0e17bc4` on `origin/main`, whose code commit is `84bfe25` — `feat(auth): let accounts request their own one-time recovery code` (pre-rebase equivalent: `4286949a82f67c328c6f30d0f89e2eceb829bbd0`) |
+| Base (parent) commit | `78431d8` (`fix(seo): serve /careers instead of 404ing, and unblock the typecheck (#139)`, merged from another thread while this work was in progress) |
 | Deploy commands | `env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID npx wrangler deploy --env staging`, then `… npx wrangler deploy --keep-vars` (production bindings verified intact: `SEND_MAIL`, `DB (luxedge-production-db)`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ZONE_ID`, `YOUTUBE_*`) |
 | Config change | `[[env.staging.send_email]] name = "SEND_MAIL"` added to `wrangler.toml` — staging had no mail binding, so the one path that matters (a real code reaching the inbox) was untestable before shipping |
 | D1 migrations | none (no schema change; `issueActivationCode` gained an option only) |
 
-Ordering note (same as Entries 1, 5 and 6): the staging deploy ran before the
-edit that added the staging mail binding — the first staging upload therefore
+Ordering notes. (1) Same as Entries 1, 5 and 6: the deploys ran from the working
+tree before the code commit existed. (2) The staging deploy ran before the edit
+that added the staging mail binding — the first staging upload therefore
 honestly answered `channel: "operator-manual"` — and the second upload
-(`eaf095f4`) is the one that can deliver.
+(`eaf095f4`) is the one that can deliver. (3) `origin/main` moved under this
+work: another thread's PR #139 merged, so the two commits were rebased onto it
+and production was rebuilt and redeployed (`3187495b`) so that it serves exactly
+the tree of the commit this entry records, rather than a tree that no longer
+exists on any branch.
 
 **Hash-level proof**
 
 ```
-sha256(dist/assets/index-C7Otebn4.js) = 20f417cca44427b0017b496b88f426e10d17cdbddc4b2468f4b1c0af8d74aa0d
-sha256(curl https://luxedge.us/assets/index-C7Otebn4.js) = 20f417cca44427b0017b496b88f426e10d17cdbddc4b2468f4b1c0af8d74aa0d
+sha256(dist/assets/index-k0I07Qw-.js) = bd31b1e5996b45343d370f09629bfe185f516a36bafb0f07a0864d3a725e34c5
+sha256(curl https://luxedge.us/assets/index-k0I07Qw-.js) = bd31b1e5996b45343d370f09629bfe185f516a36bafb0f07a0864d3a725e34c5
 ```
+
+(The first upload served `index-C7Otebn4.js` =
+`20f417cca44427b0017b496b88f426e10d17cdbddc4b2468f4b1c0af8d74aa0d`, which was
+that same hash on both sides before the rebase.)
 
 **Evidence gathered live (2026-10-01)**
 
@@ -266,9 +275,10 @@ sha256(curl https://luxedge.us/assets/index-C7Otebn4.js) = 20f417cca44427b0017b4
   The same pair appears on staging.
 * `/admin/login` renders both **Forgot password?** and **Have an activation
   code? Use it →**, and the forgot card names the verified inbox it will mail.
-* No regression: `GET /sitemap.xml` still `200`; `npx tsc --noEmit` exactly the
-  6 baseline errors; `npx vitest run` 1750 passed / 8 skipped / 0 failed;
-  `npm run build` clean.
+* No regression: `GET /sitemap.xml` still `200`, `GET /careers` now `200` (PR
+  #139's fix, carried into this deploy); `npx tsc --noEmit` **zero** errors —
+  the former 6 baselines were fixed by PR #139, not suppressed; `npx vitest run`
+  1765 passed / 8 skipped / 0 failed; `npm run build` clean.
 
 ## Adding an entry
 
