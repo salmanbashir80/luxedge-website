@@ -356,6 +356,68 @@ writes are 402-broken today anyway, so the console is read-broken-by-quota, not
 silently diverging); the 329 mirrored-less Supabase image rows belong to
 inactive/archived products and surface nowhere public.
 
+## Entry 9 — Traffic analytics on D1 (site_events) + historical backfill
+
+**Date:** 2026-10-02 · **Worker version:** `5452b145-bcc0-4f26-b97c-be6a6c7f439b`
+(production, via `wrangler versions deploy`; staging redeployed with
+`wrangler deploy --env staging`) · **Commit:** `de55734`
+(feat(analytics): first-party traffic on D1) on top of `8eda415`.
+
+**What shipped:** the Admin Traffic Overview read `site_events` through Supabase
+PostgREST with the legacy admin JWT — impossible once Supabase went 402 and
+admin sessions moved to D1 cookies. Replacement, all on D1:
+
+- migration `0006_site_events.sql` applied to **staging and production** D1.
+- `/api/admin/traffic` — GET admin-gated aggregate (`?days=N`), POST public
+  cookie-less ingest (origin allowlist CSRF guard, durable 120/h/IP rate limit,
+  field clamping, KNOWN_EVENTS allowlist, 204-on-drop, 413 on oversize).
+- client `fetchTrafficEvents` (D1 first; legacy Supabase read only when the
+  route is missing) and `recordSiteEvent` **dual-sink**: same-origin mirror
+  into D1 with full identity (visitor/session/referrer/UTM/item_ids/value),
+  Supabase POST unchanged for rollback deployments; `/admin` paths never
+  recorded.
+- **Historical backfill:** 6,610 rows exported from live Supabase via the
+  Management API SQL endpoint (`.freebuff/export-se.mjs`, 4×2000-page OFFSET
+  pagination), converted to idempotent `INSERT OR IGNORE` chunks
+  (`.freebuff/convert-se.mjs`, 8 files × ≤900 stmts) and applied with retry
+  (`.freebuff/apply-se.sh`). Production D1 verified **6,612 rows / 6,612
+  distinct ids** (6,610 backfill + 2 live verification events); page_view
+  counts match the Supabase distribution (4,300).
+- fix carried in the same commit: `api/admin/products.ts` D1 quick-add used the
+  nonexistent `.first()` — now `.all()` + optional `.run()` per the runtime
+  contract (`8eda415` had shipped both type errors and a runtime bug).
+
+**Live verification (all on luxedge.us):** same-origin ingest POST → 204 with
+the row present in D1; cross-origin (`evil.example` Origin), unknown-event and
+malformed-JSON POSTs → 204 with **no** row; GET anon → 401, buyer session →
+403, admin cookie → 200 `source:"d1"` with 5,867 rows at 30d. A real preview
+browser signed in at `/admin`, opened **Marketing & Traffic**: no more
+"Traffic data unavailable" — “5,867 events · last 30 days”, KPI cards, 7
+recharts surfaces, day-range switching 30d→7d live (135 events). A plain
+`/shop` visit from the same browser landed as `page_view /shop desktop` in D1
+within seconds — and after the full-identity mirror fix, with non-null
+visitor_id/session_id (the pre-fix mirror sent NULLs; fixed in `de55734`,
+redeployed as `5452b145`). Temp verify admins (`traffic-verify@`,
+`traffic-verify2@`) disabled **and demoted to buyer** afterwards.
+
+**Hash-level proof**
+
+```
+sha256(dist/assets/index-BTRBAbHm.js) = c564d1f8e6dcc42173aaf71b9a904a458245b5c460a43c4a32ac9fcd57c6ab48
+sha256(curl https://luxedge.us/assets/index-BTRBAbHm.js) = c564d1f8e6dcc42173aaf71b9a904a458245b5c460a43c4a32ac9fcd57c6ab48
+```
+
+Tests: `npx vitest run` **1784 passed / 8 skipped / 0 failed** (9 route tests
+in `api/__tests__/traffic.test.ts` incl. real signup+login admin-cookie flow;
+dual-sink expectations in `src/services/__tests__/siteEvents.test.ts`);
+`npx tsc --noEmit` clean.
+
+**Rollback:** remove the `/api/admin/traffic` route block from
+`worker/index.ts` and redeploy (dashboard falls back to the legacy Supabase
+read via its route-missing path); D1 site_events can be dropped with
+`DROP TABLE IF EXISTS site_events`; the `recordTrafficEvent` mirror is
+best-effort and silently absent pre-rollback. Supabase data untouched.
+
 ## Adding an entry
 
 1. Note the Worker version `npx wrangler deployments list` reports for the deploy (with
