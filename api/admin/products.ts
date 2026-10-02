@@ -104,8 +104,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       let hitCount = 0;
       if (isD1) {
         const db = getDataRuntime().db!;
-        const hit = await db.prepare('SELECT slug FROM products WHERE slug = ?').bind(slug).first();
-        if (hit) hitCount = 1;
+        const hit = await db.prepare('SELECT slug FROM products WHERE slug = ?').bind(slug).all<{ slug: string }>();
+        if (hit.results && hit.results.length > 0) hitCount = 1;
       } else {
         const hit = await fetch(`${base}/rest/v1/products?select=slug&slug=eq.${slug}`, {
           headers: { apikey: key, Authorization: `Bearer ${key}` },
@@ -163,7 +163,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       const cols = Object.keys(product).map(k => `"${k}"`);
       const placeholders = Object.keys(product).map(() => '?');
       const values = Object.values(product).map(v => typeof v === 'boolean' ? (v ? 1 : 0) : (v !== null && typeof v === 'object' ? JSON.stringify(v) : v));
-      await db.prepare(`INSERT INTO products (${cols.join(', ')}) VALUES (${placeholders.join(', ')})`).bind(...values).run();
+      await db.prepare(`INSERT INTO products (${cols.join(', ')}) VALUES (${placeholders.join(', ')})`).bind(...values).run?.();
       productId = product.id;
     } else {
       const insertRes = await fetch(`${base}/rest/v1/products`, {
@@ -208,7 +208,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
           const cols = Object.keys(row).map(k => `"${k}"`);
           const placeholders = Object.keys(row).map(() => '?');
           const values = Object.values(row).map(v => typeof v === 'boolean' ? (v ? 1 : 0) : v);
-          await db.prepare(`INSERT INTO product_images (${cols.join(', ')}) VALUES (${placeholders.join(', ')})`).bind(...values).run();
+          await db.prepare(`INSERT INTO product_images (${cols.join(', ')}) VALUES (${placeholders.join(', ')})`).bind(...values).run?.();
           imagesSaved++;
         } catch (e) {
           try {
@@ -216,7 +216,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
             const cols = Object.keys(row).map(k => `"${k}"`);
             const placeholders = Object.keys(row).map(() => '?');
             const values = Object.values(row).map(v => typeof v === 'boolean' ? (v ? 1 : 0) : v);
-            await db.prepare(`INSERT INTO product_images (${cols.join(', ')}) VALUES (${placeholders.join(', ')})`).bind(...values).run();
+            await db.prepare(`INSERT INTO product_images (${cols.join(', ')}) VALUES (${placeholders.join(', ')})`).bind(...values).run?.();
             imagesSaved++;
           } catch (e2) {}
         }

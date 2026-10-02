@@ -62,8 +62,11 @@ describe('recordSiteEvent', () => {
       campaign_medium: 'cpc',
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    // Two sinks now: call[0] = D1 mirror (/api/admin/traffic), call[1] = Supabase.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const d1Url = fetchMock.mock.calls[0][0] as string;
+    expect(d1Url).toBe('/api/admin/traffic');
+    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit];
     expect(url).toBe(`${URL}/rest/v1/site_events`);
     const headers = init.headers as Record<string, string>;
     expect(headers.apikey).toBe(ANON);
@@ -90,24 +93,38 @@ describe('recordSiteEvent', () => {
 
     recordSiteEvent('page_view', { page_location: 'http://localhost/' });
 
-    const body = JSON.parse(String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body));
+    // call[0] is the D1 mirror; the Supabase body is call[1].
+    const body = JSON.parse(String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body));
     expect(body.value).toBeUndefined();
     expect(body.currency).toBeUndefined();
   });
 
   it('falls back to the base insert when revenue columns are missing (42703)', async () => {
     stubBrowserGlobals();
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ code: '42703', message: 'column site_events.value does not exist' }), { status: 400 }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    // The D1 mirror also goes through global fetch — match on the Supabase URL
+    // so the mirror (best-effort, ignore-anything) cannot consume the 400.
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const u = String(input);
+      if (u.startsWith(URL)) {
+        // 400 only for the FIRST Supabase call (revenue columns still present
+        // in the module probe); later ones succeed so the retry resolves 204.
+        const calls = fetchMock.mock.calls.filter((c: unknown[]) => String(c[0]).startsWith(URL));
+        if (calls.length === 1) {
+          return Promise.resolve(new Response(JSON.stringify({ code: '42703', message: 'column site_events.value does not exist' }), { status: 400 }));
+        }
+      }
+      return Promise.resolve(new Response(null, { status: 204 }));
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     recordSiteEvent('purchase', { value: 99, currency: 'USD' });
     await new Promise((r) => setTimeout(r, 20));
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    const [u1, i1] = fetchMock.mock.calls[0] as [string, RequestInit];
-    const [u2, i2] = fetchMock.mock.calls[1] as [string, RequestInit];
+    const supabaseCalls = fetchMock.mock.calls.filter((c: unknown[]) => String(c[0]).startsWith(URL));
+    expect(supabaseCalls.length).toBeGreaterThanOrEqual(2); // original + retry
+    const [u1, i1] = supabaseCalls[0] as unknown as [string, RequestInit];
+    const [u2, i2] = supabaseCalls[1] as unknown as [string, RequestInit];
+    expect(u1).toBe(`${URL}/rest/v1/site_events`);
     expect(JSON.parse(String(i1.body)).value).toBe(99);
     const retryBody = JSON.parse(String(i2.body));
     expect(retryBody.value).toBeUndefined();
@@ -133,7 +150,8 @@ describe('recordSiteEvent', () => {
 
     recordSiteEvent('search', { search_term: 'horse' });
 
-    const body = JSON.parse(String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body));
+    // call[0] is the D1 mirror; the Supabase body is call[1].
+    const body = JSON.parse(String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body));
     expect(body.item_ids).toBeNull();
   });
 

@@ -14,6 +14,7 @@
 // ============================================================================
 
 import { getSupabaseConfig, getFreshAccessToken } from './supabase';
+import { recordTrafficEvent } from './traffic';
 
 const VID_KEY = 'luxedge_vid';
 const SID_KEY = 'luxedge_sid';
@@ -89,12 +90,10 @@ export interface TrackParams {
 export function recordSiteEvent(name: string, params: TrackParams = {}): void {
   try {
     if (typeof window === 'undefined') return;
-    const cfg = getSupabaseConfig();
-    if (!cfg) return;
-
     const path = window.location.pathname + window.location.search;
     if (path.startsWith('/admin')) return; // keep public traffic honest
 
+    const device = detectDevice(navigator.userAgent);
     const { visitor, session } = ids();
 
     let referrer = '';
@@ -112,13 +111,41 @@ export function recordSiteEvent(name: string, params: TrackParams = {}): void {
     }
     if (item_ids && item_ids.length === 0) item_ids = null;
 
+    const numericValue = typeof params.value === 'number' && Number.isFinite(params.value) ? params.value
+      : typeof params.value === 'string' && params.value.trim() !== '' ? Number(params.value) : NaN;
+    const currency = typeof params.currency === 'string' && params.currency.trim() ? params.currency.trim() : null;
+
+    // Mirror into the D1 ingest route (same-origin, cookie-less, rate-limited
+    // server-side) AFTER the admin-path guard. The D1 table always carries the
+    // revenue columns, so value/currency are not gated by the Supabase probe.
+    // Supabase remains the primary sink below so a rollback deployment keeps
+    // its original path; both sinks tolerate each other's absence and neither
+    // can break the storefront.
+    recordTrafficEvent({
+      event: name,
+      path,
+      referrer: referrer || null,
+      visitor_id: visitor,
+      session_id: session,
+      device,
+      utm_source: params.campaign_source ? String(params.campaign_source) : null,
+      utm_medium: params.campaign_medium ? String(params.campaign_medium) : null,
+      utm_campaign: params.campaign_name ? String(params.campaign_name) : null,
+      item_ids: item_ids || null,
+      value: Number.isFinite(numericValue) ? numericValue : null,
+      currency,
+    });
+
+    const cfg = getSupabaseConfig();
+    if (!cfg) return;
+
     const body: Record<string, unknown> = {
       event: name,
       path,
       referrer: referrer || null,
       visitor_id: visitor,
       session_id: session,
-      device: detectDevice(navigator.userAgent),
+      device,
       utm_source: params.campaign_source ? String(params.campaign_source) : null,
       utm_medium: params.campaign_medium ? String(params.campaign_medium) : null,
       utm_campaign: params.campaign_name ? String(params.campaign_name) : null,
@@ -128,12 +155,9 @@ export function recordSiteEvent(name: string, params: TrackParams = {}): void {
     // Revenue fields (migration 0024). Only sent once the columns exist;
     // if the first probe 400s, fall back to the base insert so analytics
     // recording NEVER stops just because a migration is pending.
-    const wantsRevenue = supportsRevenue !== false;
-    if (wantsRevenue) {
-      const v = typeof params.value === 'number' && Number.isFinite(params.value) ? params.value
-        : typeof params.value === 'string' && params.value.trim() !== '' ? Number(params.value) : NaN;
-      if (!Number.isNaN(v)) body.value = v;
-      if (typeof params.currency === 'string' && params.currency.trim()) body.currency = params.currency.trim();
+    if (supportsRevenue !== false) {
+      if (!Number.isNaN(numericValue)) body.value = numericValue;
+      if (currency) body.currency = currency;
     }
 
     const send = (b: Record<string, unknown>) =>
@@ -151,7 +175,7 @@ export function recordSiteEvent(name: string, params: TrackParams = {}): void {
       });
 
     send(body).then((res) => {
-      if (res && res.status === 400 && wantsRevenue) {
+      if (res && res.status === 400 && supportsRevenue !== false) {
         isMissingColumnResponse(res).then((missing) => {
           if (missing) {
             supportsRevenue = false;

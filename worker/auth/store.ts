@@ -65,7 +65,7 @@ export interface BuyerUser {
  * backend would 503 the Admin Console on production until the full cutover,
  * which is exactly the lockout this system was built to end.
  */
-function authDb(): D1DatabaseLike | null {
+export function authDb(): D1DatabaseLike | null {
   const rt = getDataRuntime();
   return rt.db;
 }
