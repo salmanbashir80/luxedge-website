@@ -13,6 +13,11 @@ compatibility_flags = ["nodejs_compat"]
 # deploys (for example the AdSense OAuth client ID).
 keep_vars = true
 
+routes = [
+  { pattern = "luxedge.us", custom_domain = true },
+  { pattern = "www.luxedge.us", custom_domain = true }
+]
+
 [assets]
 directory = "dist"
 binding = "ASSETS"
@@ -111,3 +116,14 @@ binding = "DB"
 database_name = "luxedge-staging-db"
 database_id = "41b939a3-f7ee-4d8c-8bf5-83d6f8dbe0d2"
 migrations_dir = "cloudflare/d1/migrations"
+
+[[queues.producers]]
+queue = "luxedge-d1-sync"
+binding = "D1_SYNC_QUEUE"
+
+[[queues.consumers]]
+queue = "luxedge-d1-sync"
+max_batch_size = 10
+max_batch_timeout = 5
+max_retries = 3
+dead_letter_queue = "luxedge-d1-sync-dlq"

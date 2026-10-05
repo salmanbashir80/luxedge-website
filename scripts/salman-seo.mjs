@@ -144,7 +144,16 @@ function sitemap() {
 // ---------------------------------------------------------------------------
 async function verify() {
   const urls = ['/', '/shop', '/blog', '/sitemap.xml', '/robots.txt', '/google-products.xml'];
-  const sample = (await fetchAll('products', 'select=slug,status')).find((p) => p.status === 'active' && p.slug);
+  let sample = null;
+  if (ENV.VITE_DATA_BACKEND === 'd1') {
+    const res = await fetch(`https://luxedge.us/api/db/products?select=slug,status&status=in.(active,published)&limit=1`);
+    if (res.ok) {
+      const data = await res.json();
+      sample = data[0];
+    }
+  } else {
+    sample = (await fetchAll('products', 'select=slug,status')).find((p) => p.status === 'active' && p.slug);
+  }
   if (sample) urls.push(`/product/${sample.slug}`);
   const results = [];
   for (const u of urls) {

@@ -12,7 +12,7 @@
 // No credentials, no fake facts: null/unknown stays null/unknown.
 // ============================================================================
 
-import { getDb, type DbAdapter } from '../../services/db';
+import { getDb as getSharedDb, WorkerDbAdapter, type DbAdapter } from '../../services/db';
 import {
   CatalogProduct, CatalogCategory, CatalogImage, CatalogVariant, Coupon,
   StoreOffer, StoreSettings, DEFAULT_STORE_SETTINGS, deriveMarginPercent,
@@ -23,6 +23,14 @@ import {
   type CommerceReadiness, type SourceType, type InventorySource,
 } from './commerceReadiness';
 import { parseTagList } from './tags';
+
+// This repository belongs to admin catalog tools. Public /api/db is cached and
+// intentionally omits editor fields, so it cannot be used for save/Undo checks.
+const adminD1 = new WorkerDbAdapter('/api/admin/db');
+function getDb(): DbAdapter {
+  const shared = getSharedDb();
+  return shared.mode === 'd1' ? adminD1 : shared;
+}
 
 // ---------------------------------------------------------------------------
 // Live-schema awareness
@@ -805,7 +813,7 @@ const INPUT_FIELD_TO_COLUMNS: Record<keyof ProductInput, string[]> = {
   listingEndsAt: ['listing_ends_at'],
 };
 
-export async function updateProduct(id: string, input: Partial<ProductInput>): Promise<CatalogProduct | null> {
+export async function updateProduct(id: string, input: Partial<ProductInput>, options: { preserveSlug?: boolean } = {}): Promise<CatalogProduct | null> {
   const db = getDb();
   const existing = await db.get<ProductRow>('products', id);
   if (!existing) return null;
@@ -824,7 +832,7 @@ export async function updateProduct(id: string, input: Partial<ProductInput>): P
     if (patch.status === 'active' && !existing.published_at) patch.published_at = new Date().toISOString();
   }
   const effectivePatch = await writableColumns(patch);
-  if ('name' in input && input.name && input.name !== existing.name) {
+  if (!options.preserveSlug && 'name' in input && input.name && input.name !== existing.name) {
     effectivePatch.slug = await uniqueSlug(db, input.name, id);
   }
   await db.update('products', id, effectivePatch);

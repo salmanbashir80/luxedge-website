@@ -17,7 +17,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Pulse, Warning, Robot, CheckCircle, Cpu, ListChecks, Power, ArrowClockwise, ShieldCheck, ShieldWarning, XCircle,
 } from '@phosphor-icons/react';
-import { useApp, serverProviderStatus } from '../App';
+import { useApp } from '../App';
+import { serverProviderStatus } from '../features/ai/client';
 import SalmanOsPanel from './SalmanOsPanel';
 import {
   AI_TASKS, CONTROL_MODES, COST_STRATEGIES, DEFAULT_MODEL_HELP, SECOND_OPINION_MODES,

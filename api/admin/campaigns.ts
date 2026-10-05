@@ -28,6 +28,7 @@ import {
   campaignPublicState,
   campaignStatusAt,
   campaignFromTemplate,
+  campaignStorageHealth,
   loadCampaignBySlug,
   loadProductFlags,
   loadRegistry,
@@ -484,7 +485,12 @@ async function handleAction(body: Record<string, unknown>, res: ServerResponse):
 }
 
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  res.setHeader('Cache-Control', 'private, no-store');
   if (!(await requireAdmin(req, res))) return;
+  if (req.method === 'GET' || req.method === 'POST') {
+    const health = await campaignStorageHealth();
+    if (!health.ok) { sendJson(res, 503, { error: health.error }); return; }
+  }
   if (req.method === 'GET') {
     await handleGet(req, res);
     return;

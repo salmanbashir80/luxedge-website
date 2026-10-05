@@ -55,6 +55,9 @@
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+import { getDataRuntime, type D1DatabaseLike } from '../../worker/d1/runtime';
+import { readCampaignDoc, writeCampaignDoc } from './campaign-store';
+
 export type CampaignKind = 'gift' | 'promo';
 export type CampaignStatus = 'draft' | 'scheduled' | 'live' | 'paused' | 'ended' | 'archived';
 export type TemplateKey =
@@ -573,23 +576,78 @@ export function supabaseHeadersFor(serviceRole: string, json = false): Record<st
     : { apikey: serviceRole, Authorization: `Bearer ${serviceRole}` };
 }
 
-async function readDoc(key: string): Promise<string | null> {
+/** The two Campaign Manager documents that live in private D1 when the D1
+ * backend is active. `gift_drop_campaign_v1` (Free Gift) is NOT one of them. */
+const D1_CAMPAIGN_DOC_KEYS = new Set([CAMPAIGN_REGISTRY_KEY, CAMPAIGN_PRODUCT_FLAGS_KEY]);
+
+function campaignD1(key: string): D1DatabaseLike | null {
+  if (!D1_CAMPAIGN_DOC_KEYS.has(key)) return null;
+  const runtime = getDataRuntime();
+  return runtime.backend === 'd1' && runtime.db ? runtime.db : null;
+}
+
+/** Thrown by the strict loaders. Message is safe to show to an admin. */
+export class CampaignStorageError extends Error {}
+
+/** Read one doc, distinguishing failure from a genuinely absent value. */
+async function readDocResult(key: string): Promise<{ ok: true; value: string | null } | { ok: false; error: string }> {
+  const db = campaignD1(key);
+  if (db) return readCampaignDoc(db, key);
   const { url, serviceRole } = supabaseEnv();
-  if (!url || !serviceRole) return null;
+  if (!url || !serviceRole) return { ok: false, error: 'Campaign storage is not configured.' };
   try {
     const res = await fetch(`${url}/rest/v1/app_settings?key=eq.${encodeURIComponent(key)}&select=value`, {
       headers: supabaseHeadersFor(serviceRole),
       signal: AbortSignal.timeout(10_000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { ok: false, error: `Campaign storage unavailable (Supabase HTTP ${res.status}). No campaign changes were made.` };
     const rows = (await res.json()) as Array<{ value?: string }>;
-    return rows[0]?.value || null;
+    return { ok: true, value: rows[0]?.value || null };
   } catch {
-    return null;
+    return { ok: false, error: 'Campaign storage is unreachable. No campaign changes were made.' };
   }
 }
 
+/** Admin-only health probe. Never mistake an unavailable registry for empty.
+ * Does not change Gift Drop persistence.
+ */
+export async function campaignStorageHealth(): Promise<{ ok: boolean; error?: string }> {
+  const db = campaignD1(CAMPAIGN_REGISTRY_KEY);
+  if (db) {
+    const r = await readCampaignDoc(db, CAMPAIGN_REGISTRY_KEY);
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
+  }
+  const { url, serviceRole } = supabaseEnv();
+  if (!url || !serviceRole) return { ok: false, error: 'Campaign storage is not configured.' };
+  try {
+    const res = await fetch(`${url}/rest/v1/app_settings?key=eq.${encodeURIComponent(CAMPAIGN_REGISTRY_KEY)}&select=key&limit=1`, {
+      headers: supabaseHeadersFor(serviceRole), signal: AbortSignal.timeout(10_000),
+    });
+    return res.ok ? { ok: true } : { ok: false, error: `Campaign storage unavailable (Supabase HTTP ${res.status}). No campaign changes were made.` };
+  } catch { return { ok: false, error: 'Campaign storage is unreachable. No campaign changes were made.' }; }
+}
+
+/** Admin-only probe of the claim ledger (Supabase luxedge_orders, unchanged).
+ * Publishing a campaign that cannot record claims is refused while this fails. */
+export async function claimStorageHealth(): Promise<{ ok: boolean; error?: string }> {
+  const { url, serviceRole } = supabaseEnv();
+  if (!url || !serviceRole) return { ok: false, error: 'Claim storage is not configured.' };
+  try {
+    const res = await fetch(`${url}/rest/v1/luxedge_orders?select=id&coupon_code=eq.${encodeURIComponent(CLAIM_MARKER)}&limit=1`, {
+      headers: supabaseHeadersFor(serviceRole), signal: AbortSignal.timeout(10_000),
+    });
+    return res.ok ? { ok: true } : { ok: false, error: `Claim storage unavailable (Supabase HTTP ${res.status}).` };
+  } catch { return { ok: false, error: 'Claim storage is unreachable.' }; }
+}
+
+async function readDoc(key: string): Promise<string | null> {
+  const r = await readDocResult(key);
+  return r.ok ? r.value || null : null;
+}
+
 async function writeDoc(key: string, value: string): Promise<boolean> {
+  const db = campaignD1(key);
+  if (db) return writeCampaignDoc(db, key, value);
   const { url, serviceRole } = supabaseEnv();
   if (!url || !serviceRole) return false;
   try {
@@ -615,6 +673,30 @@ export async function loadRegistry(): Promise<CampaignConfig[]> {
   } catch {
     return [];
   }
+}
+
+/** Strict registry read for admin reads-before-writes: throws instead of
+ * returning [] so an unreadable registry can never be overwritten. */
+export async function loadRegistryStrict(): Promise<CampaignConfig[]> {
+  const r = await readDocResult(CAMPAIGN_REGISTRY_KEY);
+  if (!r.ok) throw new CampaignStorageError(r.error);
+  if (!r.value) return [];
+  let parsed: { campaigns?: CampaignConfig[] };
+  try { parsed = JSON.parse(r.value); } catch { throw new CampaignStorageError('Campaign registry is unreadable (invalid JSON). No campaign changes were made.'); }
+  if (!parsed || !Array.isArray(parsed.campaigns)) throw new CampaignStorageError('Campaign registry is unreadable (unexpected shape). No campaign changes were made.');
+  return parsed.campaigns;
+}
+
+/** Strict product-flag read (same fail-closed rule as loadRegistryStrict). */
+export async function loadProductFlagsStrict(): Promise<Record<string, ProductCampaignFlag>> {
+  const r = await readDocResult(CAMPAIGN_PRODUCT_FLAGS_KEY);
+  if (!r.ok) throw new CampaignStorageError(r.error);
+  if (!r.value) return {};
+  try {
+    const parsed = JSON.parse(r.value) as Record<string, ProductCampaignFlag>;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+  } catch { /* fall through */ }
+  throw new CampaignStorageError('Campaign product flags are unreadable. No campaign changes were made.');
 }
 
 /** Save the whole registry (single doc — small cardinality by design). */

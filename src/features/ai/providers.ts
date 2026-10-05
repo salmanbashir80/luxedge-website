@@ -100,18 +100,10 @@ export function loadAIProviders(storage?: Pick<Storage, 'getItem'>): AIProvider[
       // A model that is not in its own dropdown would render as a blank select.
       if (!p.models.includes(p.defaultModel)) p.models.push(p.defaultModel);
     }
-    // Migrate the previous shipped default (deepseek) to OpenRouter in stored
-    // configs so an upgrade can't pin a stale default. Explicit owner choices
-    // are kept: only flip when deepseek was the marked default and OpenRouter
-    // is available/enabled.
+    // Preserve an owner's marked provider. Changing models for retired IDs
+    // above is safe; silently changing their provider is not.
     const markedDefault = merged.find((p) => p.isDefault);
-    if (markedDefault?.id === 'deepseek') {
-      const or = merged.find((p) => p.id === 'openrouter');
-      if (or && or.enabled) {
-        markedDefault.isDefault = false;
-        or.isDefault = true;
-      }
-    }
+    if (markedDefault) merged.forEach((p) => { p.isDefault = p.id === markedDefault.id; });
     // Self-healing: a stale all-disabled config (e.g. from an old save) must
     // never leave the import flow without a provider. The SERVER decides which
     // providers actually have keys; client toggles only affect routing.

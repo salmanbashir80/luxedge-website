@@ -4,15 +4,16 @@
 // ============================================================================
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useApp } from '../App';
+import { loadAIProviders } from '../features/ai/providers';
+import { callAIProvider } from '../features/ai/client';
 import {
-  useApp, loadAIProviders, buildExtractionPrompt, callAIProvider, fetchPageContent,
-  extractAliExpressItemId, assessAliExpressRisk,
+  buildExtractionPrompt, fetchPageContent, extractAliExpressItemId, assessAliExpressRisk,
   buildImportImages, buildImportVariants, buildImportProductInput,
   buildStorageImageInputs, importProductImagesToStorage,
-  buildScrapedEvidenceProduct, mergeScrapedWithAi, requireReviewEvidence, isEmptyExtraction,
-  parseHtmlPage,
-} from '../App';
-import type { AIProvider, AIExtractedProduct, ImportHistoryEntry } from '../App';
+  buildScrapedEvidenceProduct, mergeScrapedWithAi, requireReviewEvidence, isEmptyExtraction, parseHtmlPage
+} from '../features/ai/importer';
+import type { AIProvider, AIExtractedProduct, ImportHistoryEntry } from '../features/ai/types';
 import { loadProviderSettings } from '../features/ai/providers';
 import { createProduct, updateProduct, saveProductImages, saveProductVariants, listCategories, setDbToken, checkProductDuplicate } from '../features/catalog/repository';
 import {

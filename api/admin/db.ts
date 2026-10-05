@@ -3,13 +3,24 @@ import { requireAdmin } from '../_lib/auth.js';
 import { sendJson, readJsonBody } from '../_lib/providers.js';
 import { getDataRuntime, isD1Backend } from '../../worker/d1/runtime.js';
 import { TABLE_SCHEMA } from '../../worker/d1/table-schema.js';
+import { buildStatement, coerceRow } from '../../worker/d1/query.js';
+
+// Only the existing catalog editor's tables. Credentials, buyers, orders and
+// authentication tables must never be added to this generic read surface.
+const CATALOG_READ_TABLES = new Set([
+  'products', 'categories', 'product_images', 'product_variants',
+  'coupons', 'store_offers', 'store_settings',
+]);
 
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('Vary', 'Cookie, Authorization');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
   const admin = await requireAdmin(req, res);
   if (!admin) return; // 401/403 sent
 
   if (!isD1Backend()) {
-    sendJson(res, 503, { error: 'Admin DB mutations are only supported on the D1 backend.' });
+    sendJson(res, 503, { error: 'Admin DB access is only supported on the D1 backend.' });
     return;
   }
   const db = getDataRuntime().db!;
@@ -26,7 +37,23 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
   const method = (req.method || 'GET').toUpperCase();
   if (method === 'GET') {
-    sendJson(res, 405, { error: 'Method not allowed. Use /api/db for reads.' });
+    if (!CATALOG_READ_TABLES.has(table)) {
+      sendJson(res, 403, { error: 'This table is not available through catalog reads.' });
+      return;
+    }
+    const statement = buildStatement(`${table}${url.search}`);
+    if (!statement) {
+      sendJson(res, 400, { error: 'Unsupported catalog query.' });
+      return;
+    }
+    try {
+      const result = await db.prepare(statement.sql).bind(...statement.params).all();
+      // No public listing projection: descriptions/SEO/internal editor fields
+      // are needed for accurate read-after-write and conflict-safe Undo.
+      sendJson(res, 200, (result.results || []).map(row => coerceRow(table, row)));
+    } catch {
+      sendJson(res, 503, { error: 'Catalog read unavailable. Please try again.' });
+    }
     return;
   }
 

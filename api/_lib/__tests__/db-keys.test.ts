@@ -8,6 +8,7 @@
 // ============================================================================
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { isConfiguredFull, resolveProviderKey, loadDbProviderKeys, generate, __resetDbKeysForTests, __resetKeyRotationForTests } from '../providers.js';
+import { resetDataRuntime } from '../../../worker/d1/runtime';
 
 const ORIG = new Map<string, string | undefined>([
   ['DEEPSEEK_API_KEY', process.env.DEEPSEEK_API_KEY],
@@ -35,6 +36,7 @@ describe('DB-attached AI provider keys', () => {
     __resetDbKeysForTests();
     __resetKeyRotationForTests();
     vi.unstubAllGlobals();
+    resetDataRuntime();
   });
 
   it('falls back to the DB-attached key when the env var is missing', async () => {
@@ -114,5 +116,15 @@ describe('DB-attached AI provider keys', () => {
     expect(fetchMock.mock.calls.length).toBe(firstCalls);
     await loadDbProviderKeys(true); // forced refresh
     expect(fetchMock.mock.calls.length).toBeGreaterThan(firstCalls);
+  });
+  it('uses new D1-attached keys through the shared resolver while env bindings still win', async () => {
+    resetDataRuntime({ DATA_BACKEND: 'd1', DB: { prepare: () => ({ all: async () => ({ results: [{ provider: 'deepseek', value: 'fixture-d1-key' }] }) }) } });
+    process.env.VITE_SUPABASE_URL = 'https://x.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'svc';
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 402 })));
+    delete process.env.DEEPSEEK_API_KEY;
+    expect(await resolveProviderKey('deepseek')).toBe('fixture-d1-key');
+    process.env.DEEPSEEK_API_KEY = 'fixture-env-key';
+    expect(await resolveProviderKey('deepseek')).toBe('fixture-env-key');
   });
 });

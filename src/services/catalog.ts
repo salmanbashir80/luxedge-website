@@ -83,6 +83,7 @@ export interface CatalogProduct {
   supplierProductRef?: string;
   supplierUrl?: string | null;
   status?: string;
+  isPartial?: boolean;
 }
 
 export interface CatalogVariant {
@@ -142,6 +143,7 @@ interface DbProductRow {
   category_id?: string | null;
   inventory_qty?: number | null;
   image_url?: string | null;
+  primary_image_url?: string | null;
   status?: string | null;
   brand?: string | null;
   tags?: unknown;
@@ -242,8 +244,10 @@ interface DbSettingRow {
 // supabase/migrations/*.sql as the source of truth.
 // ============================================================================
 export const CATEGORIES_PUBLIC_SELECT = 'id,name,slug,is_active';
+export const PRODUCTS_LISTING_SELECT =
+  'id,slug,name,short_description,price,compare_at_price,category_id,inventory_qty,status,brand,tags,featured,new_arrival,free_shipping,us_inventory,sale_enabled,discount_type,discount_value,stock_status,delivery_min_days,delivery_max_days,supplier_source,supplier_product_ref,supplier_url,cost_price,landed_cost,shipping_cost,commerce_readiness,source_type,inventory_source,sku,sort_order,created_at,image_url';
 export const PRODUCTS_PUBLIC_SELECT =
-  'id,slug,name,short_description,description,long_description,features,specifications,weight_oz,price,compare_at_price,category_id,inventory_qty,status,brand,tags,featured,new_arrival,free_shipping,us_inventory,sale_enabled,discount_type,discount_value,stock_status,delivery_min_days,delivery_max_days,seo_title,seo_description,seo_keywords,supplier_source,supplier_product_ref,supplier_url,cost_price,landed_cost,shipping_cost,commerce_readiness,source_type,inventory_source,sku,sort_order,created_at';
+  'id,slug,name,short_description,description,long_description,features,specifications,weight_oz,price,compare_at_price,category_id,inventory_qty,status,brand,tags,featured,new_arrival,free_shipping,us_inventory,sale_enabled,discount_type,discount_value,stock_status,delivery_min_days,delivery_max_days,seo_title,seo_description,seo_keywords,supplier_source,supplier_product_ref,supplier_url,cost_price,landed_cost,shipping_cost,commerce_readiness,source_type,inventory_source,sku,sort_order,created_at,image_url';
 export const PRODUCT_IMAGES_PUBLIC_SELECT = 'product_id,url,alt_text,is_primary,sort_order,variant_id';
 export const PRODUCT_VARIANTS_PUBLIC_SELECT = 'id,product_id,attributes,sku,price,compare_at_price,inventory_qty';
 export const COUPONS_PUBLIC_SELECT =
@@ -309,7 +313,15 @@ function mapProductRow(
   const rawTagList = (row: DbProductRow): string[] => parseTagList(row.tags);
   const rawPrice = num(p.price) > 0 ? num(p.price) : centsToDollars(p.price_amount);
   const rawCompare = num(p.compare_at_price) > 0 ? num(p.compare_at_price) : centsToDollars(p.compare_at_amount);
-  const imgs = imagesByProduct.get(p.id) || (p.image_url ? [{ url: String(p.image_url), alt: '', isPrimary: true }] : []);
+  const fallbackUrl = p.primary_image_url || p.image_url;
+  let imgs = imagesByProduct.get(p.id) || (fallbackUrl ? [{ url: String(fallbackUrl), alt: '', isPrimary: true }] : []);
+  
+  // Protect against Supabase 402 Payment Required outage by stripping broken storage URLs
+  imgs = imgs.filter(i => !i.url.includes('supabase.co/storage'));
+  if (imgs.length === 0 && fallbackUrl) {
+    imgs = [{ url: String(fallbackUrl), alt: '', isPrimary: true }];
+  }
+
   const images = imgs.map((i) => i.url);
   const imageAlts = imgs.map((i) => i.alt);
   const variants: CatalogVariant[] = (variantsByProduct.get(p.id) || []).map((v) => {
@@ -392,6 +404,7 @@ function mapProductRow(
     status: typeof p.status === 'string' ? p.status : undefined,
     sortOrder: num(p.sort_order),
     createdAt: typeof p.created_at === 'string' ? p.created_at : undefined,
+    isPartial: p.long_description === undefined && p.description === undefined && p.features === undefined,
   };
 }
 
@@ -467,16 +480,36 @@ export async function loadProductByIdOrSlug(key: string): Promise<CatalogProduct
   }
 }
 
-export async function loadStorefrontCatalog(): Promise<StorefrontCatalog | null> {
+export interface StorefrontCatalogOptions {
+  limit?: number;
+  offset?: number;
+  categoryId?: string;
+}
+
+export async function loadStorefrontCatalog(opts?: StorefrontCatalogOptions): Promise<StorefrontCatalog | null> {
   if (!isRemoteDb()) return null;
-  const cached = readPublicCache<StorefrontCatalog>('luxedge:storefront-catalog:v1');
+  const cacheKey = `luxedge:storefront-catalog:v1:${opts?.limit ?? 24}:${opts?.offset ?? 0}:${opts?.categoryId ?? 'all'}`;
+  const cached = readPublicCache<StorefrontCatalog>(cacheKey);
   if (cached) return { ...cached, products: cached.products.filter((p) => !isHeldProduct(p.slug) && isPubliclyListableProduct(p)) };
   const db = getDb();
 
   try {
+    const limit = opts?.limit ?? 24;
+    const offset = opts?.offset ?? 0;
+    const prodOpts: any = {
+      select: PRODUCTS_LISTING_SELECT,
+      orderBy: 'created_at',
+      limit,
+      offset,
+      rawFilters: { status: 'in.(active,published)' },
+    };
+    if (opts?.categoryId) {
+      prodOpts.filters = { category_id: opts.categoryId };
+    }
+
     const [catRows, prodRows] = await Promise.all([
       db.list<DbCategoryRow>('categories', { select: CATEGORIES_PUBLIC_SELECT, orderBy: 'sort_order' }),
-      db.list<DbProductRow>('products', { select: PRODUCTS_PUBLIC_SELECT, orderBy: 'created_at' }),
+      db.list<DbProductRow>('products', prodOpts),
     ]);
 
     if (!Array.isArray(catRows) || !Array.isArray(prodRows)) return null;
@@ -511,44 +544,16 @@ export async function loadStorefrontCatalog(): Promise<StorefrontCatalog | null>
       return { products: [], categories, source: 'supabase' };
     }
 
-    // Optional: attach product images (with alt/primary/sort + variant links).
-    // Tolerate failures (missing table, grants, RLS) without failing the load.
+    // Explicitly removed massive N+1 product_images fetch for the catalog listing.
+    // The mapper will now exclusively use the normalized `image_url` column directly
+    // from the products table, avoiding a heavy table scan and protecting the storefront
+    // from Supabase storage outages.
     let imagesByProduct = new Map<string, { url: string; alt: string; isPrimary: boolean; variantId?: string | null }[]>();
-    try {
-      // Server-side filter drops the inline base64 blob rows (~9 MB in the
-      // live DB) — images become ~60 KB and cold loads stop waiting on MBs.
-      const imgRows = await db.list<DbImageRow>('product_images', {
-        select: PRODUCT_IMAGES_PUBLIC_SELECT,
-        limit: 1000,
-        rawFilters: { url: 'not.like.data:*' },
-      });
-      if (Array.isArray(imgRows)) {
-        imagesByProduct = (imgRows as DbImageRow[]).reduce((acc, img) => {
-          const url = img.url || img.public_url;
-          if (!img || !img.product_id || !url) return acc;
-          const list = acc.get(img.product_id) || [];
-          list.push({
-            url: String(url),
-            alt: img.alt_text || '',
-            isPrimary: !!img.is_primary,
-            variantId: img.variant_id || null,
-          });
-          acc.set(img.product_id, list);
-          return acc;
-        }, new Map<string, { url: string; alt: string; isPrimary: boolean; variantId?: string | null }[]>());
-        // Sort each product's images: primary first, then by insertion order
-        for (const [, imgs] of imagesByProduct) {
-          imgs.sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
-        }
-      }
-    } catch {
-      /* product images unavailable — products still render with image_url */
-    }
 
     // Optional: attach product variants (real options only — never invented).
     let variantsByProduct = new Map<string, DbVariantRow[]>();
     try {
-      const varRows = await db.list<DbVariantRow>('product_variants', { select: PRODUCT_VARIANTS_PUBLIC_SELECT, limit: 1000 });
+      const varRows = await db.list<DbVariantRow>('product_variants', { select: PRODUCT_VARIANTS_PUBLIC_SELECT, limit: 100 });
       if (Array.isArray(varRows)) {
         variantsByProduct = (varRows as DbVariantRow[]).reduce((acc, v) => {
           if (!v || !v.product_id) return acc;
@@ -567,7 +572,7 @@ export async function loadStorefrontCatalog(): Promise<StorefrontCatalog | null>
       .filter((x): x is CatalogProduct => x !== null && isPubliclyListableProduct(x));
 
     const result = { products, categories, source: 'supabase' as const };
-    writePublicCache('luxedge:storefront-catalog:v1', result);
+    writePublicCache(cacheKey, result);
     return result;
   } catch {
     // Unreachable / schema not provisioned / permission denied → null.

@@ -21,10 +21,14 @@ import fs from 'fs';
 import { isHeldBlog, isHeldProduct, isBlogPublic } from '../src/content/reviewHolds.ts';
 import { isPubliclyListableProduct } from '../src/content/productEligibility.ts';
 
-const env = {};
-for (const line of fs.readFileSync('.env', 'utf8').split('\n')) {
-  const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
-  if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, '').trim();
+const env = { ...process.env };
+try {
+  for (const line of fs.readFileSync('.env', 'utf8').split('\n')) {
+    const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+    if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, '').trim();
+  }
+} catch (e) {
+  // .env might not exist in CI environments (like Vercel)
 }
 const URL_BASE = (env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
 const KEY = env.SUPABASE_SERVICE_ROLE_KEY;
@@ -34,9 +38,15 @@ const HEAD = { apikey: KEY, Authorization: `Bearer ${KEY}` };
 
 class DbUnavailableError extends Error {}
 const get = async (path) => {
-  const res = await fetch(`${URL_BASE}/rest/v1/${path}`, { headers: HEAD });
-  if (!res.ok) throw new DbUnavailableError(`${path} -> ${res.status}`);
-  return res.json();
+  if (env.VITE_DATA_BACKEND === 'd1') {
+    const res = await fetch(`https://luxedge.us/api/db/${path}`);
+    if (!res.ok) throw new DbUnavailableError(`D1: ${path} -> ${res.status}`);
+    return res.json();
+  } else {
+    const res = await fetch(`${URL_BASE}/rest/v1/${path}`, { headers: HEAD });
+    if (!res.ok) throw new DbUnavailableError(`Supabase: ${path} -> ${res.status}`);
+    return res.json();
+  }
 };
 
 // Fields the shared public-listing contract (productEligibility.ts) reads.
@@ -59,8 +69,8 @@ let prods, cats, blogs;
 try {
   [prods, cats, blogs] = await Promise.all([
     get(`products?select=${PRODUCT_FIELDS}&status=in.(active,published)&order=slug.asc&limit=500`),
-    get('categories?select=slug&is_active=eq.true&order=slug.asc&limit=200'),
-    get('blog_posts?select=slug&status=eq.published&order=slug.asc&limit=500'),
+    get('categories?select=slug,is_active&is_active=eq.true&order=slug.asc&limit=200'),
+    get('blog_posts?select=slug,status&status=eq.published&order=slug.asc&limit=500'),
   ]);
 } catch (error) {
   if (!(error instanceof DbUnavailableError)) throw error;

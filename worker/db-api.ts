@@ -80,6 +80,9 @@ export function isPublicColumn(table: string, column: string): boolean {
   return Array.isArray(cols) && cols.includes(column);
 }
 
+export const DEFAULT_PRODUCTS_LISTING_SELECT =
+  'id,slug,name,short_description,price,compare_at_price,category_id,inventory_qty,status,brand,tags,featured,new_arrival,free_shipping,us_inventory,sale_enabled,discount_type,discount_value,stock_status,delivery_min_days,delivery_max_days,supplier_source,supplier_product_ref,supplier_url,cost_price,landed_cost,shipping_cost,commerce_readiness,source_type,inventory_source,sku,sort_order,created_at,image_url';
+
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'public, max-age=60',
@@ -95,7 +98,22 @@ function problem(status: number, message: string): Response {
  * Validates a requested query against the public projection, then reads it.
  * Returns a Response; never throws.
  */
-export async function handleDbApi(request: Request, url: URL): Promise<Response> {
+export async function handleDbApi(request: Request, url: URL, ctx?: { waitUntil: (promise: Promise<any>) => void }): Promise<Response> {
+  const cache = typeof caches !== 'undefined' ? (caches as any).default : null;
+  const cacheKey = new Request(url.toString(), {
+    method: 'GET',
+    headers: { Accept: request.headers.get('Accept') || 'application/json' },
+  });
+  
+  if (cache && (request.method === 'GET' || request.method === 'HEAD')) {
+    const cached = await cache.match(cacheKey);
+    if (cached) {
+      const res = new Response(cached.body, cached);
+      res.headers.set('X-Luxedge-Cache', 'HIT');
+      return res;
+    }
+  }
+
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
@@ -107,6 +125,12 @@ export async function handleDbApi(request: Request, url: URL): Promise<Response>
   const table = rest.split('/')[0];
   if (!table || !PUBLIC_TABLES.includes(table)) {
     return problem(404, `Unknown or non-public table: ${table || '(none)'}`);
+  }
+
+  // Optimize payload: when products table is queried without explicit select,
+  // default to lightweight listing projection rather than all 68 columns.
+  if (table === 'products' && !url.searchParams.has('select')) {
+    url.searchParams.set('select', DEFAULT_PRODUCTS_LISTING_SELECT);
   }
 
   // Enforce the projection/order/filter allowlist before touching the database.
@@ -133,6 +157,7 @@ export async function handleDbApi(request: Request, url: URL): Promise<Response>
       continue;
     }
     if (key === 'limit') continue;
+    if (key === 'offset') continue;
     // Any remaining key is a filter — it must target a public column.
     if (!isPublicColumn(table, key)) {
       return problem(400, `Cannot filter ${table} on non-public column: ${key}`);
@@ -160,7 +185,15 @@ export async function handleDbApi(request: Request, url: URL): Promise<Response>
     return out;
   });
 
-  return new Response(JSON.stringify(safe), { status: 200, headers: { ...JSON_HEADERS } });
+  const response = new Response(JSON.stringify(safe), {
+    status: 200,
+    headers: { ...JSON_HEADERS, 'X-Luxedge-Cache': 'MISS' },
+  });
+  if (cache) {
+    if (ctx) ctx.waitUntil(cache.put(cacheKey, response.clone()));
+    else await cache.put(cacheKey, response.clone());
+  }
+  return response;
 }
 
 /** True when this route can actually be served (D1 selected and bound). */

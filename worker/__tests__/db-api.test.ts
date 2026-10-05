@@ -93,7 +93,7 @@ describe('access control — deny by default', () => {
   });
 
   it('refuses admin/commerce tables that are not in the public read surface', async () => {
-    for (const table of ['luxedge_orders', 'customers', 'profiles', 'agent_jobs', 'site_events']) {
+    for (const table of ['luxedge_orders', 'customers', 'profiles', 'agent_jobs', 'site_events', 'ai_provider_keys']) {
       const res = await get(`/api/db/${table}?select=id&limit=1`);
       expect(res.status, table).toBe(404);
     }

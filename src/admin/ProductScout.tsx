@@ -18,7 +18,8 @@ import {
   Warning, Prohibit, Brain, CheckCircle, Compass, Eye, FilePlus, SpinnerGap, Package, Play, Rocket,
   ArrowClockwise, MagnifyingGlass, ShieldCheck, Siren, Target, Lightning,
 } from '@phosphor-icons/react';
-import { useApp, Modal, fetchPageContent } from '../App';
+import { useApp, Modal } from '../App';
+import { fetchPageContent } from '../features/ai/importer';
 import { useNavigate } from 'react-router-dom';
 import { getDb } from '../services/db';
 import { getAccessToken } from '../services/supabase';

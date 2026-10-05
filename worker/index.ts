@@ -84,6 +84,7 @@ import { handleDbApi } from './db-api';
 import blogAutomationHandler from '../api/blog-automation/index';
 import adsenseHandler, { setAdSenseRuntimeBindings } from '../api/adsense/index';
 import adminDbHandler from '../api/admin/db';
+import { PRODUCTS_LISTING_SELECT, PRODUCTS_PUBLIC_SELECT, CATEGORIES_PUBLIC_SELECT } from '../src/services/catalog';
 
 type NodeHandler = (req: IncomingMessage, res: ServerResponse) => Promise<void>;
 
@@ -94,6 +95,8 @@ interface ShimRes extends ServerResponse {
   _body: string;
   _chunks: Uint8Array[];
 }
+
+import dbSyncHandler from '../api/db-sync';
 
 interface Route {
   path: string;
@@ -260,6 +263,8 @@ interface AssetsFetcher {
 }
 
 export interface Env {
+  DB?: any;
+  D1_SYNC_QUEUE?: any;
   ASSETS: AssetsFetcher;
   /** CJ supplier credential — a Cloudflare secret binding, never client-side. */
   CJ_API_KEY?: string;
@@ -353,7 +358,7 @@ function populateProcessEnv(env: Env): void {
 
 /** All routing logic — the exported fetch wraps this so every response
  * passes through withSecurityHeaders exactly once. */
-async function handleRequest(request: Request, env: Env): Promise<Response> {
+async function handleRequest(request: Request, env: Env, ctx?: any): Promise<Response> {
     populateProcessEnv(env);
     // Secret bindings are not guaranteed to be enumerable in every Worker
     // runtime. CJ/Stripe server handlers read process.env, so preserve these
@@ -434,11 +439,27 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     if (url.pathname === '/video-sitemap.xml') {
       return new Response('Video sitemap retired.', { status: 410, headers: { 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } });
     }
+    // Database Sync webhook handler. Must be placed BEFORE /api/db/ 
+    if (url.pathname === '/api/db/sync') {
+      const req = makeReq(request, url) as IncomingMessage & { env?: Env };
+      req.env = env;
+      try {
+        return await dbSyncHandler(req, env, (body, status = 200) => {
+          return new Response(JSON.stringify(body), {
+            status,
+            headers: { 'content-type': 'application/json' },
+          });
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { 'content-type': 'application/json' } });
+      }
+    }
+
     // Public allowlisted storefront reads served from D1 (see worker/db-api.ts).
     // Read-only, projection-limited and same-origin — the $0 replacement for the
     // browser's direct Supabase PostgREST calls.
     if (url.pathname.startsWith('/api/db/')) {
-      return handleDbApi(request, url);
+      return handleDbApi(request, url, ctx as any);
     }
     // Buyer authentication (Cloudflare/D1 native). Supabase Auth is restricted
     // by the project-wide HTTP 402, so sign-in was impossible; these routes are
@@ -690,14 +711,14 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx?: any): Promise<Response> {
     const pathname = new URL(request.url).pathname;
     // Cloudflare bindings are only reachable per-request, and the sitemap/SEO
     // readers are called from deep inside handleRequest without an `env`, so the
     // data backend (D1 when DATA_BACKEND=d1, else Supabase) is published once
     // here — the same pattern already used for the AdSense OAuth bindings.
     setDataRuntime(env);
-    const res = await handleRequest(request, env);
+    const res = await handleRequest(request, env, ctx);
     // Single security-header owner: every response this Worker returns —
     // HTML shell, JSON APIs, sitemaps, redirects — gets the same header set
     // exactly once. Response.redirect objects are immutable, so wrap in a
@@ -754,5 +775,108 @@ export default {
       return;
     }
     console.log(`[media-cron] sync ok: synced=${result.synced ?? 0} created=${result.created ?? 0} updated=${result.updated ?? 0}`);
+  },
+
+  async queue(batch: any, env: Env): Promise<void> {
+    const db = env.DB;
+    if (!db) {
+      console.error('[queue] DB binding is missing');
+      // Acknowledging to avoid endless retry if misconfigured
+      return;
+    }
+
+    for (const msg of batch.messages) {
+      try {
+        const payload = msg.body;
+        const table = payload.table;
+        const id = payload.id;
+        const pkCol = table === 'store_settings' ? 'key' : 'id';
+
+        if (payload.type === 'DELETE') {
+          await db.prepare(`DELETE FROM ${table} WHERE ${pkCol} = ?`).bind(id).run();
+        } else if (payload.type === 'INSERT' || payload.type === 'UPDATE') {
+          const record = payload.record;
+          const keys: string[] = [];
+          const values: unknown[] = [];
+          const placeholders: string[] = [];
+          const updateAssigns: string[] = [];
+
+          // Out-of-order protection: only update if new updated_at >= existing updated_at
+          let conditionalUpdate = '';
+          const hasUpdatedAt = record.updated_at !== undefined;
+
+          for (const [k, v] of Object.entries(record)) {
+            keys.push(k);
+            let sqlValue = v;
+            if (v !== null && v !== undefined) {
+              if (typeof v === 'boolean') sqlValue = v ? 1 : 0;
+              else if (typeof v === 'object') sqlValue = JSON.stringify(v);
+            }
+            values.push(sqlValue);
+            placeholders.push('?');
+            
+            if (k !== pkCol) {
+              updateAssigns.push(`${k} = excluded.${k}`);
+            }
+          }
+
+          if (hasUpdatedAt && payload.type === 'UPDATE') {
+             conditionalUpdate = ` WHERE ${table}.updated_at IS NULL OR excluded.updated_at >= ${table}.updated_at`;
+          }
+
+          const query = `
+            INSERT INTO ${table} (${keys.join(', ')})
+            VALUES (${placeholders.join(', ')})
+            ON CONFLICT(${pkCol}) DO UPDATE SET ${updateAssigns.join(', ')}
+            ${conditionalUpdate}
+          `;
+
+          await db.prepare(query).bind(...values).run();
+        }
+
+        // Cache invalidation for public catalog queries
+        if (table === 'products' || table === 'categories') {
+          const cache = (caches as any).default;
+          const baseUrl = 'https://luxedge.us';
+          const toPurge = [];
+          
+          if (table === 'products') {
+            const listUrl = new URL('/api/db/products', baseUrl);
+            listUrl.searchParams.set('select', PRODUCTS_LISTING_SELECT);
+            listUrl.searchParams.set('order', 'created_at');
+            toPurge.push(listUrl.toString());
+            
+            const detailUrlId = new URL('/api/db/products', baseUrl);
+            detailUrlId.searchParams.set('select', PRODUCTS_PUBLIC_SELECT);
+            detailUrlId.searchParams.set('id', `eq.${id}`);
+            detailUrlId.searchParams.set('limit', '1');
+            toPurge.push(detailUrlId.toString());
+            
+            const slug = payload.record?.slug || payload.old_record?.slug;
+            if (slug) {
+              const detailUrlSlug = new URL('/api/db/products', baseUrl);
+              detailUrlSlug.searchParams.set('select', PRODUCTS_PUBLIC_SELECT);
+              detailUrlSlug.searchParams.set('slug', `eq.${slug}`);
+              detailUrlSlug.searchParams.set('limit', '1');
+              toPurge.push(detailUrlSlug.toString());
+            }
+          } else if (table === 'categories') {
+            const catUrl = new URL('/api/db/categories', baseUrl);
+            catUrl.searchParams.set('select', CATEGORIES_PUBLIC_SELECT);
+            catUrl.searchParams.set('order', 'sort_order');
+            toPurge.push(catUrl.toString());
+          }
+          
+          for (const urlStr of toPurge) {
+            await cache.delete(new Request(urlStr));
+          }
+        }
+
+        msg.ack();
+      } catch (err: any) {
+        console.error(`[queue] Error processing message: ${err.message}`);
+        msg.retry();
+      }
+    }
   },
 };

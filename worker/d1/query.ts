@@ -48,6 +48,7 @@ export interface ParsedQuery {
   filters: Filter[];
   order: { column: string; dir: 'ASC' | 'DESC'; nulls?: string }[];
   limit: number;
+  offset?: number;
 }
 
 export interface BuiltStatement {
@@ -131,6 +132,13 @@ export function parsePath(path: string): ParsedQuery | null {
       const n = Number(value);
       if (!Number.isFinite(n) || n <= 0) return null;
       parsed.limit = Math.min(Math.floor(n), MAX_QUERY_LIMIT);
+      continue;
+    }
+
+    if (key === 'offset') {
+      const n = Number(value);
+      if (!Number.isFinite(n) || n < 0) return null;
+      parsed.offset = Math.floor(n);
       continue;
     }
 
@@ -230,8 +238,12 @@ export function buildStatement(path: string): BuiltStatement | null {
         .join(', ')}`
     : '';
 
-  const sql = `SELECT ${selectList} ${from}${where.length ? ` WHERE ${where.join(' AND ')}` : ''}${orderBy ? ` ${orderBy}` : ''} LIMIT ?`;
+  const offsetClause = parsed.offset !== undefined ? ` OFFSET ?` : '';
+  const sql = `SELECT ${selectList} ${from}${where.length ? ` WHERE ${where.join(' AND ')}` : ''}${orderBy ? ` ${orderBy}` : ''} LIMIT ?${offsetClause}`;
   params.push(parsed.limit);
+  if (parsed.offset !== undefined) {
+    params.push(parsed.offset);
+  }
 
   void schema;
   return { sql, params, parsed };

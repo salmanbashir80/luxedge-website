@@ -117,8 +117,13 @@ export async function serverGenerateWithFallback(
 
 /** Connection test executed server-side so no key ever touches the browser. */
 export async function serverTestProvider(providerId: string, model?: string): Promise<string> {
-  const data = await post<{ ok: boolean; message: string }>('/ai/test', { provider: providerId, model });
+  const data = await serverTestProviderResult(providerId, model);
   return data.ok ? 'Connected successfully!' : data.message;
+}
+
+/** Preserve the server boolean: a 200 response can still be a failed test. */
+export async function serverTestProviderResult(providerId: string, model?: string): Promise<{ ok: boolean; message: string }> {
+  return post<{ ok: boolean; message: string }>('/ai/test', { provider: providerId, model });
 }
 
 /** OpenRouter credit balance, checked server-side. */

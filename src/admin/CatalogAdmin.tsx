@@ -42,6 +42,8 @@ import {
 import { SUPPLIER_SOURCE_PRESETS, supplierSearchUrl } from '../features/catalog/supplierSource';
 import { getAutoPublishEnabled, setAutoPublishEnabled } from '../features/catalog/autoPublish';
 import { generateSeoJson } from '../features/ai/seo';
+import { optimizationFingerprint, optimizationPrompt, parseOptimization, type OptimizationPatch } from '../features/ai/productOptimization';
+import ProductOptimizePanel from './ProductOptimizePanel';
 import { useSeoJobStore } from '../features/catalog/seoJobStore';
 import {
   CATALOG_COLUMN_LABELS, loadCatalogColumns, saveCatalogColumns, loadServerColumns, saveServerColumns, moveColumn,
@@ -328,14 +330,8 @@ export function CatalogProductsPage() {
   const generateAndSaveSeo = async (p: CatalogProduct) => {
     const category = cats.find((c) => c.id === p.categoryId)?.name || p.categoryName || '';
     const parsed = await generateSeoJson(buildProductSeoPrompt(p, category));
-    const kw = Array.isArray(parsed.seoKeywords) ? parsed.seoKeywords.map(String).slice(0, 8) : [];
-    const slug = String(parsed.slug || p.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 90);
-    const upd = await updateProduct(p.id, {
-      seoTitle: String(parsed.seoTitle || '').trim(),
-      seoDescription: String(parsed.metaDescription || '').trim(),
-      seoKeywords: kw,
-      ...(slug ? { canonicalSlug: slug } : {}),
-    });
+    const patch = parseOptimization(JSON.stringify(parsed), 'seo', p);
+    const upd = await updateProduct(p.id, patch, { preserveSlug: true });
     patchLocal(upd);
   };
 
@@ -1818,6 +1814,12 @@ export function CatalogProductEditor() {
     urlMode === 'detail' || urlMode === 'ai' ? urlMode : 'quick',
   );
   const [p, setP] = useState<CatalogProduct | null>(null);
+  const latestProduct = useRef<CatalogProduct | null>(null);
+  const persistedProduct = useRef<CatalogProduct | null>(null);
+  const editorAlive = useRef(true);
+  const optimizationSaving = useRef(false);
+  latestProduct.current = p;
+  useEffect(() => { editorAlive.current = true; return () => { editorAlive.current = false; }; }, []);
 
   const load = useCallback(async () => {
     try {
@@ -1827,6 +1829,7 @@ export function CatalogProductEditor() {
         const prod = await getProduct(paramId);
         if (!prod) { notify('Product not found', 'error'); nav('/admin/products'); return; }
         setP(prod);
+        persistedProduct.current = prod;
       } else {
         setP({
           id: '', slug: '', name: '', shortDescription: '', description: '', features: [], specifications: {},
@@ -1852,6 +1855,43 @@ export function CatalogProductEditor() {
 
   const set = <K extends keyof CatalogProduct>(k: K, v: CatalogProduct[K]) => {
     setP((prev) => (prev ? { ...prev, [k]: v } : prev));
+  };
+
+  const saveOptimization = async (patch: OptimizationPatch, snapshot: CatalogProduct): Promise<CatalogProduct> => {
+    const assertUnchanged = () => {
+      const current = latestProduct.current;
+      if (!editorAlive.current || !current || current.id !== snapshot.id || optimizationFingerprint(current) !== optimizationFingerprint(snapshot)) {
+        throw new Error('Product text changed while AI was working. Nothing was saved; run optimization again.');
+      }
+      return current;
+    };
+    if (optimizationSaving.current) throw new Error('Another optimization is being saved. Try again when it finishes.');
+    assertUnchanged();
+    optimizationSaving.current = true;
+    setSaving(true);
+    try {
+      if (!snapshot.id) {
+        const next = { ...assertUnchanged(), ...patch };
+        setP(next); latestProduct.current = next;
+        return next;
+      }
+      setDbToken(await getFreshAccessToken());
+      const live = await getProduct(snapshot.id);
+      if (!live) throw new Error('Product no longer exists. Nothing was saved.');
+      if (persistedProduct.current && optimizationFingerprint(live) !== optimizationFingerprint(persistedProduct.current)) {
+        throw new Error('Another editor changed this product. Reload before optimizing; nothing was saved.');
+      }
+      assertUnchanged();
+      // Partial update only: no stale full-form save, auto-publish, gallery rewrite or slug rename.
+      const saved = await updateProduct(snapshot.id, patch, { preserveSlug: true });
+      if (!saved) throw new Error('Product could not be saved.');
+      persistedProduct.current = saved;
+      const next = { ...(latestProduct.current || snapshot), ...patch, seoTitleStored: saved.seoTitleStored, seoDescriptionStored: saved.seoDescriptionStored };
+      if (patch.name && snapshot.seoTitleStored == null && snapshot.seoTitle === snapshot.name && !('seoTitle' in patch)) next.seoTitle = patch.name;
+      if (patch.shortDescription && snapshot.seoDescriptionStored == null && snapshot.seoDescription === snapshot.shortDescription && !('seoDescription' in patch)) next.seoDescription = patch.shortDescription;
+      setP(next); latestProduct.current = next;
+      return next;
+    } finally { optimizationSaving.current = false; if (editorAlive.current) setSaving(false); }
   };
 
   const handleSave = async () => {
@@ -2059,7 +2099,7 @@ export function CatalogProductEditor() {
       {(!isNew || mode === 'detail') && (
         <div className="flex gap-1.5 overflow-x-auto pb-1">
           {TABS.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)}
+            <button key={t.id} disabled={saving} onClick={() => setTab(t.id)}
               className={`shrink-0 px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors ${tab === t.id ? 'bg-blue-500 text-white' : 'bg-white border text-gray-600 hover:bg-gray-50'}`}>
               {t.icon}{t.label}
             </button>
@@ -2067,10 +2107,11 @@ export function CatalogProductEditor() {
         </div>
       )}
 
-      {(!isNew || mode === 'detail') && <div className="bg-white rounded-xl border p-5">
+      {(!isNew || mode === 'detail') && <fieldset disabled={saving} className="min-w-0 bg-white rounded-xl border p-5">
         {/* ── GENERAL ── */}
         {tab === 'general' && (
           <div className="grid sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2"><ProductOptimizePanel product={p} category={cats.find(c => c.id === p.categoryId)?.name || p.categoryName || ''} kind="content" disabled={saving} onSave={saveOptimization} /></div>
             <div className="sm:col-span-2"><label className={L}>Product name <span className="text-red-500">*</span> <span className="normal-case font-normal text-gray-400">required</span></label><input value={p.name} onChange={(e) => set('name', e.target.value)} className={I} placeholder="e.g. Interactive Squeaky Enrichment Toy for Dogs" /></div>
             <div><label className={L}>Short title <span className="normal-case font-normal text-gray-400">(optional)</span></label><input value={p.shortTitle || ''} onChange={(e) => set('shortTitle', e.target.value)} className={I} /></div>
             <div><label className={L}>Subtitle <span className="normal-case font-normal text-gray-400">(optional)</span></label><input value={p.subtitle || ''} onChange={(e) => set('subtitle', e.target.value)} className={I} /></div>
@@ -2167,7 +2208,7 @@ export function CatalogProductEditor() {
         {tab === 'variants' && <VariantManager product={p} onProduct={(next) => setP(next)} />}
 
         {/* ── SEO ── */}
-        {tab === 'seo' && <SeoTab product={p} cats={cats} set={set} onSave={handleSave} />}
+        {tab === 'seo' && <SeoTab product={p} cats={cats} set={set} disabled={saving} onOptimizeSave={saveOptimization} />}
 
         {/* ── COMMERCE / READINESS ── */}
         {tab === 'commerce' && (
@@ -2257,7 +2298,7 @@ export function CatalogProductEditor() {
 
         {/* ── PROMOTIONS ── */}
         {tab === 'promotions' && <PromoTab product={p} set={set} />}
-      </div>}
+      </fieldset>}
     </div>
   );
 }
@@ -2268,72 +2309,20 @@ export function CatalogProductEditor() {
 
 /** Factual SEO prompt shared by the per-product tab and the list bulk run. */
 function buildProductSeoPrompt(p: CatalogProduct, category: string): string {
-  return `Write premium, honest SEO for this pet product for Luxedge (a US pet store).
-Product name: ${p.name}
-Brand: ${p.brand || 'Luxedge'}
-Category: ${category || 'unknown'}
-Short description: ${p.shortDescription || ''}
-Long description: ${p.description || ''}
-
-Return ONLY JSON with EXACTLY these keys:
-{"seoTitle": "<=60 chars, factual, no fake claims", "metaDescription": "<=160 chars, factual", "focusKeyword": "one primary keyword", "seoKeywords": ["5-8 keywords"], "slug": "url-friendly-slug"}
-No other text.`;
+  return optimizationPrompt(p, 'seo', category);
 }
 
-function SeoTab({ product, cats, set, onSave }: { product: CatalogProduct; cats: CatalogCategory[]; set: <K extends keyof CatalogProduct>(k: K, v: CatalogProduct[K]) => void; onSave?: () => Promise<void> }) {
-  const { notify } = useApp();
-  const [busy, setBusy] = useState(false);
+function SeoTab({ product, cats, set, disabled, onOptimizeSave }: { product: CatalogProduct; cats: CatalogCategory[]; set: <K extends keyof CatalogProduct>(k: K, v: CatalogProduct[K]) => void; disabled: boolean; onOptimizeSave: (patch: OptimizationPatch, snapshot: CatalogProduct) => Promise<CatalogProduct> }) {
 
   const addKeyword = (k: string) => { const v = k.trim(); if (v && !product.seoKeywords.includes(v)) set('seoKeywords', [...product.seoKeywords, v]); };
   const removeKeyword = (k: string) => set('seoKeywords', product.seoKeywords.filter((x) => x !== k));
-
-  const generateWithAI = async (saveNow: boolean) => {
-    if (!product.name.trim()) { notify('Enter the product name first', 'error'); return; }
-    setBusy(true);
-    try {
-      const category = cats.find((c) => c.id === product.categoryId)?.name || product.categoryName || '';
-      const parsed = await generateSeoJson(buildProductSeoPrompt(product, category));
-      const kw = Array.isArray(parsed.seoKeywords) ? parsed.seoKeywords.map(String).slice(0, 8) : [];
-      const slug = String(parsed.slug || product.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 90);
-      set('seoTitle', String(parsed.seoTitle || '').trim());
-      set('seoDescription', String(parsed.metaDescription || '').trim());
-      set('seoKeywords', kw);
-      if (slug) set('canonicalSlug', slug);
-      if (parsed.focusKeyword) set('seoKeywords', kw.includes(String(parsed.focusKeyword)) ? kw : [String(parsed.focusKeyword), ...kw]);
-      if (saveNow && onSave) {
-        await onSave();
-        notify('SEO generated and saved');
-      } else {
-        notify('SEO generated — review before saving');
-      }
-    } catch (e) {
-      notify(`AI SEO failed: ${(e as Error).message}`, 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const meta = buildProductMeta(product);
   const jsonLd = buildProductJsonLd(product);
 
   return (
     <div className="space-y-4">
-      <div className="bg-indigo-50 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-indigo-800 flex items-center gap-1.5"><Sparkle size={15} />SEO & Meta — write nothing, let AI do it</p>
-          <p className="text-xs text-indigo-600 mt-0.5">One click generates a factual SEO title, meta description, keywords and slug from your product name AND saves the product (secure server-side — uses the first configured AI key). You can still edit everything.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => generateWithAI(true)} disabled={busy || !product.name.trim()} className="btn-glow px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium flex items-center gap-1.5">
-            <Sparkle size={15} />{busy ? 'Working…' : 'Generate SEO & Save'}
-          </button>
-          {onSave && (
-            <button onClick={() => generateWithAI(false)} disabled={busy || !product.name.trim()} className="px-3 py-2 text-xs text-indigo-600 hover:underline disabled:opacity-50">
-              Generate only
-            </button>
-          )}
-        </div>
-      </div>
+      <ProductOptimizePanel product={product} category={cats.find(c => c.id === product.categoryId)?.name || product.categoryName || ''} kind="seo" disabled={disabled} onSave={onOptimizeSave} />
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2"><label className={L}>SEO title</label><input value={product.seoTitle} onChange={(e) => set('seoTitle', e.target.value)} className={I} placeholder="Auto-generated or write your own" /></div>
         <div className="sm:col-span-2"><label className={L}>Meta description</label><textarea value={product.seoDescription} onChange={(e) => set('seoDescription', e.target.value)} rows={3} className={I} placeholder="Auto-generated or write your own" /></div>

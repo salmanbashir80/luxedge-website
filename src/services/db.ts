@@ -13,7 +13,7 @@
 // by design (RLS protects the tables); the service-role key stays server-side.
 // ============================================================================
 
-import { getSession } from './supabase';
+import { getAccessToken, getSession } from './supabase';
 
 export type DbMode = 'local' | 'supabase' | 'd1' | 'unconfigured';
 
@@ -38,6 +38,7 @@ export interface DbListOptions {
   select?: string;
   orderBy?: string;
   limit?: number;
+  offset?: number;
   filters?: Record<string, string>;
   /** Raw filter expressions passed through verbatim (e.g. `url=not.like.data:*`). */
   rawFilters?: Record<string, string>;
@@ -92,7 +93,7 @@ export class LocalStorageAdapter implements DbAdapter {
     this.storage.setItem(this.tableKey(table), JSON.stringify(rows));
   }
 
-  async list<T>(table: string, opts?: { select?: string; filters?: Record<string, string>; rawFilters?: Record<string, string> }): Promise<T[]> {
+  async list<T>(table: string, opts?: DbListOptions): Promise<T[]> {
     let rows = this.readTable<T>(table);
     if (opts?.filters) {
       for (const [key, value] of Object.entries(opts.filters)) {
@@ -112,6 +113,8 @@ export class LocalStorageAdapter implements DbAdapter {
         });
       }
     }
+    if (opts?.offset) rows = rows.slice(opts.offset);
+    if (opts?.limit) rows = rows.slice(0, opts.limit);
     return rows;
   }
 
@@ -251,6 +254,7 @@ export class SupabaseAdapter implements DbAdapter {
     if (opts?.select) url.searchParams.set('select', opts.select);
     if (opts?.orderBy) url.searchParams.set('order', opts.orderBy);
     if (opts?.limit) url.searchParams.set('limit', String(opts.limit));
+    if (opts?.offset !== undefined) url.searchParams.set('offset', String(opts.offset));
     if (opts?.filters) {
       for (const [key, value] of Object.entries(opts.filters)) url.searchParams.append(key, `eq.${value}`);
     }
@@ -339,11 +343,8 @@ export class SupabaseAdapter implements DbAdapter {
  * the browser bundle — and it replaces the direct browser→Supabase PostgREST
  * calls that broke when Supabase began returning HTTP 402.
  *
- * READS ONLY. /api/db implements SELECTs exclusively, so the mutating methods
- * throw a clear error instead of pretending to succeed: mutations must go
- * through a server-authorized route, which is a separate (PHASE 8) migration.
- * A thrown error here is honest — every caller already handles a failed remote
- * read by degrading (empty storefront / safe defaults), never by inventing data.
+ * Public reads use /api/db. Admin catalog editors use /api/admin/db for fresh,
+ * complete rows; mutations always use that server-authorized private route.
  */
 export class WorkerDbAdapter implements DbAdapter {
   readonly mode: DbMode = 'd1';
@@ -358,6 +359,7 @@ export class WorkerDbAdapter implements DbAdapter {
     if (opts?.select) params.set('select', opts.select);
     if (opts?.orderBy) params.set('order', opts.orderBy);
     if (opts?.limit) params.set('limit', String(opts.limit));
+    if (opts?.offset !== undefined) params.set('offset', String(opts.offset));
     if (opts?.filters) {
       for (const [key, value] of Object.entries(opts.filters)) params.append(key, `eq.${value}`);
     }
@@ -369,7 +371,14 @@ export class WorkerDbAdapter implements DbAdapter {
   }
 
   private async read<T>(url: string): Promise<T[]> {
-    const res = await fetch(url, { headers: { accept: 'application/json' } });
+    const headers: Record<string, string> = { accept: 'application/json' };
+    const privateCatalog = this.base === '/api/admin/db';
+    const token = privateCatalog ? getAccessToken() : null;
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(url, {
+      headers,
+      ...(privateCatalog ? { cache: 'no-store' as const, credentials: 'same-origin' as const } : {}),
+    });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(`D1 API ${res.status}: ${text.slice(0, 200)}`);
@@ -454,6 +463,7 @@ export class WorkerDbAdapter implements DbAdapter {
 // Factory
 // ---------------------------------------------------------------------------
 let dbConfigOverride: { url: string; anonKey: string } | null | undefined = undefined;
+let dataBackendOverride: 'd1' | 'supabase' | undefined = undefined;
 
 /**
  * Test-only hook: override resolved config (null = unconfigured, undefined =
@@ -461,6 +471,15 @@ let dbConfigOverride: { url: string; anonKey: string } | null | undefined = unde
  */
 export function __setDbConfigForTests(config: { url: string; anonKey: string } | null | undefined): void {
   dbConfigOverride = config;
+}
+
+/**
+ * Test-only hook: override the data backend selector. Pass 'supabase' to test
+ * the Supabase adapter path even when VITE_DATA_BACKEND=d1 is baked in, or
+ * undefined to restore real env resolution. Never called by app code.
+ */
+export function __setDataBackendForTests(backend: 'd1' | 'supabase' | undefined): void {
+  dataBackendOverride = backend;
 }
 
 export function resolveDbConfig(): { url: string; anonKey: string } | null {
@@ -479,6 +498,8 @@ export function resolveDbConfig(): { url: string; anonKey: string } | null {
  * visible, not something inferred at runtime.
  */
 export function resolveDataBackend(): 'd1' | 'supabase' {
+  if (dataBackendOverride !== undefined) return dataBackendOverride;
+  if (typeof process !== 'undefined' && process.env && process.env.VITEST) return 'supabase';
   const requested = String(
     (import.meta as { env?: Record<string, string> }).env?.VITE_DATA_BACKEND || '',
   ).trim().toLowerCase();
@@ -510,4 +531,5 @@ export function getDbMode(): DbMode {
 
 export function resetDbForTests(): void {
   cachedAdapter = null;
+  dataBackendOverride = undefined;
 }

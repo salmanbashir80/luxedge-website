@@ -31,7 +31,7 @@ export interface CustomerSyncResult {
  * friendly: never throws. Callers should not block sign-in on this.
  */
 export async function ensureCustomerProfile(user: { id: string; email: string; name: string }): Promise<CustomerSyncResult> {
-  if (getDbMode() !== 'supabase') return { ok: false, reason: 'not-configured' };
+  if (getDbMode() === 'local') return { ok: false, reason: 'not-configured' };
   const token = getAccessToken();
   if (!token) return { ok: false, reason: 'no-session' };
 

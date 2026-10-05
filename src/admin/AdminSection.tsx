@@ -5,7 +5,10 @@
 // ============================================================================
 import { useState, useEffect, useCallback, ReactNode, Component, Fragment } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation, useParams, Navigate } from 'react-router-dom';
-import { useApp, Modal, CAT_LIST, loadAIProviders, saveAIProviders, callAIProvider, fetchPageContent, serverTestProvider, serverOpenRouterCredits, serverProviderStatus } from '../App';
+import { useApp, Modal, CAT_LIST } from '../App';
+import type { Product, ProductVariant, AdminCategory } from '../App';
+import { loadAIProviders } from '../features/ai/providers';
+import { callAIProvider, serverProviderStatus } from '../features/ai/client';
 import { SOCIAL_PROFILES } from '../content/socialProfiles';
 import { useAuthStore } from '../store/authStore';
 import { getAccessToken } from '../services/supabase';
@@ -22,6 +25,7 @@ import PaymentsSetup from './PaymentsSetup';
 import GiftDropAdmin from './GiftDropAdmin';
 import ShippingSetup from './ShippingSetup';
 import CampaignManager from './CampaignManager';
+import AIHub from './AIHub';
 import AiControlCenter from './AiControlCenter';
 import { CatalogProductsPage, CatalogProductEditor, CatalogPromotionsPage } from './CatalogAdmin';
 import HermesIntel from './HermesIntel';
@@ -29,11 +33,10 @@ import BlogManager from './BlogManager';
 import MediaManager from './MediaManager';
 import LuxedgeSales from './LuxedgeSales';
 import type {
-  Product, ProductVariant, AdminCategory,
   AIProvider, EnterpriseVariant, VariantAttribute,
   SEOData, SocialSEO, ContentData, SEOScore, StructuredSchemas,
-  ProviderStatus, ProviderStatusMap,
-} from '../App';
+} from '../features/ai/types';
+import type { ProviderStatus, ProviderStatusMap } from '../features/ai/client';
 import {
   activeModeLabel, AD_SLOT_RE, clearPreviewConfig, CLIENT_ID_RE, fetchGlobalConfig,
   getCachedPreview, hasPreviewConfig, PLACEMENT_KEYS, PLACEMENT_LABELS,
@@ -45,7 +48,7 @@ import { ListingPlaybookAdmin } from './ListingPlaybookAdmin';
 import { ListingTaskAdmin } from './ListingTaskAdmin';
 import {
   Warning, ArrowLeft, Robot, CheckCircle, CaretDown, CaretRight, CaretUp,
-  Clipboard, Code, Cpu, CurrencyDollar, Download, Info, Key, PencilSimple, Eye, FileText, TreeStructure, Globe,
+  Clipboard, Code, Cpu, CurrencyDollar, Download, Info, PencilSimple, Eye, FileText, TreeStructure, Globe,
   Image as ImageIcon, Camera, Stack, SquaresFour, LinkSimple, SpinnerGap, Lock, SignOut, Megaphone, List,
   Monitor, Package, Plus, ArrowClockwise, ArrowCounterClockwise, FloppyDisk, MagnifyingGlass, PaperPlaneRight, GearSix,
   ShareNetwork, ShieldCheck, ShoppingCart, Shuffle, Sliders, DeviceMobile, Sparkle, Star, Table, Tag,
@@ -4960,414 +4963,6 @@ Rules:
 // ============================================================================
 // AI HUB — Unified AI Management Dashboard
 // ============================================================================
-function AAIHub() {
-  const { notify } = useApp();
-  const navigate = useNavigate();
-  const [aiProviders, setAiProviders] = useState<AIProvider[]>(() => {
-    return loadAIProviders();
-  });
-  const [serverStatus, setServerStatus] = useState<Record<string, ProviderStatus> | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<Record<string, string>>({});
-  const [orCredits, setOrCredits] = useState<{ total: number; used: number } | null>(null);
-  const [checkingCredits, setCheckingCredits] = useState(false);
-  const [scrapeTest, setScrapeTest] = useState<{ status: 'idle' | 'testing' | 'ok' | 'fail'; msg: string }>({ status: 'idle', msg: '' });
-  /** Verify the server-side scrape path works (SCRAPE_DO_TOKEN configured → scrape.do, else public fallback). */
-  const testScraping = async () => {
-    setScrapeTest({ status: 'testing', msg: 'Testing server-side page fetch…' });
-    try {
-      // A small, stable, fetchable page — returns quickly through any working path.
-      const raw = await fetchPageContent('https://example.com');
-      const parsed = JSON.parse(raw);
-      const ok = parsed && typeof parsed.text === 'string' && parsed.text.length > 50;
-      setScrapeTest({
-        status: ok ? 'ok' : 'fail',
-        msg: ok
-          ? 'Page fetch works — the server-side scrape path is reachable. Set SCRAPE_DO_TOKEN to unlock AliExpress (JS-rendered) pages.'
-          : 'Page fetch returned too little content — check the server /api/fetch-page deployment.',
-      });
-    } catch (e) {
-      setScrapeTest({
-        status: 'fail',
-        msg: `Page fetch failed: ${(e as Error).message?.slice(0, 160) || 'unknown error'}`,
-      });
-    }
-  };
-
-  const I = 'w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all';
-
-    const save = (updated: AIProvider[]) => {
-    setAiProviders(updated);
-    saveAIProviders(updated);
-    setSaving(true); notify('AI Providers saved!'); setTimeout(() => setSaving(false), 3000);
-  };
-
-  useEffect(() => {
-    serverProviderStatus().then((s) => {
-      const map: Record<string, ProviderStatus> = {};
-      s.providers.forEach(p => { map[p.id] = p; });
-      setServerStatus(map);
-    }).catch(() => setServerStatus({}));
-  }, []);
-
-  const testProvider = async (provider: AIProvider) => {
-    setTesting(provider.id);
-    try {
-      const msg = await serverTestProvider(provider.id, provider.defaultModel);
-      setTestResult({ ...testResult, [provider.id]: msg });
-    } catch (e: any) {
-      setTestResult({ ...testResult, [provider.id]: `Error: ${e.message?.slice(0, 80)}` });
-    } finally { setTesting(null); }
-  };
-
-  const checkOpenRouterCredits = async () => {
-    setCheckingCredits(true);
-    try {
-      const c = await serverOpenRouterCredits();
-      setOrCredits({ total: c.total, used: c.used });
-    } catch (e: any) { notify(`Credit check failed: ${e.message}`); }
-    finally { setCheckingCredits(false); }
-  };
-
-  // ── Owner-attached API keys (stored server-side, never in the browser) ──
-  const [keyInputs, setKeyInputs] = useState<Record<string, string>>({});
-  const [keySaving, setKeySaving] = useState<string | null>(null);
-  const [keyStatus, setKeyStatus] = useState<Record<string, { configured: boolean; source: string; masked: string }>>({});
-
-  const loadKeyStatus = async () => {
-    try {
-      const token = getAccessToken();
-      const res = await fetch('/api/admin/ai-keys', { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-      if (res.ok) {
-        const d = await res.json() as { providers: Array<{ id: string; configured: boolean; source: string; masked: string }> };
-        const m: Record<string, { configured: boolean; source: string; masked: string }> = {};
-        d.providers.forEach(p => { m[p.id] = p; });
-        setKeyStatus(m);
-      }
-    } catch { /* ignore */ }
-  };
-
-  useEffect(() => { void loadKeyStatus(); }, []);
-
-  const attachKey = async (providerId: string) => {
-    const key = (keyInputs[providerId] || '').trim();
-    if (key.length < 8) { notify('Paste the full API key or OAuth token first'); return; }
-    setKeySaving(providerId);
-    try {
-      const token = getAccessToken();
-      const res = await fetch('/api/admin/ai-keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ action: 'set', provider: providerId, key }),
-      });
-      const d = await res.json() as { ok?: boolean; error?: string; masked?: string };
-      if (res.ok && d.ok) {
-        notify(`Key saved for ${providerId} — live now`);
-        setKeyInputs(prev => ({ ...prev, [providerId]: '' }));
-        await loadKeyStatus();
-        await serverProviderStatus().then((s) => {
-          const map: Record<string, ProviderStatus> = {};
-          s.providers.forEach(p => { map[p.id] = p; });
-          setServerStatus(map);
-        }).catch(() => {});
-      } else {
-        notify(`Save failed: ${d.error || 'unknown error'}`);
-      }
-    } catch (e: any) { notify(`Save failed: ${e.message}`); }
-    finally { setKeySaving(null); }
-  };
-
-  const clearKey = async (providerId: string) => {
-    setKeySaving(providerId);
-    try {
-      const token = getAccessToken();
-      const res = await fetch('/api/admin/ai-keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ action: 'clear', provider: providerId }),
-      });
-      const d = await res.json() as { ok?: boolean; error?: string };
-      if (res.ok && d.ok) {
-        notify(`Key removed for ${providerId}`);
-        await loadKeyStatus();
-      } else {
-        notify(`Clear failed: ${d.error || 'unknown error'}`);
-      }
-    } catch (e: any) { notify(`Clear failed: ${e.message}`); }
-    finally { setKeySaving(null); }
-  };
-
-const providerIcons: Record<string, string> = {
-    openrouter: '\u{1F310}', gemini: '\u{1F916}', deepseek: '\u{1F40B}', codex: '\u{1F9D1}\u{200D}\u{1F4BB}', openai: '\u{1F9E0}', anthropic: '\u{1F9EC}'
-  };
-
-  return (
-    <div className="space-y-5 max-w-4xl">
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="w-12 h-12 bg-gradient-to-br from-purple-500 via-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200">
-          <Robot size={26} className="text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">AI Hub</h1>
-          <p className="text-sm text-gray-500">Manage AI providers, API keys, credits, and import settings</p>
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-          <button onClick={() => navigate('/admin/ai-import')} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors">
-            <MagicWand size={16} /> AI Import
-          </button>
-          <button onClick={() => navigate('/admin/marketing')} className="px-4 py-2 border border-purple-300 text-purple-700 hover:bg-purple-50 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors">
-            <Megaphone size={16} /> Marketing
-          </button>
-        </div>
-      </div>
-
-      {/* OpenRouter Credits Card */}
-      {aiProviders.find(p => p.id === 'openrouter' && p.enabled) && (
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-sm text-purple-800 flex items-center gap-2">
-              <Globe size={16} /> OpenRouter Credits
-            </h2>
-            <button onClick={checkOpenRouterCredits} disabled={checkingCredits}
-              className="px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50 flex items-center gap-1.5 transition-colors">
-              {checkingCredits ? <SpinnerGap size={12} className="animate-spin" /> : <ArrowClockwise size={12} />}
-              {checkingCredits ? 'Checking...' : 'Check Credits'}
-            </button>
-          </div>
-          {orCredits ? (
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-purple-700">${orCredits.total.toFixed(2)}</p>
-                <p className="text-xs text-gray-500">Total Limit</p>
-              </div>
-              <div className="bg-white rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-blue-600">${orCredits.used.toFixed(2)}</p>
-                <p className="text-xs text-gray-500">Used</p>
-              </div>
-              <div className="bg-white rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-green-600">${(orCredits.total - orCredits.used).toFixed(2)}</p>
-                <p className="text-xs text-gray-500">Remaining</p>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-purple-600">Click "Check Credits" to view your OpenRouter balance.</p>
-          )}
-          <p className="text-xs text-purple-400 mt-2">
-            <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="underline hover:text-purple-600">Get OpenRouter credits →</a>
-          </p>
-        </div>
-      )}
-
-      {/* AI Providers */}
-      <div className="bg-white rounded-2xl border border-purple-200 p-5">
-        <h2 className="font-bold text-sm text-gray-700 mb-4 flex items-center gap-2">
-          <Robot size={16} className="text-purple-500" /> AI Provider Configuration
-        </h2>
-        <p className="text-sm text-gray-500 mb-5">Add API keys and select models for each provider. The default provider is used for all AI operations.</p>
-        {/* First-run connection status */}
-        {(() => {
-          const known = Object.entries(keyStatus);
-          const connected = known.filter(([, k]) => k.configured);
-          if (connected.length === 0) {
-            return (
-              <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm flex items-start gap-3">
-                <Key size={16} className="text-amber-700 mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-semibold text-amber-800">Nothing connected yet</p>
-                  <p className="text-amber-700">Attach your first provider key below, then press <strong>Test</strong> to verify it — keys are stored server-side and never live in this browser.</p>
-                </div>
-              </div>
-            );
-          }
-          return (
-            <div className="mb-5 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2 flex-wrap text-xs">
-              <CheckCircle size={14} className="text-green-600 shrink-0" />
-              <span className="font-medium text-green-700">{connected.length} of {known.length} providers connected</span>
-              {connected.map(([id]) => (
-                <span key={id} className="px-2 py-0.5 bg-white border border-green-200 text-green-700 rounded-full font-medium">{aiProviders.find(p => p.id === id)?.name || id} ✓</span>
-              ))}
-            </div>
-          );
-        })()}
-        <div className="space-y-3">
-          {aiProviders.map((provider, idx) => (
-            <div key={provider.id} className={`border rounded-xl p-4 transition-all ${provider.isDefault ? 'border-purple-300 bg-purple-50/50 shadow-sm' : 'border-gray-200 hover:border-gray-300'}`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <button type="button" onClick={() => save(aiProviders.map((p, i) => ({ ...p, enabled: i === idx ? !p.enabled : p.enabled })))}>
-                    {provider.enabled ? <ToggleRight size={24} className="text-green-500" /> : <ToggleLeft size={24} className="text-gray-400" />}
-                  </button>
-                  <div>
-                    <span className="font-semibold text-sm">{providerIcons[provider.id] || ''} {provider.name}</span>
-                    {provider.isDefault && <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">Default</span>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => testProvider(provider)} disabled={testing === provider.id}
-                    className="px-3 py-1.5 text-xs border rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1.5 transition-colors">
-                    {testing === provider.id ? <SpinnerGap size={12} className="animate-spin" /> : <Lightning size={12} />}
-                    Test
-                  </button>
-                  {!provider.isDefault && (
-                    <button type="button" onClick={() => save(aiProviders.map(p => ({ ...p, isDefault: p.id === provider.id })))}
-                      className="text-xs text-purple-600 hover:text-purple-800 font-medium">Make Default</button>
-                  )}
-                </div>
-              </div>
-              {testResult[provider.id] && (
-                <div className={`mb-3 p-2 rounded-lg text-xs ${testResult[provider.id].startsWith('Error') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
-                  {testResult[provider.id]}
-                </div>
-              )}
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">Server Key</label>
-                  <div className={"flex items-center gap-2 text-xs px-3 py-2.5 rounded-xl border " + (serverStatus?.[provider.id]?.configured ? 'bg-green-50 border-green-200 text-green-700' : 'bg-amber-50 border-amber-200 text-amber-700')}>
-                    {serverStatus?.[provider.id]?.configured ? <CheckCircle size={14} className="shrink-0" /> : <Warning size={14} className="shrink-0" />}
-                    {serverStatus?.[provider.id]?.configured
-                      ? 'Configured on server — key is safe (env var only)'
-                      : 'No key yet — paste one above to go live now (a server env var, if set, wins)'}
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <input
-                      type="password"
-                      value={keyInputs[provider.id] || ''}
-                      onChange={e => setKeyInputs(prev => ({ ...prev, [provider.id]: e.target.value }))}
-                      placeholder={provider.id === 'codex' ? 'Paste ChatGPT OAuth token (Codex subscription)' : `Paste ${provider.name} API key`}
-                      className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-purple-400"
-                    />
-                    <button type="button" onClick={() => attachKey(provider.id)} disabled={keySaving === provider.id}
-                      className="px-3 py-2 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold disabled:opacity-50 shrink-0">
-                      {keySaving === provider.id ? 'Saving…' : 'Attach Key'}
-                    </button>
-                    {keyStatus[provider.id]?.source === 'attached' && (
-                      <button type="button" onClick={() => clearKey(provider.id)} disabled={keySaving === provider.id}
-                        className="px-3 py-2 text-xs border border-red-200 text-red-600 hover:bg-red-50 rounded-lg font-semibold disabled:opacity-50 shrink-0">
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                  {keyStatus[provider.id]?.source === 'attached' && (
-                    <p className="text-[10px] text-gray-400 mt-1">Attached key: {keyStatus[provider.id].masked} — stored server-side only.</p>
-                  )}
-                  <p className="text-[10px] text-gray-400 mt-1">Keys never live in the browser. All AI calls proxy through /api/ai/*.</p>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1">Model</label>
-                  <select value={provider.defaultModel} onChange={e => setAiProviders(prev => prev.map((p, i) => i === idx ? { ...p, defaultModel: e.target.value } : p))}
-                    className={I + ' text-xs'}>
-                    {provider.models.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
-              </div>
-              {provider.id === 'openrouter' && (
-                <p className="text-xs text-gray-400 mt-2">
-                  Free models: nvidia/nemotron-3-super-120b-a12b:free (default — 262k context, general purpose), nvidia/nemotron-3.5-lightning:free (1M context, fast), google/gemma-4-31b-it:free, cohere/north-mini-code:free (coding), openrouter/free (auto-routes to whichever free model is available)
-                  <br />Paid models require credits. OpenRouter retires free model ids without notice — if a run fails with “does not offer the requested model”, pick another id here (the server also retries the provider default automatically). <a href="https://openrouter.ai/docs" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">Docs</a>
-                </p>
-              )}
-              {provider.id === 'gemini' && (
-                <p className="text-xs text-gray-400 mt-2">
-                  Free tier: 1,500 requests/day. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">Get API key</a>
-                </p>
-              )}
-              {provider.id === 'deepseek' && (
-                <p className="text-xs text-gray-400 mt-2">
-                  Budget-friendly and fast. <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">Get API key</a>
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-        {saving && (
-          <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-xl text-purple-700 text-sm flex items-center gap-2">
-            <CheckCircle size={16} /> AI Providers saved successfully!
-          </div>
-        )}
-        <button type="button" onClick={() => save(aiProviders)}
-          className="mt-4 px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors w-full sm:w-auto justify-center">
-          <FloppyDisk size={16} /> FloppyDisk All AI Providers
-        </button>
-      </div>
-
-      {/* Quick Start Cards */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <MagicWand size={18} className="text-blue-600" />
-            <h3 className="font-bold text-sm">AI Product Import</h3>
-          </div>
-          <p className="text-xs text-gray-600 mb-3">Paste any product URL from AliExpress, Amazon, eBay, Etsy, Walmart, Temu — AI extracts all details.</p>
-          <button onClick={() => navigate('/admin/ai-import')} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors">
-            Launch Import →
-          </button>
-        </div>
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Megaphone size={18} className="text-green-600" />
-            <h3 className="font-bold text-sm">AI Content Generators</h3>
-          </div>
-          <p className="text-xs text-gray-600 mb-3">Generate product descriptions, ad copy, emails, social posts, blog ideas with AI.</p>
-          <button onClick={() => navigate('/admin/marketing')} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-semibold transition-colors">
-            Open Marketing →
-          </button>
-        </div>
-        <div className="bg-gradient-to-br from-sky-50 to-orange-50 border border-sky-200 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <MagnifyingGlass size={18} className="text-blue-600" />
-            <h3 className="font-bold text-sm">SEO Engine</h3>
-          </div>
-          <p className="text-xs text-gray-600 mb-3">AI-powered SEO optimization: meta tags, structured data, keyword analysis, content scoring.</p>
-          <button onClick={() => navigate('/admin/seo-engine')} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors">
-            Open SEO Engine →
-          </button>
-        </div>
-        <div className="bg-gradient-to-br from-pink-50 to-rose-50 border border-pink-200 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Stack size={18} className="text-pink-600" />
-            <h3 className="font-bold text-sm">Variant Generator</h3>
-          </div>
-          <p className="text-xs text-gray-600 mb-3">AI generates product variants (colors, sizes, materials) with SKUs and pricing.</p>
-          <button onClick={() => navigate('/admin/variant-gen')} className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold transition-colors">
-            Open Variant Gen →
-          </button>
-        </div>
-      </div>
-
-      {/* Scraping Configuration */}
-      <div className="bg-white rounded-2xl border border-green-200 p-5">
-        <h2 className="font-bold text-sm text-gray-700 mb-4 flex items-center gap-2">
-          <LinkSimple size={16} className="text-green-500" /> Web Scraping Configuration
-        </h2>
-        <div className="rounded-xl border border-dashed border-green-300 bg-green-50 p-4 space-y-3">
-          <div>
-            <p className="text-sm font-bold text-green-700">scrape.do — Free Web Scraper</p>
-            <p className="text-xs text-green-600 mt-0.5">1,000 free requests/month · No credit card · Permanent free tier</p>
-          </div>
-          <ol className="text-xs text-green-700 space-y-1 list-decimal list-inside">
-            <li>Go to scrape.do and create a free account</li>
-            <li>Add your token as the <span className="font-mono">SCRAPE_DO_TOKEN</span> environment variable on the server (see .env.example)</li>
-            <li>Credential-backed scraping then runs through /api/fetch-page — the token never ships to the browser</li>
-          </ol>
-          <div className="p-3 bg-white/60 border border-green-200 rounded-xl text-xs text-green-800">
-            🔒 Luxedge V2: scraping tokens are server-side only. Without a server token, URL import falls back to public proxies.
-          </div>
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={testScraping} disabled={scrapeTest.status === 'testing'}
-              className="px-4 py-2 text-xs bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg font-semibold flex items-center gap-1.5 transition-colors">
-              {scrapeTest.status === 'testing' ? <SpinnerGap size={12} className="animate-spin" /> : <LinkSimple size={12} />}
-              {scrapeTest.status === 'testing' ? 'Testing…' : 'Test scraping connection'}
-            </button>
-            {scrapeTest.status !== 'idle' && (
-              <p className={`text-xs ${scrapeTest.status === 'ok' ? 'text-green-700' : 'text-red-600'}`}>{scrapeTest.msg}</p>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function AAIImport() {
   return <AIImportPanel />;
@@ -6224,7 +5819,7 @@ export default function AdminSection() {
       <Route path="seo-engine" element={<AdminLayout><ASEOEngine /></AdminLayout>} />
       <Route path="marketing" element={<AdminLayout><AMarketingGen /></AdminLayout>} />
       <Route path="variant-gen" element={<AdminLayout><AVariantGen /></AdminLayout>} />
-      <Route path="ai" element={<AdminLayout><AAIHub /></AdminLayout>} />
+      <Route path="ai" element={<AdminLayout><AIHub /></AdminLayout>} />
       <Route path="ai-import" element={<AdminLayout><AAIImport /></AdminLayout>} />
       <Route path="listing-task" element={<AdminLayout><ListingTaskAdmin /></AdminLayout>} />
       <Route path="scout" element={<AdminLayout><ProductScout /></AdminLayout>} />

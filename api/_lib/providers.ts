@@ -3,7 +3,8 @@
 //
 // This code runs ONLY inside /api serverless functions (never in the browser).
 // Provider API keys are read from environment variables, with an optional
-// owner-attached fallback stored server-side in Supabase `app_settings`.
+// owner-attached fallback stored server-side in private D1 (Cloudflare) or
+// legacy Supabase `app_settings` (other deployments).
 //
 // SECURITY RULES (enforced here):
 //  - Keys are never logged, never echoed in errors, never returned to clients.
@@ -13,6 +14,8 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { supabaseAdmin, supabaseHeaders } from './supabase.js';
+import { getDataRuntime } from '../../worker/d1/runtime';
+import { readAttachedAiKeys } from './ai-key-store.js';
 
 /** Hard cap on outbound provider calls — prevents hung serverless functions. */
 export const FETCH_TIMEOUT_MS = 45_000;
@@ -139,6 +142,18 @@ const DB_KEYS_TTL_MS = 60_000;
 
 /** Load AI_KEY_* rows from app_settings (service role, read-only on those rows). */
 export async function loadDbProviderKeys(force = false): Promise<Record<string, string>> {
+  const runtime = getDataRuntime();
+  if (runtime.backend === 'd1' && runtime.db) {
+    const attached = await readAttachedAiKeys(runtime.db);
+    // Legacy keys are retained as a fallback (including warm cached values).
+    // New saves land only in D1; no Supabase credentials/settings are mutated.
+    const legacy = await loadLegacyProviderKeys(force);
+    return { ...legacy, ...attached };
+  }
+  return loadLegacyProviderKeys(force);
+}
+
+async function loadLegacyProviderKeys(force = false): Promise<Record<string, string>> {
   const cfg = supabaseAdmin();
   if (!cfg) return {};
   if (!force && dbKeysCache && Date.now() - dbKeysLoadedAt < DB_KEYS_TTL_MS) return dbKeysCache;

@@ -11,7 +11,7 @@
 //   - nothing secret is ever sent to /api/ai/generate
 // ============================================================================
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { callAIProvider } from '../client';
+import { callAIProvider, serverTestProviderResult } from '../client';
 import type { AIProvider } from '../types';
 
 function providers(): AIProvider[] {
@@ -41,6 +41,10 @@ afterEach(() => {
 });
 
 describe('callAIProvider', () => {
+  it('does not mistake an HTTP 200 failed connection test for success', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: false, message: 'Quota exhausted' }), { status: 200 })));
+    expect(await serverTestProviderResult('openrouter')).toEqual({ ok: false, message: 'Quota exhausted' });
+  });
   it('uses the configured default provider with no fallback when default settings have null fallback', async () => {
     stubFetch();
     const out = await callAIProvider('test', providers());

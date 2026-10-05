@@ -63,11 +63,11 @@ describe('loadAIProviders', () => {
     });
     const providers = loadAIProviders(storage);
     const deepseek = providers.find((p) => p.id === 'deepseek');
-    // The old shipped default (deepseek marked default) migrates to OpenRouter.
-    expect(deepseek?.isDefault).toBe(false);
+    // A saved owner choice stays the default; adding shipped providers must not replace it.
+    expect(deepseek?.isDefault).toBe(true);
     expect(deepseek?.defaultModel).toBe('deepseek-chat');
     expect(deepseek && 'apiKey' in deepseek).toBe(false);
-    expect(providers.find((p) => p.id === 'openrouter')?.isDefault).toBe(true);
+    expect(providers.find((p) => p.id === 'openrouter')?.isDefault).toBe(false);
     // defaults still present
     expect(providers.length).toBeGreaterThanOrEqual(DEFAULT_AI_PROVIDERS.length);
     expect(JSON.stringify(providers)).not.toContain('sk-ds-super-secret');

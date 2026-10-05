@@ -1,6 +1,7 @@
 // GET/POST /api/admin/ai-keys
 // Admin-only endpoint to manage owner-attached AI provider keys.
-// Keys are stored in the Supabase app_settings table as `AI_KEY_<PROVIDER>`
+// Cloudflare stores new keys in private D1 ai_provider_keys; legacy Supabase
+// app_settings `AI_KEY_<PROVIDER>` keys remain read-only fallbacks.
 // (e.g. AI_KEY_DEEPSEEK, AI_KEY_OPENROUTER, AI_KEY_CODEX, AI_KEY_CHATGPT_OAUTH)
 // — server-side only, never in the browser. Env vars always win; DB keys are
 // the fallback so the owner can attach their own keys without a redeploy.
@@ -15,6 +16,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { sendJson, readJsonBody, PROVIDER_ENV, PROVIDER_NAMES, resolveProviderKey, loadDbProviderKeys, testProvider, rateLimited, clientIp } from '../_lib/providers.js';
 import { upsertAppSetting, deleteAppSetting } from '../_lib/supabase.js';
 import { requireAdmin } from '../_lib/auth.js';
+import { getDataRuntime } from '../../worker/d1/runtime';
+import { writeAttachedAiKey, removeAttachedAiKey } from '../_lib/ai-key-store.js';
 
 const DB_KEY_PREFIX = 'AI_KEY_';
 
@@ -31,10 +34,14 @@ function mask(key: string): string {
 }
 
 function writeDbKey(provider: string, value: string): Promise<boolean> {
+  const runtime = getDataRuntime();
+  if (runtime.backend === 'd1' && runtime.db) return writeAttachedAiKey(runtime.db, provider, value);
   return upsertAppSetting(dbKeyName(provider), value);
 }
 
 function clearDbKey(provider: string): Promise<boolean> {
+  const runtime = getDataRuntime();
+  if (runtime.backend === 'd1' && runtime.db) return removeAttachedAiKey(runtime.db, provider);
   return deleteAppSetting(dbKeyName(provider));
 }
 
@@ -83,13 +90,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
   if (action === 'set') {
     const key = String(body.key || '').trim();
-    if (key.length < 8) {
-      sendJson(res, 400, { error: 'Key too short — paste the full API key or OAuth token.' });
+    if (key.length < 8 || key.length > 8192) {
+      sendJson(res, 400, { error: 'Key must contain between 8 and 8192 characters.' });
       return;
     }
     const ok = await writeDbKey(provider, key);
     if (!ok) {
-      sendJson(res, 502, { error: 'Could not save the key to the server (app_settings unavailable).' });
+      sendJson(res, 502, { error: 'Could not save the key to the private server store. Existing keys are unchanged.' });
       return;
     }
     await loadDbProviderKeys(true); // refresh cache so the next generate sees it

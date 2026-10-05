@@ -62,6 +62,16 @@ describe('catalog repository (local adapter)', () => {
     expect(b.slug).toBe('interactive-squeaky-enrichment-toy-for-dogs-2');
   });
 
+  it('AI content updates preserve the product URL and unrelated fields', async () => {
+    const p = await createProduct(base);
+    const next = await updateProduct(p.id, { name: 'Improved Squeaky Dog Toy', description: 'Updated factual copy.' }, { preserveSlug: true });
+    expect(next?.name).toBe('Improved Squeaky Dog Toy');
+    expect(next?.slug).toBe(p.slug);
+    expect(next?.price).toBe(p.price);
+    expect(next?.status).toBe(p.status);
+    expect(next?.tags).toEqual(p.tags);
+  });
+
   it('updates a product and derives margin + stock status', async () => {
     const p = await createProduct({ ...base });
     const updated = await updateProduct(p.id, { ...base, price: 24.99, inventoryQty: 3, lowStockThreshold: 5, stockStatus: 'low_stock' });

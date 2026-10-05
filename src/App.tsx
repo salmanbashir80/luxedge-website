@@ -17,6 +17,7 @@ import { categoryContentFor } from './content/categoryContent';
 import { NAV_PATHS, UTILITY_NAV, STRIP_NAV, MEGA_MENU, DRAWER_NAV, FOOTER_COLUMNS } from './content/navigation';
 import { productContentFor } from './content/productContent';
 import ProductGallery from './components/ProductGallery';
+import { proxiedImage } from './lib/product-images';
 import CookieConsent from './components/CookieConsent';
 import WelcomePopup from './components/WelcomePopup';
 import AIAssistant from './components/AIAssistant';
@@ -85,6 +86,7 @@ export interface Product {
   intendedSpecies?: string | null;
   commerceReadiness?: string; sourceType?: string; inventorySource?: string;
   deliveryMinDays?: number | null; deliveryMaxDays?: number | null;
+  isPartial?: boolean;
 }
 interface CartItem { product: Product; quantity: number; }
 interface AppUser { id: string; email: string; name: string; role: 'admin' | 'buyer'; password?: string; isBlocked?: boolean; joined?: string; }
@@ -114,19 +116,6 @@ const LUXEDGE_IMAGE_FALLBACK = "data:image/svg+xml;charset=utf-8," + encodeURICo
   "<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800'><rect width='100%' height='100%' fill='#F6F3EE'/><text x='50%' y='50%' font-family='Georgia, serif' font-size='64' letter-spacing='6' fill='#1A2440' text-anchor='middle' dominant-baseline='middle'>LUXEDGE</text></svg>"
 );
 
-/** Proxy CJ/external images through our worker to bypass CORS/ORB. */
-function proxiedImage(src: string): string {
-  if (!src || src.startsWith('data:')) return src;
-  try {
-    const u = new URL(src);
-    const hosts = ['cf.cjdropshipping.com', 'oss-cf.cjdropshipping.com', 'img.ltwebstatic.com', 'ae01.alicdn.com'];
-    if (hosts.some(h => u.hostname === h || u.hostname.endsWith('.' + h))) {
-      return '/api/img-proxy?url=' + encodeURIComponent(src);
-    }
-  } catch { /* not a URL, use as-is */ }
-  return src;
-}
-
 /** Swap a broken image to the branded fallback once (never loops). */
 function onImageError(e: React.SyntheticEvent<HTMLImageElement>) {
   const img = e.currentTarget;
@@ -145,47 +134,7 @@ import CampaignLanding from './features/campaigns/CampaignLanding';
 import CampaignPopup from './features/campaigns/CampaignPopup';
 import { productPath } from './features/catalog/seo';
 
-import type {
-  AIProvider, ImportHistoryEntry, AIExtractedProduct, EnterpriseVariant,
-  VariantAttribute, SEOData, SocialSEO, ContentData, SEOScore, StructuredSchemas,
-} from "./features/ai/types";
-import {
-  DEFAULT_AI_PROVIDERS, loadAIProviders, saveAIProviders, resolveActiveProvider,
-} from "./features/ai/providers";
-import {
-  callAIProvider, serverGenerate, serverTestProvider,
-  serverOpenRouterCredits, serverProviderStatus,
-} from "./features/ai/client";
-import type { ProviderStatus, ProviderStatusMap } from "./features/ai/client";
-import {
-  fetchPageContent, buildExtractionPrompt, extractProductJson, parseHtmlPage,
-  normalizeProductTitle, extractAliExpressItemId, assessAliExpressRisk,
-  deriveImportReadiness, findDuplicateProduct, buildImportImages,
-  buildImportVariants, buildImportProductInput,
-  buildStorageImageInputs, importProductImagesToStorage,
-  buildUrlEvidenceProduct, buildScrapedEvidenceProduct, mergeScrapedWithAi, requireReviewEvidence,
-  extractAliExpressUrlEvidence, isEmptyExtraction,
-} from "./features/ai/importer";
-
-// Re-exported so existing consumers (e.g. the admin section importing from
-// "../App") keep working without change.
-export type {
-  AIProvider, ImportHistoryEntry, AIExtractedProduct, EnterpriseVariant,
-  VariantAttribute, SEOData, SocialSEO, ContentData, SEOScore, StructuredSchemas,
-  ProviderStatus, ProviderStatusMap,
-};
-export {
-  DEFAULT_AI_PROVIDERS, loadAIProviders, saveAIProviders, resolveActiveProvider,
-  callAIProvider, serverGenerate, serverTestProvider, serverOpenRouterCredits,
-  serverProviderStatus,
-  fetchPageContent, buildExtractionPrompt,
-  extractProductJson, parseHtmlPage, normalizeProductTitle,
-  extractAliExpressItemId, assessAliExpressRisk, deriveImportReadiness,
-  findDuplicateProduct, buildImportImages, buildImportVariants,
-  buildImportProductInput, buildStorageImageInputs, importProductImagesToStorage,
-  buildUrlEvidenceProduct, buildScrapedEvidenceProduct, mergeScrapedWithAi, requireReviewEvidence,
-  extractAliExpressUrlEvidence, isEmptyExtraction,
-};
+// AI Imports have been relocated directly to Admin components to reduce main bundle size.
 
 
 // ============================================================================
@@ -208,7 +157,7 @@ function mapCatalogProduct(p: CatalogProduct): Product {
     originalPrice: p.originalPrice,
     category: p.category || 'Pet Supplies',
     stock: p.stock,
-    images: p.images.length ? p.images.map(proxiedImage) : [],
+    images: p.images.length ? p.images.map(src => proxiedImage(src)) : [],
     // Ensure primary (hero) image is always first
     // (catalog may return images in insertion order, not primary-first)
     imageAlts: p.imageAlts || [],
@@ -249,6 +198,7 @@ function mapCatalogProduct(p: CatalogProduct): Product {
     supplierSource: p.supplierSource,
     supplierProductRef: p.supplierProductRef,
     supplierUrl: p.supplierUrl,
+    isPartial: p.isPartial,
     variants: (p.variants || []).map((v) => ({
       id: v.id,
       color: v.attributes?.color || '',
@@ -327,9 +277,9 @@ const CAT_META: Record<string, { desc: string }> = {
   'Cattle': { desc: 'Useful feeding and care essentials for cattle and livestock' },
 };
 
-function firstUsableImage(product: Product | undefined): string | undefined {
+function firstUsableImage(product: Product | undefined, width?: number): string | undefined {
   const raw = product?.images.find((image) => Boolean(image));
-  return raw ? proxiedImage(raw) : undefined;
+  return raw ? proxiedImage(raw, width) : undefined;
 }
 const toSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 const fromSlug = (slug: string) => CAT_LIST.find(c => toSlug(c) === slug) || 'All';
@@ -531,7 +481,7 @@ function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (products.length === 0) return;
     const ranked = rankProducts(products, { stats: merchStats, explore: false });
-    const top = ranked.slice(0, 12).map((p) => ({ id: p.id, url: p.images && p.images[0] ? proxiedImage(p.images[0]) : undefined }));
+    const top = ranked.slice(0, 12).map((p) => ({ id: p.id, url: p.images && p.images[0] ? proxiedImage(p.images[0], 200) : undefined }));
     let cancelled = false;
     const run = () => { if (!cancelled) void probeVisualQuality(top, { budget: 12, concurrency: 2 }); };
     const w = window as unknown as { requestIdleCallback?: (fn: () => void, o?: { timeout: number }) => number };
@@ -1113,8 +1063,9 @@ function PCard({ product }: { product: Product }) {
   const { addToCart, reviews, notify } = useApp();
   const { pathname } = useLocation();
   const selectProduct = () => trackEvent('select_item', { item_list_id: pathname || 'storefront', items: [{ item_id: product.id, item_name: product.name, price: product.price }], ...utmParams() });
-  const image = firstUsableImage(product) || LUXEDGE_IMAGE_FALLBACK;
-  const secondImage = product.images.find((candidate) => candidate && candidate !== image);
+  const image = firstUsableImage(product, 400) || LUXEDGE_IMAGE_FALLBACK;
+  const secondImageRaw = product.images.find((candidate) => candidate && candidate !== (product?.images.find((i) => Boolean(i))));
+  const secondImage = secondImageRaw ? proxiedImage(secondImageRaw, 400) : undefined;
   const hasCompareAt = product.originalPrice > product.price;
   const discount = hasCompareAt ? Math.round((1 - product.price / product.originalPrice) * 100) : 0;
   // Ratings come ONLY from verified user reviews — never the catalog stub.
@@ -1428,9 +1379,13 @@ function ProductDetailPage() {
   const catalogProduct = products.find(p => p.id === id || p.slug === id);
   const [directProduct, setDirectProduct] = useState<Product | null>(null);
   const [resolving, setResolving] = useState(false);
+  
+  // If the product was loaded from the lightweight listing projection, we must fetch the full detail row.
+  const needsFullFetch = !catalogProduct || catalogProduct.isPartial;
+
   useEffect(() => {
     let cancelled = false;
-    if (catalogProduct) { setDirectProduct(null); setResolving(false); return; }
+    if (!needsFullFetch) { setDirectProduct(null); setResolving(false); return; }
     setDirectProduct(null); setResolving(true);
     void loadProductByIdOrSlug(id || '').then((p) => {
       if (cancelled) return;
@@ -1438,8 +1393,10 @@ function ProductDetailPage() {
       setResolving(false);
     });
     return () => { cancelled = true; };
-  }, [id, catalogProduct?.id]);
-  const product = catalogProduct || directProduct;
+  }, [id, needsFullFetch]);
+  
+  // Use directProduct if we fetched it, otherwise fallback to the listing product while resolving, or just the listing product if full.
+  const product = directProduct || catalogProduct;
 
   // ALL hooks MUST be before any return
   const [qty, setQty] = useState(1);
@@ -2139,24 +2096,6 @@ function HomePage() {
       image: '/images/redesign/products/bird-feeder.jpg',
       badge: 'Wild Bird'
     },
-    {
-      id: 'f6859ec4-b5a5-4250-8f5b-7957c9a810dd',
-      slug: 'himalayan-pink-salt-licks-for-horses',
-      name: 'Himalayan Pink Salt Licks for Horses — Essential Trace Minerals',
-      price: 18.95,
-      originalPrice: 24.95,
-      image: '/images/redesign/products/horse-salt-lick.jpg',
-      badge: 'Equine Choice'
-    },
-    {
-      id: 'himalayan-salt-rock-for-cattle',
-      slug: 'himalayan-salt-rock-for-cattle',
-      name: 'Himalayan Pink Salt Block for Cattle — 30 lb Essential Minerals',
-      price: 49.95,
-      originalPrice: 59.95,
-      image: '/images/redesign/products/cattle-salt-block.jpg',
-      badge: 'Farm Choice'
-    }
   ];
 
   // Map to live products when catalog data is present
@@ -2170,8 +2109,8 @@ function HomePage() {
     const dog = findBySlug('stainless-steel-pet-water-fountain-filtered-running-water-for-cats-dogs') || findByCat('dog') || active[0];
     const cat = findBySlug('collapsible-cat-tunnel-with-crinkle-peek-hole-3-way-play-tube') || findByCat('cat') || active[1];
     const bird = findBySlug('outdoor-hanging-bird-feeder') || findByCat('bird') || active[2];
-    const horse = findBySlug('himalayan-pink-salt-licks-for-horses') || findByCat('horse') || active[3];
-    const livestock = findBySlug('heavy-duty-cattle-feed-trough') || findByCat('cattle') || active[4];
+    const horse = findByCat('horse') || active[3];
+    const livestock = findByCat('cattle') || active[4];
 
     return [
       {
@@ -2180,7 +2119,7 @@ function HomePage() {
         name: dog?.name || defaultBestsellers[0].name,
         price: dog?.price || defaultBestsellers[0].price,
         originalPrice: dog?.originalPrice || defaultBestsellers[0].originalPrice,
-        image: (dog && firstUsableImage(dog)) || defaultBestsellers[0].image,
+        image: (dog && firstUsableImage(dog, 500)) || defaultBestsellers[0].image,
         badge: 'Bestseller',
         rawProduct: dog
       },
@@ -2190,7 +2129,7 @@ function HomePage() {
         name: cat?.name || defaultBestsellers[1].name,
         price: cat?.price || defaultBestsellers[1].price,
         originalPrice: cat?.originalPrice || defaultBestsellers[1].originalPrice,
-        image: (cat && firstUsableImage(cat)) || defaultBestsellers[1].image,
+        image: (cat && firstUsableImage(cat, 500)) || defaultBestsellers[1].image,
         badge: 'Popular',
         rawProduct: cat
       },
@@ -2200,30 +2139,30 @@ function HomePage() {
         name: bird?.name || defaultBestsellers[2].name,
         price: bird?.price || defaultBestsellers[2].price,
         originalPrice: bird?.originalPrice || defaultBestsellers[2].originalPrice,
-        image: (bird && firstUsableImage(bird)) || defaultBestsellers[2].image,
+        image: (bird && firstUsableImage(bird, 500)) || defaultBestsellers[2].image,
         badge: 'Wild Bird',
         rawProduct: bird
       },
-      {
-        id: horse?.id || defaultBestsellers[3].id,
-        slug: horse?.slug || defaultBestsellers[3].slug,
-        name: horse?.name || defaultBestsellers[3].name,
-        price: horse?.price || defaultBestsellers[3].price,
-        originalPrice: horse?.originalPrice || defaultBestsellers[3].originalPrice,
-        image: (horse && firstUsableImage(horse)) || defaultBestsellers[3].image,
+      ...(horse ? [{
+        id: horse.id,
+        slug: horse.slug,
+        name: horse.name,
+        price: horse.price,
+        originalPrice: horse.originalPrice,
+        image: firstUsableImage(horse, 500) || '',
         badge: 'Equine Choice',
         rawProduct: horse
-      },
-      {
-        id: livestock?.id || defaultBestsellers[4].id,
-        slug: livestock?.slug || defaultBestsellers[4].slug,
-        name: livestock?.name || defaultBestsellers[4].name,
-        price: livestock?.price || defaultBestsellers[4].price,
-        originalPrice: livestock?.originalPrice || defaultBestsellers[4].originalPrice,
-        image: (livestock && firstUsableImage(livestock)) || defaultBestsellers[4].image,
+      }] : []),
+      ...(livestock ? [{
+        id: livestock.id,
+        slug: livestock.slug,
+        name: livestock.name,
+        price: livestock.price,
+        originalPrice: livestock.originalPrice,
+        image: firstUsableImage(livestock, 500) || '',
         badge: 'Farm Choice',
         rawProduct: livestock
-      }
+      }] : [])
     ];
   }, [products]);
 
@@ -2731,7 +2670,7 @@ function HomePage() {
 
 function ShopPage() {
   const { slug } = useParams<{ slug?: string }>();
-  const { products, merchStats } = useApp();
+  const { products, setProducts, categories, merchStats } = useApp();
   // Subscribe so quality-store changes (broken images) re-rank the grid.
   useMerchVisualVersion();
   const nav = useNavigate();
@@ -2746,6 +2685,31 @@ function ShopPage() {
   const [onlyFreeShipping, setOnlyFreeShipping] = useState(false);
   const [onlyNew, setOnlyNew] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [serverHasMore, setServerHasMore] = useState(true);
+  const itemsPerPage = 24;
+
+  const handleLoadMore = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    const catId = cat !== 'All' ? categories.find(c => c.name === cat)?.id : undefined;
+    const more = await loadStorefrontCatalog({ limit: 24, offset: products.length, categoryId: catId });
+    if (more && more.products.length > 0) {
+      setProducts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const added = more.products.map(mapCatalogProduct).filter(p => !existingIds.has(p.id));
+        return [...prev, ...added];
+      });
+      if (more.products.length < 24) {
+        setServerHasMore(false);
+      }
+    } else {
+      setServerHasMore(false);
+    }
+    setPage(p => p + 1);
+    setLoadingMore(false);
+  };
   const isDeals = q.toLowerCase() === 'deal';
   const hasRealDeals = products.some(p => p.isActive && (p.saleEnabled || p.originalPrice > p.price));
   const dealFallbackIds = new Set(
@@ -2759,6 +2723,7 @@ function ShopPage() {
   useEffect(() => { setCat(slug ? fromSlug(slug) : 'All'); }, [slug]);
   useEffect(() => { const qp = params.get('q'); if (qp) trackEvent('search', { search_term: qp, ...utmParams() }); setQ(qp || ''); }, [params]);
   useEffect(() => { const m = params.get('max'); if (m !== null) setMaxPrice(+m); }, [params]);
+  useEffect(() => { setPage(1); }, [cat, q, sort, maxPrice, onlyInStock, onlyFreeShipping, onlyNew]);
 
   const base = products.filter(p => p.isActive)
     .filter(p => {
@@ -2804,6 +2769,8 @@ function ShopPage() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cat, q, sort, maxPrice, onlyInStock, onlyFreeShipping, onlyNew]);
+
+  const paginatedF = f.slice(0, page * itemsPerPage);
 
   const handleCatChange = (newCat: string) => {
     if (newCat === 'All') nav('/shop');
@@ -2965,9 +2932,22 @@ function ShopPage() {
             <p className="text-[12px] text-luxe-gray mb-3">{f.length} product{f.length !== 1 ? 's' : ''}{cat !== 'All' ? ` in ${cat}` : ''}</p>
 
             {f.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                {f.map(p => <PCard key={p.id} product={p} />)}
-              </div>
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                  {paginatedF.map(p => <PCard key={p.id} product={p} />)}
+                </div>
+                {(f.length > paginatedF.length || serverHasMore) && (
+                  <div className="mt-8 text-center">
+                    <button
+                      onClick={handleLoadMore}
+                      disabled={loadingMore}
+                      className="px-6 py-2.5 bg-luxe-black hover:bg-luxe-gold text-white text-xs font-bold uppercase tracking-wider rounded-full transition-colors disabled:opacity-50"
+                    >
+                      {loadingMore ? 'Loading...' : 'Load More'}
+                    </button>
+                  </div>
+                )}
+              </>
             ) : products.length === 0 ? (
               /* Phase 4E.1 — genuinely empty catalog (no published DB products):
                  premium curation notice, never fake cards or fake counts. */

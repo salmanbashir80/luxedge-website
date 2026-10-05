@@ -10,8 +10,12 @@
 //     creates), with a TEST filter and the full fulfilment action set.
 // The flagship Pet Gift Drop stays bridged to the legacy config + page.
 // ============================================================================
-import { useEffect, useState } from 'react';
-import { getAccessToken } from '../services/supabase';
+import { useEffect, useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { getAccessToken, getFreshAccessToken } from '../services/supabase';
+import { callAIProvider } from '../features/ai/client';
+import { loadAIProviders } from '../features/ai/providers';
+import { campaignCopyPrompt, parseCampaignCopy } from '../features/ai/campaignCopy';
 
 type Status = 'draft' | 'scheduled' | 'live' | 'paused' | 'ended' | 'archived';
 
@@ -106,6 +110,7 @@ interface ProdRow { id: string; slug?: string | null; name?: string | null; pric
 
 export default function CampaignManager() {
   const [loaded, setLoaded] = useState(false);
+  const [storageReady, setStorageReady] = useState(false);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [campaigns, setCampaigns] = useState<Array<{ config: CampaignView; state: Record<string, unknown>; stats: Record<string, unknown> }>>([]);
@@ -123,14 +128,33 @@ export default function CampaignManager() {
   const [prodQuery, setProdQuery] = useState('');
   const [prodResults, setProdResults] = useState<ProdRow[]>([]);
   const [flagsDraft, setFlagsDraft] = useState<FlagsMap>({});
+  const [campaignQuery, setCampaignQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [copyBusy, setCopyBusy] = useState(false);
+  const [copyNote, setCopyNote] = useState('');
+  const [copyUndo, setCopyUndo] = useState<Pick<CampaignView, 'title' | 'subtitle' | 'message'> | null>(null);
+  const editingRef = useRef(editing);
+  const editDialog = useRef<HTMLDialogElement>(null);
+  editingRef.current = editing;
+  useEffect(() => {
+    const dialog = editDialog.current;
+    if (editing && dialog && !dialog.open) dialog.showModal();
+    return () => { if (dialog?.open) dialog.close(); };
+  }, [editing?.slug]);
 
   const token = getAccessToken();
+  const authHeaders = (): Record<string, string> => token ? { Authorization: `Bearer ${token}` } : {};
 
   const load = () => {
-    if (!token) return;
-    fetch('/api/admin/campaigns', { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+    setLoaded(false); setStorageReady(false); setErr('');
+    fetch('/api/admin/campaigns', { headers: authHeaders(), credentials: 'same-origin', cache: 'no-store' })
+      .then(async r => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || `Campaign Manager unavailable (HTTP ${r.status}).`);
+        return d;
+      })
       .then((d) => {
+        setStorageReady(true);
         setCampaigns(Array.isArray(d.campaigns) ? d.campaigns : []);
         setFlagship(d.flagship || null);
         setClaims(Array.isArray(d.claims) ? d.claims : []);
@@ -139,20 +163,21 @@ export default function CampaignManager() {
         setTemplates(Array.isArray(d.templates) ? d.templates : []);
         setStatuses(Array.isArray(d.statuses) ? d.statuses : []);
       })
-      .catch(() => setErr('Could not load the Campaign Manager — are you signed in as admin?'))
+      .catch(e => setErr((e as Error).message || 'Could not load the Campaign Manager.'))
       .finally(() => setLoaded(true));
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   const post = async (payload: Record<string, unknown>): Promise<Record<string, unknown> | null> => {
-    if (!token) return null;
+    if (!storageReady) { setErr('Campaign storage is not ready. Refresh after its connection is restored.'); return null; }
     setBusy(true);
     setErr('');
     try {
       const r = await fetch('/api/admin/campaigns', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        credentials: 'same-origin',
         body: JSON.stringify(payload),
       });
       const d = await r.json().catch(() => ({}));
@@ -196,9 +221,8 @@ export default function CampaignManager() {
   };
 
   const searchProducts = async (q: string) => {
-    if (!token) return;
     setProdQuery(q);
-    const r = await fetch(`/api/admin/campaigns?view=products&q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } });
+    const r = await fetch(`/api/admin/campaigns?view=products&q=${encodeURIComponent(q)}`, { headers: authHeaders(), credentials: 'same-origin' });
     const d = await r.json().catch(() => ({}));
     setProdResults(Array.isArray(d.products) ? d.products : []);
   };
@@ -213,6 +237,7 @@ export default function CampaignManager() {
     const cfg = (campaigns.find((c) => c.config.slug === slug)?.config) || null;
     if (!cfg) { setErr('Only registry campaigns can be edited here (the flagship is edited on the Gift Drop page).'); return; }
     setEditing(JSON.parse(JSON.stringify(cfg)));
+    setCopyNote(''); setCopyUndo(null);
   };
 
   const setField = (k: keyof CampaignView, v: unknown) => setEditing((e) => (e ? { ...e, [k]: v } : e));
@@ -220,9 +245,33 @@ export default function CampaignManager() {
 
   const saveEdit = async () => {
     if (!editing) return;
+    if (editing.startsAt && !Number.isFinite(Date.parse(editing.startsAt))) { setCopyNote('Enter a valid start date.'); return; }
+    if (editing.endsAt && !Number.isFinite(Date.parse(editing.endsAt))) { setCopyNote('Enter a valid end date.'); return; }
+    if (editing.startsAt && editing.endsAt && Date.parse(editing.endsAt) <= Date.parse(editing.startsAt)) { setCopyNote('Campaign end must be after its start.'); return; }
+    if (editing.status === 'live' && !window.confirm('Save these changes to a LIVE campaign? Review the preview and offer details first.')) return;
     const d = await post({ action: 'save', config: editing });
     if (d) { setEditing(null); load(); }
   };
+
+  const draftCopy = async () => {
+    if (!editing || copyBusy) return;
+    const snapshot = structuredClone(editing);
+    setCopyBusy(true); setCopyNote('Generating a draft with your shared AI provider…');
+    try {
+      await getFreshAccessToken();
+      const raw = await callAIProvider(campaignCopyPrompt({ title: snapshot.title, subtitle: snapshot.subtitle, message: snapshot.message, kind: snapshot.kind, giftName: snapshot.giftName, freeShipping: snapshot.offer?.freeShipping }), loadAIProviders());
+      const copy = parseCampaignCopy(raw, { kind: snapshot.kind, freeShipping: snapshot.offer?.freeShipping });
+      if (!editingRef.current || JSON.stringify(editingRef.current) !== JSON.stringify(snapshot)) throw new Error('Campaign changed while AI was working. Draft not applied; try again.');
+      setCopyUndo({ title: snapshot.title, subtitle: snapshot.subtitle, message: snapshot.message });
+      setEditing(prev => prev?.slug === snapshot.slug ? { ...prev, ...copy } : prev);
+      setCopyNote('AI draft applied to this form only. Review the preview, then save manually. Nothing has been published or emailed.');
+    } catch (e) { setCopyNote((e as Error).message); }
+    finally { setCopyBusy(false); }
+  };
+
+  const filteredCampaigns = campaigns.filter(({ config: c }) => (statusFilter === 'all' || c.status === statusFilter)
+    && `${c.title} ${c.slug}`.toLowerCase().includes(campaignQuery.toLowerCase()));
+  const formatDate = (date?: string | null) => date && Number.isFinite(Date.parse(date)) ? new Date(date).toLocaleString() : 'Not set';
 
   const totalClaims = (slug: string) => {
     const rows = claimsFor(slug);
@@ -241,18 +290,19 @@ export default function CampaignManager() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-bold text-gray-900">Campaign Manager</h1>
-          <p className="text-xs text-gray-500">
-            Reusable promotional campaigns. Free-gift claims live in the same order table as sales, marked{' '}
-            <code className="rounded bg-gray-100 px-1">PET-GIFT-DROP</code> — no payment method is ever collected for $0 gifts.
-          </p>
+          <p className="mt-1 text-sm text-gray-600">Plan an offer, prepare the copy, review the preview, then publish when ready. Gift claims remain separate from paid orders.</p>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <button onClick={load} className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-50">Refresh</button>
-          <button onClick={() => setShowCreate(true)} className="rounded-lg bg-indigo-600 px-3 py-1.5 font-bold text-white hover:bg-indigo-700">+ Create campaign</button>
+          <button onClick={() => setShowCreate(true)} disabled={!storageReady || busy} className="rounded-lg bg-indigo-600 px-3 py-1.5 font-bold text-white hover:bg-indigo-700 disabled:opacity-40">+ Create campaign</button>
         </div>
       </div>
 
-      {err && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{err}</div>}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3" aria-label="Campaign overview">
+        {[['Registry live campaigns', campaigns.filter(c => c.config.status === 'live').length], ['Drafts', campaigns.filter(c => c.config.status === 'draft').length], ['Scheduled', campaigns.filter(c => c.config.status === 'scheduled').length], ['Real gift claims', claims.filter(c => !c.isTest && !['cancelled', 'failed'].includes(c.status)).length]].map(([label, count]) => <div key={label} className="rounded-xl border border-gray-200 bg-white p-4"><p className="text-xs text-gray-600">{label}</p><p className="mt-2 text-2xl font-bold text-gray-950">{loaded && storageReady ? count : '—'}</p></div>)}
+      </section>
+      <div className="flex flex-col sm:flex-row gap-3"><label className="flex-1 text-xs font-semibold text-gray-700">Find a campaign<input className={inputCls} value={campaignQuery} onChange={e => setCampaignQuery(e.target.value)} placeholder="Search title or URL slug" /></label><label className="text-xs font-semibold text-gray-700">Status<select className={inputCls} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">All statuses</option>{Object.entries(STATUS_UI).map(([id, ui]) => <option key={id} value={id}>{ui.label}</option>)}</select></label><Link to="/admin/ai" className="self-end min-h-11 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-indigo-700">AI connection →</Link></div>
+      {err && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{err}</div>}
 
       {/* Create modal */}
       {showCreate && (
@@ -278,13 +328,14 @@ export default function CampaignManager() {
 
       {/* Edit modal */}
       {editing && (
-        <div className="fixed inset-0 z-[120] overflow-y-auto bg-black/40 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={`Edit ${editing.title}`}>
+        <dialog ref={editDialog} onCancel={e => { e.preventDefault(); if (!copyBusy && !busy) setEditing(null); }} className="m-auto w-[calc(100%_-_1.5rem)] max-w-2xl max-h-[90dvh] overflow-y-auto rounded-2xl border-0 p-0 shadow-2xl backdrop:bg-black/40" aria-label={`Edit ${editing.title}`}>
           <div className="mx-auto w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-black text-gray-900">Edit — {editing.slug}</h2>
-              <button onClick={() => setEditing(null)} className="rounded-lg px-2 py-1 text-xs text-gray-400 hover:bg-gray-100">Close</button>
+              <button onClick={() => setEditing(null)} disabled={copyBusy || busy} className="min-h-11 rounded-lg px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:opacity-50">Close</button>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <section className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-950 space-y-2"><p className="font-semibold">AI copy assistance — drafts only</p><p>Uses the same provider as product SEO. Does not change your offer, dates, inventory, campaign status or email recipients.</p><div className="flex flex-wrap gap-2"><button onClick={() => void draftCopy()} disabled={copyBusy || busy || !editing.title.trim()} className="min-h-11 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{copyBusy ? 'Generating…' : 'Draft copy with AI'}</button>{copyUndo && <button className="min-h-11 px-3 text-sm underline" disabled={copyBusy || busy} onClick={() => { setEditing(prev => prev ? { ...prev, ...copyUndo } : prev); setCopyUndo(null); setCopyNote('Previous copy restored in the form.'); }}>Undo AI copy</button>}</div>{copyNote && <p role="status">{copyNote}</p>}</section>
+            <fieldset disabled={copyBusy || busy} className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className={labelCls}>Title
                 <input className={inputCls} value={editing.title} onChange={(e) => setField('title', e.target.value)} /></label>
               <label className={labelCls}>Status
@@ -325,13 +376,14 @@ export default function CampaignManager() {
                 <input type="checkbox" className="h-4 w-4 accent-indigo-600" checked={!!editing.popup?.enabled} onChange={(e) => setField('popup', { ...(editing.popup || {}), enabled: e.target.checked })} />
                 Enable storefront popup (email capture)
               </label>
-            </div>
+            </fieldset>
+            <section className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4" aria-label="Campaign copy preview"><p className="text-xs font-semibold uppercase text-gray-600">Preview · not published</p><h3 className="mt-2 text-lg font-bold text-gray-950 break-words">{editing.title}</h3><p className="mt-1 text-sm text-gray-700 break-words">{editing.subtitle}</p><p className="mt-3 text-sm leading-relaxed text-gray-700 whitespace-pre-wrap break-words">{editing.message}</p><p className="mt-3 text-xs text-gray-600">Starts: {formatDate(editing.startsAt)} · Ends: {formatDate(editing.endsAt)}</p></section>
             <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setEditing(null)} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600">Cancel</button>
-              <button onClick={saveEdit} disabled={busy} className="rounded-lg bg-gray-900 px-4 py-1.5 text-xs font-bold text-white disabled:opacity-50">Save campaign</button>
+              <button onClick={() => setEditing(null)} disabled={busy || copyBusy} className="min-h-11 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600">Cancel</button>
+              <button onClick={saveEdit} disabled={busy || copyBusy} className="min-h-11 rounded-lg bg-gray-900 px-4 py-1.5 text-xs font-bold text-white disabled:opacity-50">Save campaign</button>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       {/* Product flags modal */}
@@ -395,6 +447,8 @@ export default function CampaignManager() {
       )}
 
       {/* Campaign cards */}
+      {!loaded && <p role="status" className="text-sm text-gray-500">Checking campaign storage…</p>}
+      {storageReady && <>
       <div className="grid gap-3 lg:grid-cols-2">
         {/* Flagship card */}
         <div className="rounded-2xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm">
@@ -415,7 +469,7 @@ export default function CampaignManager() {
           </div>
         </div>
 
-        {campaigns.map(({ config: c, stats }) => {
+        {filteredCampaigns.map(({ config: c, stats }) => {
           const ui = STATUS_UI[c.status] || STATUS_UI.draft;
           const claimed = Number((stats as { claimed?: number })?.claimed ?? 0);
           return (
@@ -433,6 +487,7 @@ export default function CampaignManager() {
                 <span>🧪 {(stats as { tests?: number })?.tests ?? 0} tests</span>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                <Link to={`/campaigns/${c.landingSlug || c.slug}`} target="_blank" className="min-h-11 rounded-lg border border-indigo-200 px-3 py-2 text-xs font-semibold text-indigo-700">View page ↗</Link>
                 <button onClick={() => setEditingFrom(c.slug)} className="rounded-lg bg-gray-900 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-gray-700">Edit</button>
                 <button onClick={() => duplicate(c.slug)} className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-[11px] font-medium text-gray-600 hover:bg-gray-50">Duplicate</button>
                 {c.status !== 'live' && c.status !== 'ended' && <button onClick={() => setStatus(c.slug, 'live')} className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700">Activate</button>}
@@ -443,6 +498,7 @@ export default function CampaignManager() {
             </div>
           );
         })}
+        {loaded && filteredCampaigns.length === 0 && <p className="rounded-xl border border-dashed border-gray-300 p-5 text-sm text-gray-600">No matching registry campaigns. Create a draft to get started; the existing Gift Drop stays managed separately.</p>}
         {!loaded && <p className="text-sm text-gray-400">Loading campaigns…</p>}
       </div>
 
@@ -470,6 +526,7 @@ export default function CampaignManager() {
           </div>
         )}
       </div>
+      </>}
     </div>
   );
 }

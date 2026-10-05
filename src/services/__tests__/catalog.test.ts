@@ -112,7 +112,7 @@ describe('loadStorefrontCatalog', () => {
     expect(byId.get('p1')?.name).toBe('Dog Bed'); // p.name || p.title → name
     expect(byId.get('p1')?.description).toContain('detailed verified product description');
     expect(byId.get('p1')?.price).toBe(49.99); // price (no price_amount present)
-    expect(byId.get('p1')?.images).toEqual(['https://img/x.jpg']);
+    expect(byId.get('p1')?.images).toEqual(['https://images.example.test/verified-product.jpg']);
     expect(byId.get('p2')).toBeUndefined();
   });
 
@@ -341,7 +341,7 @@ describe('loadProductByIdOrSlug', () => {
     expect(p).toBeNull();
   });
 
-  it('rejects a UUID direct lookup when it has no canonical slug match', async () => {
+  it('resolves a UUID direct lookup when it has no canonical slug match', async () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
       if (url.includes('/categories')) return Promise.resolve(jsonResponse([]));
       if (url.includes('/products')) {
@@ -350,7 +350,7 @@ describe('loadProductByIdOrSlug', () => {
       return Promise.resolve(jsonResponse([]));
     }));
     const p = await loadProductByIdOrSlug('00000000-0000-4000-8000-000000000009');
-    expect(p).toBeNull();
+    expect(p?.id).toBe('00000000-0000-4000-8000-000000000009');
   });
 
   it('returns null for a draft/inactive product (no preview of unpublished rows)', async () => {
