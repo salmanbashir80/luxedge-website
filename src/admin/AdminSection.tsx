@@ -12,6 +12,7 @@ import { callAIProvider, serverProviderStatus } from '../features/ai/client';
 import { SOCIAL_PROFILES } from '../content/socialProfiles';
 import { useAuthStore } from '../store/authStore';
 import { getAccessToken } from '../services/supabase';
+import { ORDERS_UNAVAILABLE, ORDERS_UNAVAILABLE_SHORT, giftStorageUnreadable } from '../services/adminReadouts';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { listCategories, createCategory, updateCategory, deleteCategory, listProducts, setDbToken } from '../features/catalog/repository';
 import type { CatalogProduct } from '../features/catalog/types';
@@ -288,33 +289,41 @@ export function ADashboard() {
   const [gift, setGift] = useState<{ active: boolean; remaining: number; total: number; claimsToday: number } | null>(null);
   const [loadedAt, setLoadedAt] = useState<Date | null>(null);
   const [range, setRange] = useState<7 | 30 | 90>(7);
+  // Non-empty when the order store could not be read. Never let an unreachable
+  // store render as "$0.00 / no orders yet" — that reads as a real zero.
+  const [ordersErr, setOrdersErr] = useState('');
 
   // REAL data only (Stripe webhook orders + the DB catalog + Gift Drop ledger).
   // No demo numbers. Orders stats come from the server (paid-only, full order
   // set, refunds subtracted) and refresh near-real-time on focus + interval.
   const loadOrders = useCallback(() => {
     const token = getAccessToken();
-    if (!token) return Promise.resolve();
+    // Admin access is the same-origin session cookie; a bearer token is only an
+    // extra. Bailing out when it is absent left this panel permanently empty.
     setDbToken(token);
+    const authH: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
     // Gift Drop live status — claims ledger + remaining inventory.
-    fetch('/api/admin/gift-drop', { headers: { Authorization: `Bearer ${token}` } })
+    fetch('/api/admin/gift-drop', { headers: authH, credentials: 'same-origin', cache: 'no-store' })
       .then(r => r.json())
-      .then((d: { campaign?: { active?: boolean }; stats?: { total?: number; remaining?: number }; claims?: Array<{ createdAt?: string; isTest?: boolean }> }) => {
-        if (!d || !d.stats) return;
+      .then((d: { campaign?: { active?: boolean } | null; stats?: { total?: number; remaining?: number }; claims?: Array<{ createdAt?: string; isTest?: boolean }> }) => {
+        // remaining < 0 means the ledger could not be read (never a real 0).
+        const remaining = Number(d?.stats?.remaining);
+        if (!d || !d.stats || !d.campaign || giftStorageUnreadable(d.campaign, remaining)) { setGift(null); return; }
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const claimsToday = Array.isArray(d.claims)
           ? d.claims.filter((c) => !c.isTest && new Date(c.createdAt || 0) >= today).length
           : 0;
-        setGift({ active: !!d.campaign?.active, remaining: Number(d.stats.remaining) || 0, total: Number(d.stats.total) || 0, claimsToday });
+        setGift({ active: !!d.campaign.active, remaining, total: Number(d.stats.total) || 0, claimsToday });
       })
       .catch(() => setGift(null));
-    return fetch('/api/checkout?action=orders', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
+    return fetch('/api/checkout?action=orders', { headers: authH, credentials: 'same-origin', cache: 'no-store' })
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((d: { orders?: DashOrderRow[]; stats?: DashStats | null }) => {
         setRealOrders(Array.isArray(d.orders) ? d.orders : []);
         setStats(d.stats && typeof d.stats.revenue === 'number' ? d.stats : null);
+        setOrdersErr('');
       })
-      .catch(() => { setRealOrders([]); setStats(null); })
+      .catch(() => { setRealOrders([]); setStats(null); setOrdersErr(ORDERS_UNAVAILABLE); })
       .finally(() => setLoadedAt(new Date()));
   }, []);
   const refresh = useAutoRefresh(loadOrders);
@@ -379,9 +388,9 @@ export function ADashboard() {
   const statusTotal = statusCounts.reduce((a, b) => a + b.n, 0);
 
   const kpis = [
-    { l: 'Revenue (7 days)', v: `$${weekRev.toFixed(2)}`, sub: weekRev > 0 ? (revTrend === null ? '— vs prior week' : `${revTrend >= 0 ? '▲' : '▼'} ${Math.abs(revTrend).toFixed(0)}% vs prior week`) : 'No paid orders yet', i: CurrencyDollar, to: '/admin/orders', iconCls: 'bg-[#f6efdd] text-[#9a6f16]' },
-    { l: 'Orders', v: paidCount, sub: paidCount ? `${rev.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })} all-time` : 'No paid orders yet', i: ShoppingCart, to: '/admin/orders', iconCls: 'bg-[#f6efdd] text-[#9a6f16]' },
-    { l: 'Avg order value', v: paidCount ? `$${aov.toFixed(2)}` : '—', sub: paidCount ? 'per paid order' : 'No paid orders yet', i: TrendUp, to: '/admin/orders', iconCls: 'bg-[#f6efdd] text-[#9a6f16]' },
+    { l: 'Revenue (7 days)', v: ordersErr ? '—' : `$${weekRev.toFixed(2)}`, sub: ordersErr ? ORDERS_UNAVAILABLE_SHORT : weekRev > 0 ? (revTrend === null ? '— vs prior week' : `${revTrend >= 0 ? '▲' : '▼'} ${Math.abs(revTrend).toFixed(0)}% vs prior week`) : 'No paid orders yet', i: CurrencyDollar, to: '/admin/orders', iconCls: 'bg-[#f6efdd] text-[#9a6f16]' },
+    { l: 'Orders', v: ordersErr ? '—' : paidCount, sub: ordersErr ? ORDERS_UNAVAILABLE_SHORT : paidCount ? `${rev.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })} all-time` : 'No paid orders yet', i: ShoppingCart, to: '/admin/orders', iconCls: 'bg-[#f6efdd] text-[#9a6f16]' },
+    { l: 'Avg order value', v: paidCount ? `$${aov.toFixed(2)}` : '—', sub: ordersErr ? ORDERS_UNAVAILABLE_SHORT : paidCount ? 'per paid order' : 'No paid orders yet', i: TrendUp, to: '/admin/orders', iconCls: 'bg-[#f6efdd] text-[#9a6f16]' },
     { l: 'Customers', v: users.length, sub: users.length ? 'registered accounts' : 'No customers yet', i: UsersIcon, to: '/admin/users', iconCls: 'bg-[#f6efdd] text-[#9a6f16]' },
     { l: 'Active products', v: activeProducts, sub: `${totalProducts} total · ${commerceReady} commerce-ready`, i: Package, to: '/admin/products', iconCls: 'bg-[#f6efdd] text-[#9a6f16]' },
     { l: 'Low-stock products', v: lowStock, sub: lowStock ? 'need restock' : 'All stocked', i: Warning, to: '/admin/products', iconCls: 'bg-amber-50 text-amber-600' },
@@ -460,7 +469,7 @@ export function ADashboard() {
             {rangeOrders === 0 ? (
               <div className="py-12 text-center">
                 <div className="mx-auto w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center mb-3"><TrendUp size={16} className="text-gray-300" /></div>
-                <p className="text-xs text-gray-500">No orders yet — share your store or run a campaign.</p>
+                <p className="text-xs text-gray-500">{ordersErr || 'No orders yet — share your store or run a campaign.'}</p>
                 <Link to="/" target="_blank" className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-gray-200 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 transition-colors"><Eye size={12} /> View store</Link>
               </div>
             ) : (
@@ -514,7 +523,7 @@ export function ADashboard() {
                   </tr>
                 ))}
                 {realOrders.length === 0 && (
-                  <tr><td colSpan={5} className="px-4 py-6 text-center text-[11px] text-gray-400">No orders yet — share your store or run a campaign.</td></tr>
+                  <tr><td colSpan={5} className="px-4 py-6 text-center text-[11px] text-gray-400">{ordersErr || 'No orders yet — share your store or run a campaign.'}</td></tr>
                 )}
               </tbody>
             </table>
@@ -527,7 +536,7 @@ export function ADashboard() {
           <div className="bg-white rounded-xl border border-gray-100 p-3.5">
             <h3 className="font-bold text-[11px] text-gray-800 mb-2.5 flex items-center gap-1.5"><Receipt size={11} className="text-[#9a6f16]" />Order Status</h3>
             {statusTotal === 0 ? (
-              <p className="text-[11px] text-gray-400 py-4 text-center">No order-status data yet.</p>
+              <p className="text-[11px] text-gray-400 py-4 text-center">{ordersErr ? 'Order status unavailable — the order store could not be read.' : 'No order-status data yet.'}</p>
             ) : (
               <>
                 <div className="flex h-2.5 rounded-full overflow-hidden bg-gray-100">
@@ -930,6 +939,7 @@ export function AOrders() {
   const { notify } = useApp();
   const [stripeOrders, setStripeOrders] = useState<StripeOrderRow[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [ordersErr, setOrdersErr] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [tracking, setTracking] = useState<Record<string, { carrier: string; number: string }>>({});
   const [labelOrder, setLabelOrder] = useState<StripeOrderRow | null>(null);
@@ -956,17 +966,18 @@ export function AOrders() {
   const [orderStats, setOrderStats] = useState<DashStats | null>(null);
   const loadOrders = useCallback(() => {
     const token = getAccessToken();
-    if (!token) { setLoaded(true); return Promise.resolve(); }
+    const authH: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
     const params = new URLSearchParams({ action: 'orders' });
     if (providerFilter !== 'all') params.set('provider', providerFilter);
     if (includeGifts) params.set('includeGifts', 'true');
-    return fetch(`/api/checkout?${params}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
+    return fetch(`/api/checkout?${params}`, { headers: authH, credentials: 'same-origin', cache: 'no-store' })
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((d: { orders?: StripeOrderRow[]; stats?: DashStats | null }) => {
         setStripeOrders(Array.isArray(d.orders) ? d.orders : []);
         setOrderStats(d.stats && typeof d.stats.revenue === 'number' ? d.stats : null);
+        setOrdersErr('');
       })
-      .catch(() => { setStripeOrders([]); setOrderStats(null); })
+      .catch(() => { setStripeOrders([]); setOrderStats(null); setOrdersErr(ORDERS_UNAVAILABLE); })
       .finally(() => setLoaded(true));
   }, [providerFilter, includeGifts]);
   const refreshOrders = useAutoRefresh(loadOrders);
@@ -982,8 +993,7 @@ export function AOrders() {
   // ── ERP config + sync ledger (masked, from the server) ──
   const loadErpCfg = () => {
     const token = getAccessToken();
-    if (!token) return;
-    fetch('/api/admin/erp', { headers: { Authorization: `Bearer ${token}` } })
+    fetch('/api/admin/erp', { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: 'same-origin', cache: 'no-store' })
       .then(r => (r.ok ? r.json() : null))
       .then((d: ErpConfig | null) => { if (d) setErpCfg(d); })
       .catch(() => { /* keep last known state */ });
@@ -1362,6 +1372,7 @@ export function AOrders() {
         <div className="min-w-0">
           <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2"><ShoppingCart size={20} className="text-[#9a6f16]" /> Orders</h1>
           <p className="text-xs text-gray-500 mt-0.5">Track, fulfil and sync orders to your ERP.</p>
+          {ordersErr && <p className="text-xs text-amber-700 mt-1">{ordersErr}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {showDemo && <button onClick={() => setShowDemo(false)} className="text-xs text-gray-400 hover:text-gray-600 underline whitespace-nowrap">Hide demo order</button>}
@@ -1372,10 +1383,10 @@ export function AOrders() {
       {/* KPI row — 4-across desktop, 2x2 tablet, single column mobile */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { l: 'Total Orders', v: String(stats.total), icon: ShoppingCart, tint: 'bg-[#f6efdd] text-[#9a6f16]', sub: stats.total ? 'real orders' : 'No orders yet' },
-          { l: 'Revenue', v: `$${stats.revenue.toFixed(2)}`, icon: CurrencyDollar, tint: 'bg-[#f6efdd] text-[#9a6f16]', sub: stats.total ? 'from real orders' : 'No revenue yet' },
-          { l: 'Needs Fulfilment', v: String(stats.pending), icon: Warning, tint: 'bg-amber-50 text-amber-600', sub: stats.pending ? 'awaiting fulfilment' : 'All fulfilled' },
-          { l: 'Shipped / Delivered', v: String(stats.shipped), icon: Truck, tint: 'bg-emerald-50 text-emerald-600', sub: stats.shipped ? 'on the way or delivered' : 'Nothing shipped yet' },
+          { l: 'Total Orders', v: ordersErr ? '—' : String(stats.total), icon: ShoppingCart, tint: 'bg-[#f6efdd] text-[#9a6f16]', sub: ordersErr ? ORDERS_UNAVAILABLE_SHORT : stats.total ? 'real orders' : 'No orders yet' },
+          { l: 'Revenue', v: ordersErr ? '—' : `$${stats.revenue.toFixed(2)}`, icon: CurrencyDollar, tint: 'bg-[#f6efdd] text-[#9a6f16]', sub: ordersErr ? ORDERS_UNAVAILABLE_SHORT : stats.total ? 'from real orders' : 'No revenue yet' },
+          { l: 'Needs Fulfilment', v: ordersErr ? '—' : String(stats.pending), icon: Warning, tint: 'bg-amber-50 text-amber-600', sub: ordersErr ? ORDERS_UNAVAILABLE_SHORT : stats.pending ? 'awaiting fulfilment' : 'All fulfilled' },
+          { l: 'Shipped / Delivered', v: ordersErr ? '—' : String(stats.shipped), icon: Truck, tint: 'bg-emerald-50 text-emerald-600', sub: ordersErr ? ORDERS_UNAVAILABLE_SHORT : stats.shipped ? 'on the way or delivered' : 'Nothing shipped yet' },
         ].map((k, i) => (
           <div key={i} className="bg-white rounded-xl border border-gray-100 p-3.5 shadow-[0_1px_2px_rgba(27,31,39,0.04)]">
             <div className="flex items-center justify-between">

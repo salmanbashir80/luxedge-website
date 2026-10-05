@@ -3,10 +3,12 @@
 //
 // Manages the real $0 giveaway: campaign configuration, live inventory, and
 // every claim (same luxedge_orders rows the public flow creates). Actions
-// persist server-side through /api/admin/gift-drop (admin JWT).
+// persist server-side through /api/admin/gift-drop (same-origin session
+// cookie; a localStorage bearer token is optional).
 // ============================================================================
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { getAccessToken } from '../services/supabase';
+import { GIFT_STORAGE_UNAVAILABLE, giftStorageUnreadable } from '../services/adminReadouts';
 
 interface ClaimView {
   id: string;
@@ -69,32 +71,46 @@ export default function GiftDropAdmin() {
   const [showTests, setShowTests] = useState(true);
   const [trackingDraft, setTrackingDraft] = useState<Record<string, { carrier: string; number: string }>>({});
   const [cfgDraft, setCfgDraft] = useState<CampaignView | null>(null);
+  // The server reports remaining = -1 when the gift ledger could not be read
+  // (Supabase outage/quota). That is NOT an empty campaign — say so instead of
+  // telling the owner to seed a row that already exists.
+  const [storageDown, setStorageDown] = useState(false);
+
+  // The admin gate is the same-origin session COOKIE (see api/_lib/auth.ts);
+  // a localStorage bearer token is optional. Never bail out when it is absent,
+  // otherwise the page stays on its empty skeleton forever.
+  const authHeader = (): Record<string, string> => {
+    const token = getAccessToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
   const load = () => {
-    const token = getAccessToken();
-    if (!token) return;
-    fetch('/api/admin/gift-drop', { headers: { Authorization: `Bearer ${token}` } })
+    setErr('');
+    fetch('/api/admin/gift-drop', { headers: authHeader(), credentials: 'same-origin', cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((d) => {
         setCampaign(d.campaign || null);
         setCfgDraft(d.campaign || null);
         setClaims(Array.isArray(d.claims) ? d.claims : []);
-        setRemaining(typeof d.stats?.remaining === 'number' ? d.stats.remaining : -1);
+        const remaining = typeof d.stats?.remaining === 'number' ? d.stats.remaining : -1;
+        setRemaining(remaining);
+        setStorageDown(giftStorageUnreadable(d.campaign, remaining));
       })
-      .catch(() => setErr('Could not load the Pet Gift Drop — are you signed in as admin?'))
+      .catch((e: Error) => setErr(e.message === 'HTTP 401'
+        ? 'Could not load the Pet Gift Drop — sign in as admin again.'
+        : `Could not load the Pet Gift Drop (${e.message}).`))
       .finally(() => setLoaded(true));
   };
 
   useEffect(load, []);
 
   const post = async (action: string, extra: Record<string, unknown> = {}) => {
-    const token = getAccessToken();
-    if (!token) return;
     setBusy(true);
     try {
       const r = await fetch('/api/admin/gift-drop', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        credentials: 'same-origin',
         body: JSON.stringify({ action, ...extra }),
       });
       const d = await r.json().catch(() => ({}));
@@ -179,8 +195,12 @@ export default function GiftDropAdmin() {
           </div>
         )}
         {loaded && !campaign && (
-          <div className="mt-3 rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500">
-            No campaign configured yet — seed the app_settings row <code className="bg-gray-100 px-1">gift_drop_campaign_v1</code>.
+          <div className={storageDown
+            ? 'mt-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800'
+            : 'mt-3 rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500'}>
+            {storageDown
+              ? GIFT_STORAGE_UNAVAILABLE
+              : <>No campaign configured yet — seed the app_settings row <code className="bg-gray-100 px-1">gift_drop_campaign_v1</code>.</>}
           </div>
         )}
       </div>
