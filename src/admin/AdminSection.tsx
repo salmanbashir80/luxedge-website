@@ -454,7 +454,7 @@ export function ADashboard() {
                 <div className="w-7 h-7 rounded-lg bg-[#f6efdd] flex items-center justify-center"><TrendUp size={14} className="text-[#9a6f16]" /></div>
                 <div>
                   <h2 className="text-sm font-bold text-gray-900 leading-tight">Revenue & Orders</h2>
-                  <p className="text-[10px] text-gray-400">{rangeOrders} order{rangeOrders !== 1 ? 's' : ''} · ${rangeRev.toFixed(2)} in range</p>
+                  <p className="text-[10px] text-gray-400">{ordersErr ? 'totals unavailable' : `${rangeOrders} order${rangeOrders !== 1 ? 's' : ''} · $${rangeRev.toFixed(2)} in range`}</p>
                 </div>
               </div>
               <div className="flex items-center gap-0.5 rounded-lg border border-gray-200 p-0.5">
