@@ -104,6 +104,129 @@ No legacy data was changed or reconstructed. Confirming original flagship conten
 - Full `npm test`: 147 files passed, 3 skipped; 1881 tests passed, 8 skipped.
 - `npx vite build`: exit 0, large chunk/dynamic-static import warnings. Direct Vite build used to avoid rewriting public sitemap through the npm prebuild generator.
 
+## Fixes applied, committed and deployed (same day)
+
+Branch `fix-campaign-storage-d1`, commit `ee2a560`, pushed to origin. Deploy:
+`wrangler deploy --config wrangler.toml --name luxedge-production --keep-vars`
+(owner OAuth session; the exposed CLOUDFLARE_API_TOKEN was deliberately NOT
+used). Deployed Version ID `e3e7bc66-3e24-4586-9df3-2559bf9b1f6c`; bundle
+`index-D5f3wvy0.js` served live.
+
+### 1. Best Sellers duplicates (section 4 of the earlier sweep — fixed)
+
+Cause: each curated slot fell back to a FIXED array index (`active[2]`, `active[3]`,
+`active[4]`) when its slug/category was missing, and the row was built only from
+the first 24 oldest products, which never contained the bird/horse/cattle rows.
+So the same dog card appeared as "Bestseller" and "Wild Bird", and the same cat
+card as "Popular" and "Equine Choice".
+
+Fix: `pickHomeBestSellers()` (src/features/catalog/merchandising.ts) resolves one
+DISTINCT real product per slot (no repeated id, no shared supplier photo), only
+labels a product with its own category badge, drops a slot that has no genuine
+product, and the homepage loads the full first page (60) so every category is
+present.
+
+Production evidence after deploy: five distinct cards — Bestseller (Stainless
+Steel Pet Water Fountain $51.95), Popular (Collapsible Cat Tunnel $24.95),
+Wild Bird (Outdoor Hanging Bird Feeder $39.95), Equine Choice (Breathable Mesh
+Horse Fly Mask $19.95), Farm Choice (Heavy-Duty Poly Livestock Feed Trough
+$49.95). No repeated product or image.
+
+### 2. 7 visible shop listings vs 32 feed items — explained and fixed
+
+The storefront listing projection (`PRODUCTS_LISTING_SELECT`) omitted
+`description`, while the public eligibility gate requires
+`description + short_description >= 100` characters. The gate therefore judged
+rows on `short_description` alone and hid most of them: 7 of the 24 loaded rows
+passed, so the shop showed 7 products while `/google-products.xml` and the
+sitemap (which read full rows) listed 32.
+
+Fix: `description` is now part of the listing projection (and the first page is
+60 rows).
+
+Production evidence after deploy: the shop reports "32 products" and renders 24
+unique product links with a working Load More; `/api/db/products` with
+`select=...,description` returns 200. This is the real mismatch — no product was
+published to equalise counts.
+
+Remaining honest difference: the Google feed lists active products with a price
+and a real image and does NOT apply the commerce-readiness gate, while the
+storefront does. Today all 32 rows pass that gate (derived from supplier + cost
++ in-stock evidence), so both surfaces show 32.
+
+### 3. "Normal Save does nothing" in the catalog editor — root cause fixed
+
+Cause: `handleSave()` posts the WHOLE product form, which includes `tags` as an
+array. Cloudflare D1's `bind()` accepts only scalars, so `UPDATE ... SET tags = ?`
+with an array throws D1_TYPE_ERROR and the entire write fails — while a partial
+AI-optimize save (no tags) and a single-column PATCH both succeeded. That is
+exactly the earlier observation: the AI save persisted, the normal Save did not.
+
+Fix: `api/admin/db.ts` now coerces every write value through `d1BindValue()`
+(booleans for declared bool columns, JSON text for json columns, and JSON text
+for any array/object, with `undefined` fields skipped instead of bound). `tags`
+stays raw TEXT, so `parseTagList()` remains the single tolerant parser.
+
+Verification: `api/__tests__/admin-db-write.test.ts` (full-form PATCH with
+`tags` array, insert coercion, 401 without a token); full suite 1893 passed /
+3 files skipped; `tsc --noEmit` clean; `vite build` exit 0.
+
+Still required for a production Save/Undo round-trip: an authenticated admin
+session (see below).
+
+### 4. Flagship lookup/bridge restored (read-only)
+
+`loadCampaignBySlug()` searched only the registry, so the Campaign Manager
+showed flagship = null whenever the registry had no `pet-gift-drop` entry —
+independently of the legacy document. The flagship legacy mapping now lives in
+`api/_lib/campaigns.ts` as `flagshipLegacyConfig()` (read-only; the legacy
+`gift_drop_campaign_v1` document stays the single source of truth) and is shared
+by the public routes, the claim/state handlers and the admin manager. An
+unreadable document still returns null rather than a fabricated default.
+
+Production: `/api/campaigns` returns 200 with an empty list and
+`/api/campaigns/state?slug=pet-gift-drop` 404 — honest, because Supabase still
+reports `exceed_egress_quota` (402). No legacy data was written or reconstructed.
+
+### 5. Product Scout private reads + honest unavailable state
+
+Scout tables have not migrated to D1, and `/api/db` correctly refuses
+`product_scores` (404). Scout now reads them through the authenticated private
+admin route (`/api/admin/db/*`), which proxies to the existing Scout backend and
+never exposes scores publicly. When that backend is unavailable (Supabase 402
+today) the UI shows — and an explicit "data unavailable" message instead of
+zeros or fake scores. Production: `/api/admin/db/product_scores` answers 401
+without a token.
+
+### 6. AI campaign copy
+
+Only marked internal/QA identifiers are stripped as noise before prompting;
+product measurements, pack quantities and verified offer facts stay available to
+the model, every unsupported-claim rule is unchanged, and one bounded corrective
+retry remains. Rejected provider output is never applied.
+
+### 7. Post-deploy surface check
+
+| Surface | Result |
+| --- | --- |
+| `/` Best Sellers | PASS — 5 distinct, correctly badged cards |
+| `/shop` | PASS — "32 products", 24 rendered + Load More |
+| PDP (`/product/stainless-steel-...`) | PASS — 200, correct title and price 51.95 |
+| `/sitemap.xml` | PASS — 200, 65 `<url>` entries |
+| `/robots.txt`, `/ads.txt` | PASS — 200, unchanged |
+| `/api/admin/db/product_scores` (no token) | PASS — 401 |
+| `/api/admin/gift-drop`, `/api/admin/campaigns`, `/api/admin/traffic?days=7` (no token) | PASS — 401 |
+| Console | Only the known AdSense/CSP report-only noise; no application errors |
+
+### 8. BLOCKED — authenticated production QA
+
+No admin session is available in the browser profile any more (the Supabase
+session key `luxedge_sb_session` is absent; only the profile record remains), so
+the live product Save/Undo round-trip, campaign draft persistence, Scout data
+panel and the Gift Drop admin page could NOT be re-verified after this deploy.
+Everything above is public-surface evidence plus unit/integration tests.
+Owner sign-in is required to complete that round-trip.
+
 ## Screenshots
 
 Captured/displayed inline in this conversation: first PDP with loaded gallery/title/price; Campaign Manager after reload; reopened QA editor showing persisted copy and NOT PUBLISHED preview; earlier AI failure and empty flagship UI. DOM metadata values are recorded above and in URL JSON evidence. Screenshot tool returns inline images, not filesystem paths; no downloadable screenshot files are claimed. No green D1-chip screenshot is claimed because that chip was absent.
