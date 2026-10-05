@@ -227,6 +227,53 @@ panel and the Gift Drop admin page could NOT be re-verified after this deploy.
 Everything above is public-surface evidence plus unit/integration tests.
 Owner sign-in is required to complete that round-trip.
 
+### 9. Authenticated production QA (owner signed in, session cookie)
+
+The earlier blocker in §8 was wrong: this build authenticates admin routes with
+the same-origin session **cookie**, not a `luxedge_sb_session` localStorage
+token (only the `luxedge_session` profile record exists — no `accessToken`).
+Re-verified live against Version `5ea1961e-175a-4b17-99b4-c15cae69fac7`:
+
+| Check | Result |
+| --- | --- |
+| Product editor Save round-trip | PASS — typed description through the UI, Save navigated to `/admin/products`, `PATCH /api/admin/db/products?id=eq.…` 200 and the value read back from D1. Probe removed afterwards; no `PROBE` residue anywhere in the catalog |
+| Campaign draft save → reload | PASS — a title edit survived a full page reload; `/api/admin/campaigns` returns the same title, status `draft`, unpublished. QA draft restored to its original title |
+| Product Scout | PASS — private reads proxy through `/api/admin/db/{product_candidates,product_scores,supplier_products,suppliers,agent_jobs}` and all answer **402** (Supabase egress quota), never 404. Counts render `—` with "Scout storage unavailable … No scores can be shown" |
+| Gift Drop page | PASS after the fix below — no API request was ever made before it |
+| `/api/suppliers/cj?action=health` | PASS — `online`, "CJ authentication succeeded" (proves `--keep-vars` preserved the production secrets) |
+
+### 10. New defect found + fixed: admin panels required a token that never exists
+
+Admin access is the cookie; `getAccessToken()` is always `null` in this build.
+Four call sites treated that as "not signed in" and bailed out **before**
+fetching, so the pages sat on an empty skeleton and the host didn't even
+attempt the request:
+
+| Site | Symptom |
+| --- | --- |
+| `GiftDropAdmin.load()` / `post()` | Gift Drop page rendered no config form and told the owner to seed `gift_drop_campaign_v1` — a row that already exists |
+| `ADashboard.loadOrders()` | Revenue/orders KPIs and the chart never fetched; the 402 order store rendered as a real `$0.00` / "No paid orders yet" |
+| `AOrders.loadOrders()` | Orders page never fetched; same fabricated zeros, ERP config never loaded |
+| `AOrders.loadErpCfg()` | ERP webhook/token (masked) never displayed |
+
+Fixed by fetching unconditionally with an optional bearer header, plus shared
+honest readouts in [src/services/adminReadouts.ts](src/services/adminReadouts.ts)
+so an unreachable store can never read as a fact:
+`Orders data unavailable — the order store could not be read.`, `—` KPI values,
+and `Gift Drop storage unavailable — … Nothing is shown as zero` (the admin API
+reports `remaining: -1` for "ledger unreadable", which is not an empty campaign).
+
+Verified live after deploy: dashboard KPI row `—` + "order store unreachable",
+chart header "totals unavailable", Recent Orders and Order Status honest, Gift
+Drop card "data unavailable"; Gift Drop page →
+"Gift Drop storage unavailable — … Nothing is shown as zero", `— claimed`,
+`… real gifts left`; Orders page → banner + four `—` KPI cards with the ERP
+config now loaded. `tsc` clean, **149 test files / 1899 tests pass**.
+
+Still blocked upstream (owner action): Supabase project `eidujmfbcfrjjleitaqp`
+answers **402 `exceed_egress_quota`**, which is why orders, the gift-drop ledger
+and all Scout tables are unreadable.
+
 ## Screenshots
 
 Captured/displayed inline in this conversation: first PDP with loaded gallery/title/price; Campaign Manager after reload; reopened QA editor showing persisted copy and NOT PUBLISHED preview; earlier AI failure and empty flagship UI. DOM metadata values are recorded above and in URL JSON evidence. Screenshot tool returns inline images, not filesystem paths; no downloadable screenshot files are claimed. No green D1-chip screenshot is claimed because that chip was absent.
