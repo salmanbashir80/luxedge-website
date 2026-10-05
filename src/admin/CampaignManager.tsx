@@ -15,7 +15,7 @@ import { Link } from 'react-router-dom';
 import { getAccessToken, getFreshAccessToken } from '../services/supabase';
 import { callAIProvider } from '../features/ai/client';
 import { loadAIProviders } from '../features/ai/providers';
-import { campaignCopyPrompt, parseCampaignCopy } from '../features/ai/campaignCopy';
+import { generateCampaignCopy } from '../features/ai/campaignCopy';
 
 type Status = 'draft' | 'scheduled' | 'live' | 'paused' | 'ended' | 'archived';
 
@@ -259,8 +259,7 @@ export default function CampaignManager() {
     setCopyBusy(true); setCopyNote('Generating a draft with your shared AI provider…');
     try {
       await getFreshAccessToken();
-      const raw = await callAIProvider(campaignCopyPrompt({ title: snapshot.title, subtitle: snapshot.subtitle, message: snapshot.message, kind: snapshot.kind, giftName: snapshot.giftName, freeShipping: snapshot.offer?.freeShipping }), loadAIProviders());
-      const copy = parseCampaignCopy(raw, { kind: snapshot.kind, freeShipping: snapshot.offer?.freeShipping });
+      const copy = await generateCampaignCopy({ title: snapshot.title, subtitle: snapshot.subtitle, message: snapshot.message, kind: snapshot.kind, giftName: snapshot.giftName, freeShipping: snapshot.offer?.freeShipping }, prompt => callAIProvider(prompt, loadAIProviders()));
       if (!editingRef.current || JSON.stringify(editingRef.current) !== JSON.stringify(snapshot)) throw new Error('Campaign changed while AI was working. Draft not applied; try again.');
       setCopyUndo({ title: snapshot.title, subtitle: snapshot.subtitle, message: snapshot.message });
       setEditing(prev => prev?.slug === snapshot.slug ? { ...prev, ...copy } : prev);

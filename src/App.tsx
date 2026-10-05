@@ -26,7 +26,7 @@ import { useAuthStore } from './store/authStore';
 import { isSupabaseConfigured, updatePassword, updateUserMetadata, getAccessToken, getFreshAccessToken } from './services/supabase';
 import { buyerActivate, buyerRequestCode } from './services/buyerAuth';
 import { loadProductByIdOrSlug, loadStorefrontCatalog, loadStorefrontPromotions, type CatalogProduct, type CatalogCategory, type StoreCoupon } from './services/catalog';
-import { rankProducts, probeVisualQuality, markBrokenImage, subscribeVisualQuality, getVisualQualityVersion, type MerchStats } from './features/catalog/merchandising';
+import { rankProducts, probeVisualQuality, markBrokenImage, subscribeVisualQuality, getVisualQualityVersion, pickHomeBestSellers, type MerchStats } from './features/catalog/merchandising';
 import { loadMerchStats } from './services/merch';
 import { loadPublishedBlogs } from './services/blog';
 import { MediaLatestSection } from './media/MediaHub';
@@ -456,9 +456,15 @@ function AppProvider({ children }: { children: ReactNode }) {
   // Phase 3B: load the real storefront catalog from Supabase when it is
   // configured and populated. On any failure (unconfigured, unreachable,
   // empty DB) the catalog stays EMPTY — never demo/fallback products.
+  //
+  // The full first page (60) is loaded rather than only 24 so the curated home
+  // sections can resolve their category slots: the bird/horse/cattle rows are
+  // the NEWEST products, and with a 24-row oldest-first page they never reached
+  // the homepage (their Best Seller slots fell back to whatever was loaded —
+  // which is how one card ended up shown twice).
   useEffect(() => {
     let cancelled = false;
-    void loadStorefrontCatalog().then((cat) => {
+    void loadStorefrontCatalog({ limit: 60 }).then((cat) => {
       if (cancelled) return;
       if (cat) {
         // Catalog load completed (even with zero products) — the cart can
@@ -2098,72 +2104,28 @@ function HomePage() {
     },
   ];
 
-  // Map to live products when catalog data is present
+  // Curated Best Sellers — one DISTINCT real product per curated slot.
+  // Each slot resolves its owner-curated slug first, then its category; a
+  // product (or shared supplier photo) already used by an earlier card can
+  // never be picked again, so the row cannot render the same card twice. The
+  // old fixed-index fallbacks (active[2], active[3], active[4]) did exactly
+  // that: "Wild Bird"/"Equine Choice" showed the same dog/cat cards as
+  // "Bestseller"/"Popular". A slot with no genuine product is dropped instead
+  // of being fake-filled, and a categorised badge only ever labels its own
+  // category. An empty catalog keeps the existing first-paint defaults.
   const bestSellers = useMemo(() => {
     const active = products.filter(p => p.isActive);
     if (active.length === 0) return defaultBestsellers;
-
-    const findBySlug = (slug: string) => active.find(p => p.slug === slug);
-    const findByCat = (catName: string) => active.find(p => p.category?.toLowerCase().includes(catName.toLowerCase()) && p.images?.length > 0);
-
-    const dog = findBySlug('stainless-steel-pet-water-fountain-filtered-running-water-for-cats-dogs') || findByCat('dog') || active[0];
-    const cat = findBySlug('collapsible-cat-tunnel-with-crinkle-peek-hole-3-way-play-tube') || findByCat('cat') || active[1];
-    const bird = findBySlug('outdoor-hanging-bird-feeder') || findByCat('bird') || active[2];
-    const horse = findByCat('horse') || active[3];
-    const livestock = findByCat('cattle') || active[4];
-
-    return [
-      {
-        id: dog?.id || defaultBestsellers[0].id,
-        slug: dog?.slug || defaultBestsellers[0].slug,
-        name: dog?.name || defaultBestsellers[0].name,
-        price: dog?.price || defaultBestsellers[0].price,
-        originalPrice: dog?.originalPrice || defaultBestsellers[0].originalPrice,
-        image: (dog && firstUsableImage(dog, 500)) || defaultBestsellers[0].image,
-        badge: 'Bestseller',
-        rawProduct: dog
-      },
-      {
-        id: cat?.id || defaultBestsellers[1].id,
-        slug: cat?.slug || defaultBestsellers[1].slug,
-        name: cat?.name || defaultBestsellers[1].name,
-        price: cat?.price || defaultBestsellers[1].price,
-        originalPrice: cat?.originalPrice || defaultBestsellers[1].originalPrice,
-        image: (cat && firstUsableImage(cat, 500)) || defaultBestsellers[1].image,
-        badge: 'Popular',
-        rawProduct: cat
-      },
-      {
-        id: bird?.id || defaultBestsellers[2].id,
-        slug: bird?.slug || defaultBestsellers[2].slug,
-        name: bird?.name || defaultBestsellers[2].name,
-        price: bird?.price || defaultBestsellers[2].price,
-        originalPrice: bird?.originalPrice || defaultBestsellers[2].originalPrice,
-        image: (bird && firstUsableImage(bird, 500)) || defaultBestsellers[2].image,
-        badge: 'Wild Bird',
-        rawProduct: bird
-      },
-      ...(horse ? [{
-        id: horse.id,
-        slug: horse.slug,
-        name: horse.name,
-        price: horse.price,
-        originalPrice: horse.originalPrice,
-        image: firstUsableImage(horse, 500) || '',
-        badge: 'Equine Choice',
-        rawProduct: horse
-      }] : []),
-      ...(livestock ? [{
-        id: livestock.id,
-        slug: livestock.slug,
-        name: livestock.name,
-        price: livestock.price,
-        originalPrice: livestock.originalPrice,
-        image: firstUsableImage(livestock, 500) || '',
-        badge: 'Farm Choice',
-        rawProduct: livestock
-      }] : [])
-    ];
+    return pickHomeBestSellers(active).map(({ badge, product: p }) => ({
+      id: p.id,
+      slug: p.slug || p.id,
+      name: p.name,
+      price: p.price,
+      originalPrice: p.originalPrice,
+      image: firstUsableImage(p, 500) || '',
+      badge,
+      rawProduct: p,
+    }));
   }, [products]);
 
   const handleSubscribe = (e: React.FormEvent) => {

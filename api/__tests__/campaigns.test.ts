@@ -554,3 +554,77 @@ describe('POST /api/admin/campaigns (stubbed DB)', () => {
     expect(String((captured.body as { error: string }).error)).toContain('Cannot move');
   });
 });
+
+// ---------------------------------------------------------------------------
+// FLAGSHIP BRIDGE — the shared resolver every surface now uses
+//
+// The Campaign Manager asked loadCampaignBySlug() for the flagship and got null
+// whenever the registry held no `pet-gift-drop` entry — even when the legacy
+// gift-drop document was perfectly readable. These tests pin the read-only
+// bridge and its honest failure mode (never a fabricated default config).
+// ---------------------------------------------------------------------------
+describe('flagship bridge — loadCampaignBySlug', () => {
+  beforeEach(() => {
+    process.env.VITE_SUPABASE_URL = HOST;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = KEY;
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.VITE_SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  });
+
+  function stubLegacy(value: string | null, status = 200) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('luxedge_campaigns_v1')) {
+          return new Response(JSON.stringify([{ value: JSON.stringify({ campaigns: [] }) }]), { status: 200 });
+        }
+        if (url.includes('gift_drop_campaign_v1')) {
+          return new Response(
+            status === 200 ? JSON.stringify(value === null ? [] : [{ value }]) : JSON.stringify({ message: 'exceed_egress_quota' }),
+            { status },
+          );
+        }
+        return new Response('[]', { status: 200 });
+      }),
+    );
+  }
+
+  it('resolves the flagship from the legacy document when the registry has no entry', async () => {
+    stubLegacy(JSON.stringify({
+      active: true,
+      title: 'Pet Gift Drop',
+      message: 'Free gift for pet owners',
+      giftName: 'Luxedge gift',
+      giftValueCents: 1500,
+      totalQuantity: 40,
+      startsAt: null,
+      endsAt: null,
+    }));
+    const { loadCampaignBySlug } = await import('../_lib/campaigns.js');
+    const cfg = await loadCampaignBySlug('pet-gift-drop');
+    expect(cfg?.slug).toBe('pet-gift-drop');
+    expect(cfg?.kind).toBe('gift');
+    expect(cfg?.title).toBe('Pet Gift Drop');
+    expect(cfg?.giftName).toBe('Luxedge gift');
+    expect(cfg?.giftValueCents).toBe(1500);
+    expect(cfg?.totalQuantity).toBe(40);
+    expect(cfg?.offer.freeShipping).toBe(true);
+    expect(cfg?.status).toBe('live');
+  });
+
+  it('never fabricates a flagship when the legacy document is unreadable (402)', async () => {
+    stubLegacy(null, 402);
+    const { loadCampaignBySlug } = await import('../_lib/campaigns.js');
+    expect(await loadCampaignBySlug('pet-gift-drop')).toBeNull();
+  });
+
+  it('keeps the bridge exclusive to the flagship slug', async () => {
+    stubLegacy(JSON.stringify({ active: true, title: 'Pet Gift Drop' }));
+    const { loadCampaignBySlug } = await import('../_lib/campaigns.js');
+    expect(await loadCampaignBySlug('some-other-campaign')).toBeNull();
+  });
+});

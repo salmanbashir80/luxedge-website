@@ -21,7 +21,7 @@ import {
 import { useApp, Modal } from '../App';
 import { fetchPageContent } from '../features/ai/importer';
 import { useNavigate } from 'react-router-dom';
-import { getDb } from '../services/db';
+import { getDb, WorkerDbAdapter } from '../services/db';
 import { getAccessToken } from '../services/supabase';
 import type { DbAdapter } from '../services/db';
 import { runScoutResearch, runMarketIntelligenceJob, qaCandidate, cjMarketContextFor } from '../features/scout/engine';
@@ -195,7 +195,8 @@ export default function ProductScout() {
   const [fMaxDays, setFMaxDays] = useState('');
 
   const load = useCallback(async () => {
-    const d = getDb();
+    const selected = getDb();
+    const d = selected.mode === 'd1' ? new WorkerDbAdapter('/api/admin/db') : selected;
     if ('setAccessToken' in d && typeof (d as { setAccessToken: (t: string | null) => void }).setAccessToken === 'function') {
       (d as { setAccessToken: (t: string | null) => void }).setAccessToken(getAccessToken());
     }
@@ -1022,7 +1023,7 @@ export default function ProductScout() {
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{s.label}</span>
               {s.icon}
             </div>
-            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+            <p className={`text-2xl font-bold ${s.color}`}>{loading || error ? '—' : s.value}</p>
           </div>
         ))}
       </div>
@@ -1032,7 +1033,7 @@ export default function ProductScout() {
         <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
           <Lightning size={14} /> Job Audit Trail <span className="font-normal normal-case text-gray-400">· PRODUCT_RESEARCH → PRODUCT_SCORE → PRODUCT_QA</span>
         </div>
-        {jobs.length === 0 ? (
+        {error ? <p className="text-sm text-red-700">Scout job data unavailable. Restore storage access to view the audit trail.</p> : jobs.length === 0 ? (
           <p className="text-sm text-gray-400">No scout jobs recorded yet. Run a Scout Run to create one.</p>
         ) : (
           <div className="overflow-x-auto">

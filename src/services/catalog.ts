@@ -244,8 +244,15 @@ interface DbSettingRow {
 // supabase/migrations/*.sql as the source of truth.
 // ============================================================================
 export const CATEGORIES_PUBLIC_SELECT = 'id,name,slug,is_active';
+// `description` is REQUIRED here, not optional: isPubliclyListableProduct()
+// (src/content/productEligibility.ts) hides a product whose
+// description + short_description is under 100 characters. The listing
+// projection used to omit description, so the gate silently judged rows on
+// their short_description alone and dropped most of the catalog — 7 of the 24
+// loaded products stayed visible while /google-products.xml and the sitemap
+// (which read the full row) listed 32. One projection, one gate, one count.
 export const PRODUCTS_LISTING_SELECT =
-  'id,slug,name,short_description,price,compare_at_price,category_id,inventory_qty,status,brand,tags,featured,new_arrival,free_shipping,us_inventory,sale_enabled,discount_type,discount_value,stock_status,delivery_min_days,delivery_max_days,supplier_source,supplier_product_ref,supplier_url,cost_price,landed_cost,shipping_cost,commerce_readiness,source_type,inventory_source,sku,sort_order,created_at,image_url';
+  'id,slug,name,short_description,description,price,compare_at_price,category_id,inventory_qty,status,brand,tags,featured,new_arrival,free_shipping,us_inventory,sale_enabled,discount_type,discount_value,stock_status,delivery_min_days,delivery_max_days,supplier_source,supplier_product_ref,supplier_url,cost_price,landed_cost,shipping_cost,commerce_readiness,source_type,inventory_source,sku,sort_order,created_at,image_url';
 export const PRODUCTS_PUBLIC_SELECT =
   'id,slug,name,short_description,description,long_description,features,specifications,weight_oz,price,compare_at_price,category_id,inventory_qty,status,brand,tags,featured,new_arrival,free_shipping,us_inventory,sale_enabled,discount_type,discount_value,stock_status,delivery_min_days,delivery_max_days,seo_title,seo_description,seo_keywords,supplier_source,supplier_product_ref,supplier_url,cost_price,landed_cost,shipping_cost,commerce_readiness,source_type,inventory_source,sku,sort_order,created_at,image_url';
 export const PRODUCT_IMAGES_PUBLIC_SELECT = 'product_id,url,alt_text,is_primary,sort_order,variant_id';

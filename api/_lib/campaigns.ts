@@ -705,12 +705,78 @@ export async function saveRegistry(campaigns: CampaignConfig[]): Promise<boolean
   return writeDoc(CAMPAIGN_REGISTRY_KEY, JSON.stringify({ campaigns: dedup }));
 }
 
+/**
+ * FLAGSHIP BRIDGE — the Pet Gift Drop predates the campaign registry, so its
+ * config lives in the legacy `gift_drop_campaign_v1` document.
+ *
+ * This is a READ-ONLY mapping. The legacy document stays the single source of
+ * truth (nothing here writes config, claims, inventory or the Free Gift flow),
+ * and an unreadable/unavailable document returns null — never a fabricated
+ * default — so the admin UI can distinguish "no flagship" from "cannot read".
+ */
+export async function flagshipLegacyConfig(): Promise<CampaignConfig | null> {
+  const r = await readDocResult(LEGACY_GIFT_CAMPAIGN_KEY);
+  if (!r.ok || !r.value) return null;
+  let legacy: Record<string, unknown>;
+  try {
+    const parsed = JSON.parse(r.value) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    legacy = parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  const active = legacy.active === undefined ? true : !!legacy.active;
+  const endsAtRaw = typeof legacy.endsAt === 'string' && legacy.endsAt ? legacy.endsAt : null;
+  const startsAtRaw = typeof legacy.startsAt === 'string' && legacy.startsAt ? legacy.startsAt : null;
+  const end = endsAtRaw ? new Date(endsAtRaw).getTime() : NaN;
+  const status: CampaignStatus = !active ? 'paused' : Number.isFinite(end) && end < Date.now() ? 'ended' : 'live';
+  const valueCents = Math.max(Number(legacy.giftValueCents) || 0, 0);
+  return {
+    slug: FLAGSHIP_SLUG,
+    kind: 'gift',
+    templateKey: 'free_pet_gift',
+    status,
+    title: String(legacy.title || 'Luxedge Pet Gift Drop'),
+    subtitle: '',
+    message: String(legacy.message || ''),
+    giftName: String(legacy.giftName || 'Complimentary Luxedge pet gift'),
+    giftValueCents: valueCents,
+    totalQuantity: Math.max(Number(legacy.totalQuantity) || 0, 0),
+    startsAt: startsAtRaw,
+    endsAt: endsAtRaw,
+    audience: { petTypes: ['dog', 'cat'] },
+    eligibility: { onePerEmail: true, onePerHousehold: true },
+    offer: {
+      freeThresholdCents: valueCents,
+      premiumPercentOff: 0,
+      maxDiscountCents: valueCents,
+      maxEligibleRetailCents: valueCents,
+      freeShipping: true,
+      productScope: 'all',
+    },
+    popup: { enabled: true, delayMs: 4000, frequencyDays: 30, headline: 'Get Your Free Luxedge Gift', subtext: 'One free gift per person — choose an eligible item priced $15 or below. Enter your email to get your personal claim code. No credit card required.' },
+    referral: { enabled: false },
+    email: { enabled: true },
+    tracking: {},
+    updatedAt: typeof legacy.updatedAt === 'string' ? legacy.updatedAt : null,
+  };
+}
+
+/**
+ * Resolve one campaign by slug. The registry wins when it holds the slug (it
+ * cannot legitimately hold the flagship — creating `pet-gift-drop` is rejected
+ * and the flagship is edited from the Gift Drop page); otherwise the flagship
+ * slug falls back to the legacy document bridge. Without that fallback the
+ * Campaign Manager showed flagship = null whenever the registry had no
+ * `pet-gift-drop` entry, independently of whether the legacy doc was readable.
+ */
 export async function loadCampaignBySlug(slug: string): Promise<CampaignConfig | null> {
   const s = String(slug || '').trim();
   if (!s) return null;
   const registry = await loadRegistry();
   const found = registry.find((c) => c.slug === s);
   if (found) return found;
+  if (s === FLAGSHIP_SLUG) return flagshipLegacyConfig();
   return null;
 }
 

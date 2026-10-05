@@ -45,54 +45,15 @@ import {
   type CampaignConfig,
   type ClaimEnvelope,
 } from './_lib/campaigns.js';
-import { loadCampaign as loadLegacyFlagship } from './_lib/gift-drop.js';
-
 const claimLimiter = new InMemoryRateLimiter();
 
 /** Bridge: flagship campaign config = the legacy gift-drop doc (single source
- * of truth so the original page/API keep working with zero regression). */
+ * of truth so the original page/API keep working with zero regression). The
+ * mapping itself lives in `_lib/campaigns.ts` so the public routes, the state/
+ * claim handlers AND the admin Campaign Manager all resolve the flagship the
+ * same way — that shared path is what the Campaign Manager was missing. */
 async function resolveCampaign(slug: string): Promise<CampaignConfig | null> {
-  const s = slugifyCampaign(slug);
-  if (!s) return null;
-  if (s === FLAGSHIP_SLUG) {
-    const legacy = (await loadLegacyFlagship()) as Record<string, unknown> | null;
-    if (!legacy) return null;
-    const active = legacy.active === undefined ? true : !!legacy.active;
-    const endsAtRaw = typeof legacy.endsAt === 'string' && legacy.endsAt ? legacy.endsAt : null;
-    const startsAtRaw = typeof legacy.startsAt === 'string' && legacy.startsAt ? legacy.startsAt : null;
-    const end = endsAtRaw ? new Date(endsAtRaw).getTime() : NaN;
-    const status: CampaignConfig['status'] = !active ? 'paused' : Number.isFinite(end) && end < Date.now() ? 'ended' : 'live';
-    const valueCents = Math.max(Number(legacy.giftValueCents) || 0, 0);
-    return {
-      slug: FLAGSHIP_SLUG,
-      kind: 'gift',
-      templateKey: 'free_pet_gift',
-      status,
-      title: String(legacy.title || 'Luxedge Pet Gift Drop'),
-      subtitle: '',
-      message: String(legacy.message || ''),
-      giftName: String(legacy.giftName || 'Complimentary Luxedge pet gift'),
-      giftValueCents: valueCents,
-      totalQuantity: Math.max(Number(legacy.totalQuantity) || 0, 0),
-      startsAt: startsAtRaw,
-      endsAt: endsAtRaw,
-      audience: { petTypes: ['dog', 'cat'] },
-      eligibility: { onePerEmail: true, onePerHousehold: true },
-      offer: {
-        freeThresholdCents: valueCents,
-        premiumPercentOff: 0,
-        maxDiscountCents: valueCents,
-        maxEligibleRetailCents: valueCents,
-        freeShipping: true,
-        productScope: 'all',
-      },
-      popup: { enabled: true, delayMs: 4000, frequencyDays: 30, headline: 'Get Your Free Luxedge Gift', subtext: 'One free gift per person — choose an eligible item priced $15 or below. Enter your email to get your personal claim code. No credit card required.' },
-      referral: { enabled: false },
-      email: { enabled: true },
-      tracking: {},
-    };
-  }
-  return loadCampaignBySlug(s);
+  return loadCampaignBySlug(slugifyCampaign(slug));
 }
 
 /** Reads published products for eligibility computation. */

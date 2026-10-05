@@ -331,3 +331,94 @@ export function rankProducts<T extends RankableProduct>(list: T[], opts: MerchOp
   order.push(...auto.map((x) => x.p));
   return order;
 }
+
+// --- Homepage "Best Sellers" curation ---------------------------------------
+// The homepage row is a small curated set of REAL products, one per theme
+// slot. Two rules keep it honest; both are regressions this function fixes:
+//
+//   1. NEVER repeat a product. The previous implementation resolved every slot
+//      independently and fell back to a FIXED array index (active[2], active[3],
+//      active[4]) whenever the curated slug/category was missing, so a sparse
+//      or differently-ordered catalog rendered the same product — and the same
+//      photo — two or three times in a row (observed live: the row showed the
+//      same dog card under "Bestseller" and "Wild Bird", and the same cat card
+//      under "Popular" and "Equine Choice").
+//   2. NEVER mislabel. A category badge ("Wild Bird", "Equine Choice",
+//      "Farm Choice") is attached only to a product from that category. When the
+//      store genuinely has no product for a slot, the slot is dropped — it is
+//      never filled with an unrelated product under a false badge.
+//
+// Two rows that share one supplier image are treated as the same card: to a
+// shopper they look like a duplicate even when the ids differ.
+
+export interface BestSellerSlot {
+  /** Card badge rendered on the homepage. */
+  badge: string;
+  /** Owner-curated slug(s) for this slot — checked before the category rule. */
+  slugs: readonly string[];
+  /** Lower-case category substring that legitimately earns this badge. */
+  category?: string;
+}
+
+/** Curated homepage slots, in display order. */
+export const HOME_BEST_SELLER_SLOTS: readonly BestSellerSlot[] = [
+  { badge: 'Bestseller', slugs: ['stainless-steel-pet-water-fountain-filtered-running-water-for-cats-dogs'], category: 'dog' },
+  { badge: 'Popular', slugs: ['collapsible-cat-tunnel-with-crinkle-peek-hole-3-way-play-tube'], category: 'cat' },
+  { badge: 'Wild Bird', slugs: ['outdoor-hanging-bird-feeder'], category: 'bird' },
+  { badge: 'Equine Choice', slugs: ['horse-fly-mask-with-ears'], category: 'horse' },
+  { badge: 'Farm Choice', slugs: ['heavy-duty-cattle-feed-trough'], category: 'cattle' },
+];
+
+export interface BestSellerCandidate {
+  id: string;
+  slug?: string | null;
+  category?: string | null;
+  images?: readonly string[] | null;
+}
+
+export interface BestSellerPick<P> {
+  badge: string;
+  product: P;
+}
+
+/** Stable key for "sold under this photo" de-duplication: the query string and
+ * trailing slashes are ignored, so proxied/resized variants of one file and two
+ * rows pointing at the same upload collapse to the same card. */
+function imageKeyOf(p: BestSellerCandidate): string {
+  const raw = (p.images || []).find((u) => Boolean(u));
+  return raw ? String(raw).split('?')[0].toLowerCase().replace(/\/+$/, '') : '';
+}
+
+/**
+ * Pick homepage Best Seller cards: one distinct, real product per curated slot.
+ * Returns fewer cards when the catalog has no product for a slot — never a
+ * duplicate product/image, and never a category badge on the wrong product.
+ */
+export function pickHomeBestSellers<P extends BestSellerCandidate>(
+  products: readonly P[],
+  slots: readonly BestSellerSlot[] = HOME_BEST_SELLER_SLOTS,
+): BestSellerPick<P>[] {
+  const usedIds = new Set<string>();
+  const usedImages = new Set<string>();
+  const available = (p: P): boolean => {
+    const key = imageKeyOf(p);
+    return key !== '' && !usedIds.has(p.id) && !usedImages.has(key);
+  };
+  const claim = (p: P): void => {
+    usedIds.add(p.id);
+    const key = imageKeyOf(p);
+    if (key) usedImages.add(key);
+  };
+
+  const out: BestSellerPick<P>[] = [];
+  for (const slot of slots) {
+    const bySlug = products.find((p) => available(p) && !!p.slug && slot.slugs.includes(p.slug));
+    const pick = bySlug || (slot.category
+      ? products.find((p) => available(p) && String(p.category || '').toLowerCase().includes(slot.category as string))
+      : undefined);
+    if (!pick) continue; // no genuine product for this slot → drop it, never fake it
+    claim(pick);
+    out.push({ badge: slot.badge, product: pick });
+  }
+  return out;
+}

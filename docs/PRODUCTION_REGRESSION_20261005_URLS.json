@@ -1,0 +1,563 @@
+{
+  "checkedAt": "2026-10-05T13:08:42.194Z",
+  "count": 71,
+  "results": [
+    {
+      "url": "https://luxedge.us/about",
+      "status": 200,
+      "title": "About Luxedge — Premium Pet Essentials",
+      "description": "Luxedge curates useful essentials for pets and animals — thoughtfully selected, sourced from verified suppliers, and shipped to your door.",
+      "canonical": "https://luxedge.us/about",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us",
+      "status": 200,
+      "title": "Luxedge — Premium Pet &amp; Animal Essentials",
+      "description": "Shop practical pet and horse essentials, read buying guides, and find clear shipping and return information at Luxedge.",
+      "canonical": "https://luxedge.us",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/blog",
+      "status": 200,
+      "title": "Pet Care Blog — Guides, Tips &amp; Buying Advice | Luxedge",
+      "description": "Practical buying guides and care tips for dogs, cats, birds, horses, and cattle — sizing, placement, grooming, and product picks from the Luxedge editorial team.",
+      "canonical": "https://luxedge.us/blog",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/",
+      "status": 200,
+      "title": "Luxedge — Premium Pet &amp; Animal Essentials",
+      "description": "Shop practical pet and horse essentials, read buying guides, and find clear shipping and return information at Luxedge.",
+      "canonical": "https://luxedge.us",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/shop",
+      "status": 200,
+      "title": "Shop All Pet Essentials — Dog, Cat, Bird, Horse &amp; More | Luxedge",
+      "description": "Browse the Luxedge curated collection — dog beds and leashes, cat toys and fountains, bird feeders, horse grooming and livestock essentials, all sourced and ready to ship.",
+      "canonical": "https://luxedge.us/shop",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/contact",
+      "status": 200,
+      "title": "Contact Luxedge — We Are Here to Help",
+      "description": "Questions about an order, a product, or shipping? Contact the Luxedge support team and we will get back to you.",
+      "canonical": "https://luxedge.us/contact",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/returns",
+      "status": 200,
+      "title": "Returns &amp; Replacement Policy | Luxedge",
+      "description": "How Luxedge returns work: request within 30 days for damaged, defective, or incorrect items, with replacement or refund where the law requires it.",
+      "canonical": "https://luxedge.us/returns",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/shipping-policy",
+      "status": 200,
+      "title": "Shipping Policy — Delivery, Costs &amp; Tracking | Luxedge",
+      "description": "How Luxedge ships: where we deliver, how shipping is calculated before payment, what affects your delivery estimate, and what to do about a missing package.",
+      "canonical": "https://luxedge.us/shipping-policy",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/copyright",
+      "status": 200,
+      "title": "Copyright &amp; DMCA — Reporting Infringement | Luxedge",
+      "description": "How Luxedge handles copyright: what we own, how to reuse our content, and how a rights holder can report allegedly infringing material with a DMCA-style notice.",
+      "canonical": "https://luxedge.us/copyright",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/faq",
+      "status": 200,
+      "title": "FAQ — Shipping, Returns &amp; Product Questions | Luxedge",
+      "description": "Answers to common questions about Luxedge — shipping times, order tracking, returns, and how our curated pet essentials are sourced.",
+      "canonical": "https://luxedge.us/faq",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/editorial-policy",
+      "status": 200,
+      "title": "Editorial Policy — How Luxedge Guides Are Prepared",
+      "description": "How Luxedge prepares, checks, updates, sources, and corrects its animal-care buying guides and editorial content.",
+      "canonical": "https://luxedge.us/editorial-policy",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/terms",
+      "status": 200,
+      "title": "Terms of Service | Luxedge",
+      "description": "The rules for using Luxedge: orders and payment, shipping estimates, product information, returns, and liability, written in plain language.",
+      "canonical": "https://luxedge.us/terms",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/disclaimer",
+      "status": 200,
+      "title": "Disclaimer — Luxedge Product and Animal-Care Information",
+      "description": "Important limits on Luxedge product information and general animal-care content, including health, safety, and professional-care boundaries.",
+      "canonical": "https://luxedge.us/disclaimer",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/privacy",
+      "status": 200,
+      "title": "Privacy Policy | Luxedge",
+      "description": "How Luxedge collects, uses, and protects your personal information when you shop with us.",
+      "canonical": "https://luxedge.us/privacy",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/sitemap",
+      "status": 200,
+      "title": "Sitemap — Every Page on Luxedge",
+      "description": "Browse every page on Luxedge in one place: the full product catalog, shop categories, care guides, and our shipping, returns, privacy and terms pages.",
+      "canonical": "https://luxedge.us/sitemap",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/category/cattle",
+      "status": 200,
+      "title": "Cattle — Pet Essentials | Luxedge",
+      "description": "Shop Cattle at Luxedge — useful feeding and care essentials for cattle and livestock. Supplier-verified items with clear delivery estimates.",
+      "canonical": "https://luxedge.us/category/cattle",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/category/bird-supplies",
+      "status": 200,
+      "title": "Bird Supplies — Pet Essentials | Luxedge",
+      "description": "Shop Bird Supplies at Luxedge — seed, feed &amp; care essentials for feathered friends. Supplier-verified items with clear delivery estimates.",
+      "canonical": "https://luxedge.us/category/bird-supplies",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/category/cat-supplies",
+      "status": 200,
+      "title": "Cat Supplies — Pet Essentials | Luxedge",
+      "description": "Shop Cat Supplies at Luxedge — play, comfort &amp; everyday cat essentials. Supplier-verified items with clear delivery estimates.",
+      "canonical": "https://luxedge.us/category/cat-supplies",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/category/dog-supplies",
+      "status": 200,
+      "title": "Dog Supplies — Pet Essentials | Luxedge",
+      "description": "Shop Dog Supplies at Luxedge — walking, training &amp; everyday dog essentials. Supplier-verified items with clear delivery estimates.",
+      "canonical": "https://luxedge.us/category/dog-supplies",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/category/feeding-water",
+      "status": 200,
+      "title": "Feeding &amp; Water — Pet Essentials | Luxedge",
+      "description": "Shop Feeding &amp; Water at Luxedge — considered pieces for daily mealtimes. Supplier-verified items with clear delivery estimates.",
+      "canonical": "https://luxedge.us/category/feeding-water",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/category/grooming",
+      "status": 200,
+      "title": "Grooming — Pet Essentials | Luxedge",
+      "description": "Shop Grooming at Luxedge — simple tools for everyday care. Supplier-verified items with clear delivery estimates.",
+      "canonical": "https://luxedge.us/category/grooming",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/category/pet-accessories",
+      "status": 200,
+      "title": "Pet Accessories — Pet Essentials | Luxedge",
+      "description": "Shop Pet Accessories at Luxedge — useful pieces for life together. Supplier-verified items with clear delivery estimates.",
+      "canonical": "https://luxedge.us/category/pet-accessories",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/category/pet-beds",
+      "status": 200,
+      "title": "Pet Beds — Pet Essentials | Luxedge",
+      "description": "Shop Pet Beds at Luxedge — comfort-led pieces for deeper rest. Supplier-verified items with clear delivery estimates.",
+      "canonical": "https://luxedge.us/category/pet-beds",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/category/pet-toys",
+      "status": 200,
+      "title": "Pet Toys — Pet Essentials | Luxedge",
+      "description": "Shop Pet Toys at Luxedge — interactive play and everyday enrichment. Supplier-verified items with clear delivery estimates.",
+      "canonical": "https://luxedge.us/category/pet-toys",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/category/horse",
+      "status": 200,
+      "title": "Horse — Pet Essentials | Luxedge",
+      "description": "Shop Horse at Luxedge — practical care and stable essentials for horses. Supplier-verified items with clear delivery estimates.",
+      "canonical": "https://luxedge.us/category/horse",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/blog/horse-grooming-kit-buyers-guide",
+      "status": 200,
+      "title": "Horse Grooming Kit Buyer’s Guide: Essential Tools and Care | Luxedge",
+      "description": "Build a practical horse grooming kit by starting with the core tools, matching each brush to its job, and caring for the kit after use.",
+      "canonical": "https://luxedge.us/blog/horse-grooming-kit-buyers-guide",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/blog/horse-fly-mask-buyers-guide",
+      "status": 200,
+      "title": "How to Choose a Horse Fly Mask: Fit and Daily Care | Luxedge",
+      "description": "Learn how to compare a horse fly mask, check the fit around the eyes and ears, and inspect it during daily turnout.",
+      "canonical": "https://luxedge.us/blog/horse-fly-mask-buyers-guide",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/blog/best-bird-feeder-buyers-guide",
+      "status": 200,
+      "title": "How to Choose a Bird Feeder for Your Backyard | Luxedge",
+      "description": "Compare feeder styles, placement, seed handling, cleaning, and water so you can choose a practical setup for visiting wild birds.",
+      "canonical": "https://luxedge.us/blog/best-bird-feeder-buyers-guide",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/blog/dog-car-safety-seat-belt-guide",
+      "status": 200,
+      "title": "Dog Car Safety: Tethers, Harnesses, and Travel Tips | Luxedge",
+      "description": "Keep dogs secure and drivers focused: learn how seat belt tethers work, why they must connect to a harness, and practical road trip rules.",
+      "canonical": "https://luxedge.us/blog/dog-car-safety-seat-belt-guide",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/blog/horse-halter-lead-rope-buyers-guide",
+      "status": 200,
+      "title": "How to Choose a Horse Halter and Lead Rope: Fit First | Luxedge",
+      "description": "Choose horse handling equipment by measuring the head, checking pressure points, matching the material to the routine, and inspecting the hardware.",
+      "canonical": "https://luxedge.us/blog/horse-halter-lead-rope-buyers-guide",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/blog/how-to-choose-a-cat-tunnel",
+      "status": 200,
+      "title": "How to Choose a Cat Tunnel for Indoor Play | Luxedge",
+      "description": "Choose a cat tunnel that fits your space, your cat’s size and temperament, and a safe indoor enrichment routine.",
+      "canonical": "https://luxedge.us/blog/how-to-choose-a-cat-tunnel",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/blog/how-to-clean-a-bird-feeder",
+      "status": 200,
+      "title": "How to Clean a Bird Feeder: A Practical Routine | Luxedge",
+      "description": "Empty old seed, wash the feeder, dry it completely, and keep the ground below tidy with a repeatable bird-care routine.",
+      "canonical": "https://luxedge.us/blog/how-to-clean-a-bird-feeder",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/blog/how-to-choose-cattle-trough-feed-water-setup",
+      "status": 200,
+      "title": "How to Choose a Cattle Trough: Feed, Water, and Placement | Luxedge",
+      "description": "Plan a cattle trough around its job, stated capacity, placement, refilling, drainage, and the cleaning routine your livestock setup requires.",
+      "canonical": "https://luxedge.us/blog/how-to-choose-cattle-trough-feed-water-setup",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/blog/how-to-fit-no-pull-dog-harness",
+      "status": 200,
+      "title": "How to Fit a No-Pull Dog Harness: A Practical Checklist | Luxedge",
+      "description": "Measure the chest, position each strap, use a two-finger check, and inspect a no-pull harness before everyday walks.",
+      "canonical": "https://luxedge.us/blog/how-to-fit-no-pull-dog-harness",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/adjustable-pet-car-seatbelt-tether-2-pack",
+      "status": 200,
+      "title": "Adjustable Dog Car Restraint Tether (2-Pack) | Luxedge",
+      "description": "Two adjustable dog car restraint tethers that clip to a harness to reduce roaming and driver distraction. Note: travel restraint, not crash-tested.",
+      "canonical": "https://luxedge.us/product/adjustable-pet-car-seatbelt-tether-2-pack",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/cat-window-perch-suction-cup-hammock-seat-for-sunbathing",
+      "status": 200,
+      "title": "Cat Window Perch | Suction Cup Hammock Seat | Luxedge",
+      "description": "Suction-cup window hammock for cats — removable washable mesh bed, no-drill install. Weight rating not stated; ask us about large cats.",
+      "canonical": "https://luxedge.us/product/cat-window-perch-suction-cup-hammock-seat-for-sunbathing",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/bone-charm-pendant-necklace",
+      "status": 200,
+      "title": "Bone Charm Pendant Necklace for Dog Owners | Luxedge",
+      "description": "Engraved bone charm pendant necklace for dog owners. Human jewellery — not a pet collar.",
+      "canonical": "https://luxedge.us/product/bone-charm-pendant-necklace",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/collapsible-cat-tunnel-with-crinkle-peek-hole-3-way-play-tube",
+      "status": 200,
+      "title": "Collapsible Cat Tunnel | 3-Way Crinkle Play Tube | Luxedge",
+      "description": "Y-shaped crinkle tunnel with peek holes for hide-and-pounce play. Folds flat. Fun for kittens and adult cats.",
+      "canonical": "https://luxedge.us/product/collapsible-cat-tunnel-with-crinkle-peek-hole-3-way-play-tube",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/ceramic-cat-face-food-bowl-easy-clean-pet-dish",
+      "status": 200,
+      "title": "Ceramic Cat Food Bowl | Luxedge",
+      "description": "Shop the ceramic cat-face food bowl — a stable, easy-clean dish for wet and dry food.",
+      "canonical": "https://luxedge.us/product/ceramic-cat-face-food-bowl-easy-clean-pet-dish",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/bungee-pet-car-seatbelt-leash",
+      "status": 200,
+      "title": "Bungee Dog Car Restraint Tether — Travel Leash | Luxedge",
+      "description": "Elastic shock-absorbing car restraint tether that clips to a harness to reduce pet roaming and driver distraction during vehicle travel.",
+      "canonical": "https://luxedge.us/product/bungee-pet-car-seatbelt-leash",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/cooling-pet-mat-ice-silk-cooling-pad-for-cats-dogs",
+      "status": 200,
+      "title": "Cooling Pet Mat — Ice-Silk Pad | Luxedge",
+      "description": "Shop the ice-silk cooling pet mat — a no-water, no-electricity cooling pad for cats and dogs on warm days.",
+      "canonical": "https://luxedge.us/product/cooling-pet-mat-ice-silk-cooling-pad-for-cats-dogs",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/cute-cat-blankets-dog-pet-mat",
+      "status": 200,
+      "title": "Soft Cat Blanket / Pet Mat | Luxedge",
+      "description": "Soft blanket mat for cats and small pets — a cozy, portable resting spot for home or travel.",
+      "canonical": "https://luxedge.us/product/cute-cat-blankets-dog-pet-mat",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/dog-bed",
+      "status": 200,
+      "title": "Comfortable Everyday Dog Bed | Luxedge",
+      "description": "A comfortable everyday dog bed — a soft, dedicated resting spot for your dog.",
+      "canonical": "https://luxedge.us/product/dog-bed",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/cozy-cat-nest-bed-round-plush-mat",
+      "status": 200,
+      "title": "Cozy Cat Nest Bed | Luxedge",
+      "description": "Shop the cozy round cat nest bed — a plush, rimmed sleeping mat for cats and small dogs.",
+      "canonical": "https://luxedge.us/product/cozy-cat-nest-bed-round-plush-mat",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/dog-clothes-spring-and-summer-clothing",
+      "status": 200,
+      "title": "Lightweight Spring Dog Apparel | Luxedge",
+      "description": "Lightweight dog clothing set for small dogs — comfortable spring and summer wear.",
+      "canonical": "https://luxedge.us/product/dog-clothes-spring-and-summer-clothing",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/dog-poop-bags-biodegradable-waste-bag-rolls",
+      "status": 200,
+      "title": "Dog Poop Bags — Durable Waste Bag Rolls | Luxedge",
+      "description": "Durable dog waste bags on continuous rolls (15 per roll). Fits standard dispensers. Clean, leak-resistant, and easy to tear.",
+      "canonical": "https://luxedge.us/product/dog-poop-bags-biodegradable-waste-bag-rolls",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/foldable-pet-travel-carrier-backpack",
+      "status": 200,
+      "title": "Foldable Pet Carrier Backpack | Breathable &amp; Expandable | Luxedge",
+      "description": "Expandable pet carrier backpack with mesh ventilation and padded straps. Check your airline&#39;s current cabin rules before booking.",
+      "canonical": "https://luxedge.us/product/foldable-pet-travel-carrier-backpack",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/dual-shoulder-pet-carrier-backpack",
+      "status": 200,
+      "title": "Pet Carrier Backpack for Small Dogs | Luxedge",
+      "description": "Portable pet carrier backpack with double-shoulder straps — carry your small dog hands-free.",
+      "canonical": "https://luxedge.us/product/dual-shoulder-pet-carrier-backpack",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/heavy-duty-cattle-feed-trough",
+      "status": 200,
+      "title": "Heavy-Duty Poly Livestock Feed Trough | Luxedge",
+      "description": "Durable outdoor poly feed trough for cattle, goats, and livestock. Easy-clean smooth interior with reinforced edges for daily feeding on the farm.",
+      "canonical": "https://luxedge.us/product/heavy-duty-cattle-feed-trough",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/himalayan-30-lb-trace-mineral-salt-block",
+      "status": 200,
+      "title": "30 lb Himalayan Salt Block for Horses &amp; Livestock | Luxedge",
+      "description": "Shop a 30 lb natural Himalayan pink salt block for horses and livestock. Single-piece block with naturally occurring trace minerals. Free US shipping.",
+      "canonical": "https://luxedge.us/product/himalayan-30-lb-trace-mineral-salt-block",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/himalayan-round-rope-salt-lick-6-lb-pack-of-4",
+      "status": 200,
+      "title": "6 lb Himalayan Salt Lick with Rope — Pack of 4 | Luxedge",
+      "description": "Four 6 lb Himalayan pink salt licks with rope for horses and livestock. Pack net weight 24 lb before packaging. Free US shipping.",
+      "canonical": "https://luxedge.us/product/himalayan-round-rope-salt-lick-6-lb-pack-of-4",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/no-pull-dog-harness-with-reflective-strips-front-back-clip",
+      "status": 200,
+      "title": "No-Pull Dog Harness | Reflective, Dual Clip | Luxedge",
+      "description": "Dual-clip harness stops pulling without choking. Reflective stitching, padded chest plate, sizes XS to XXL.",
+      "canonical": "https://luxedge.us/product/no-pull-dog-harness-with-reflective-strips-front-back-clip",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/nylon-anti-grind-dog-leash-collar",
+      "status": 200,
+      "title": "Nylon Anti-Chew Dog Leash Collar | Luxedge",
+      "description": "Durable nylon dog collar and leash set for everyday walks and training.",
+      "canonical": "https://luxedge.us/product/nylon-anti-grind-dog-leash-collar",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/horse-fly-mask-with-ears",
+      "status": 200,
+      "title": "Horse Fly Mask with Ears — Breathable Mesh | Luxedge",
+      "description": "Fly mask for horses with ear covers, shading the eyes, face and ears with a clear view. Keeps flies, gnats and sun glare away during turnout.",
+      "canonical": "https://luxedge.us/product/horse-fly-mask-with-ears",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/nylon-training-collar-quick-release",
+      "status": 200,
+      "title": "Adjustable Dog Training Collar — Nylon Everyday Wear | Luxedge",
+      "description": "An adjustable dog training collar built for everyday wear and basic obedience. Strong nylon webbing, comfortable fit and a secure buckle for leash work.",
+      "canonical": "https://luxedge.us/product/nylon-training-collar-quick-release",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/pet-shoes-wear-dog-shoes",
+      "status": 200,
+      "title": "Protective Dog Shoes — Paw Protection for Walks | Luxedge",
+      "description": "Protect your dog&#39;s paws from hot pavement, rough trails and cold sidewalks with easy-on protective dog shoes. Flexible soles and secure straps for comfort.",
+      "canonical": "https://luxedge.us/product/pet-shoes-wear-dog-shoes",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/orthopedic-memory-foam-dog-bed",
+      "status": 200,
+      "title": "Orthopedic Memory Foam Dog Bed Extra-Large | Luxedge",
+      "description": "4-inch memory foam dog bed in sizes M to XXL. Removable washable cover, water-resistant inner liner.",
+      "canonical": "https://luxedge.us/product/orthopedic-memory-foam-dog-bed",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/polka-dot-turtleneck-dog-sweater",
+      "status": 200,
+      "title": "Polka-Dot Turtleneck Dog Shirt | Luxedge",
+      "description": "Lightweight polka-dot turtleneck shirt for small dogs — a simple, comfortable everyday layer.",
+      "canonical": "https://luxedge.us/product/polka-dot-turtleneck-dog-sweater",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/outdoor-hanging-bird-feeder",
+      "status": 200,
+      "title": "Outdoor Hanging Bird Feeder — Weather-Resistant | Luxedge",
+      "description": "Weather-resistant outdoor bird feeder that keeps seed dry for cardinals, finches and chickadees. Easy to fill, hang and clean for backyard bird watching.",
+      "canonical": "https://luxedge.us/product/outdoor-hanging-bird-feeder",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/portable-livestock-water-trough-30-gallon",
+      "status": 200,
+      "title": "Portable Collapsible Livestock Water Trough — 30 Gallon | Luxedge",
+      "description": "Portable 30-gallon collapsible livestock water trough for cattle, horses and goats. Durable heavy-duty PVC, folds flat for easy transport.",
+      "canonical": "https://luxedge.us/product/portable-livestock-water-trough-30-gallon",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/retractable-dog-leash-5m-one-button-lock-with-anti-slip-grip",
+      "status": 200,
+      "title": "Retractable Dog Leash 5m | One-Button Lock | Luxedge",
+      "description": "5-meter retractable leash with instant brake. Anti-slip grip, tangle-resistant cord rated 50 lbs, waste bag slot.",
+      "canonical": "https://luxedge.us/product/retractable-dog-leash-5m-one-button-lock-with-anti-slip-grip",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/silicone-flying-disc-dog-toy",
+      "status": 200,
+      "title": "Silicone Flying Disc Dog Toy | Luxedge",
+      "description": "Soft silicone flying disc dog toy — durable, flexible, and great for fetch and interactive play.",
+      "canonical": "https://luxedge.us/product/silicone-flying-disc-dog-toy",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/solar-bird-bath-fountain",
+      "status": 200,
+      "title": "Solar Bird Bath with Light — Round Garden Birdbath | Luxedge",
+      "description": "Solar-powered bird bath fountain circulates fresh water with no wiring or batteries. A charming, low-maintenance addition to any garden.",
+      "canonical": "https://luxedge.us/product/solar-bird-bath-fountain",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/stainless-steel-pet-water-fountain-filtered-running-water-for-cats-dogs",
+      "status": 200,
+      "title": "Pet Water Fountain | Stainless Steel Triple Filter | Luxedge",
+      "description": "Flowing water with triple filtration stays fresher longer. 2.5L, quiet circulating pump. Encourages hydration.",
+      "canonical": "https://luxedge.us/product/stainless-steel-pet-water-fountain-filtered-running-water-for-cats-dogs",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/silicone-feeding-placemat-dogs-cats",
+      "status": 200,
+      "title": "Easy-Clean Silicone Pet Placemat | Luxedge",
+      "description": "Easy-to-clean silicone pet placemat for containing spills around food and water bowls.",
+      "canonical": "https://luxedge.us/product/silicone-feeding-placemat-dogs-cats",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/product/usb-rechargeable-pet-nail-grinder-quiet-motor-for-dogs-cats",
+      "status": 200,
+      "title": "USB Pet Nail Grinder | Whisper-Quiet Motor | Luxedge",
+      "description": "Low-noise nail grinder for dogs and cats. 2 speeds, 3 port sizes, USB-C rechargeable. For dogs and cats.",
+      "canonical": "https://luxedge.us/product/usb-rechargeable-pet-nail-grinder-quiet-motor-for-dogs-cats",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/robots.txt",
+      "status": 200,
+      "jsonld": false
+    },
+    {
+      "url": "https://luxedge.us/ads.txt",
+      "status": 200,
+      "jsonld": false
+    },
+    {
+      "url": "https://luxedge.us/orders",
+      "status": 200,
+      "title": "Orders | Luxedge",
+      "description": "",
+      "canonical": "https://luxedge.us/orders",
+      "jsonld": true
+    },
+    {
+      "url": "https://luxedge.us/google-products.xml",
+      "status": 200,
+      "title": "Luxedge",
+      "jsonld": false
+    },
+    {
+      "url": "https://luxedge.us/sitemap.xml",
+      "status": 200,
+      "jsonld": false
+    }
+  ]
+}

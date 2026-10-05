@@ -8,8 +8,11 @@ import {
   emptyMerchStats,
   subscribeVisualQuality,
   getVisualQualityVersion,
+  pickHomeBestSellers,
+  HOME_BEST_SELLER_SLOTS,
   type MerchStats,
   type RankableProduct,
+  type BestSellerCandidate,
 } from '../merchandising';
 
 type P = RankableProduct & { id: string };
@@ -138,6 +141,84 @@ describe('visual quality store', () => {
     const scored = [b, a].map((p) => merchScoreOf(p));
     expect(scored[1]).toBeLessThan(scored[0]);
     expect(seen).toBeGreaterThanOrEqual(before);
+  });
+});
+
+describe('pickHomeBestSellers', () => {
+  const item = (id: string, category: string, slug: string, image: string): BestSellerCandidate => ({
+    id, category, slug, images: [image],
+  });
+
+  // The live regression: a 7-product visible catalog with no bird/horse/cattle
+  // rows. The old fixed-index fallbacks (active[2], active[3]) re-rendered the
+  // Bestseller and Popular products under the "Wild Bird"/"Equine Choice"
+  // badges, so the homepage showed the same two cards twice.
+  const liveBugShape: BestSellerCandidate[] = [
+    item('shirt', 'Dog Supplies', 'dog-clothes-spring-and-summer-clothing', 'https://img.example.test/pet-shirt.jpg'),
+    item('hammock', 'Cat Supplies', 'cat-window-perch-suction-cup-hammock-seat-for-sunbathing', 'https://img.example.test/hammock.jpg'),
+    item('carrier', 'Pet Accessories', 'foldable-pet-travel-carrier-backpack', 'https://img.example.test/carrier.jpg'),
+  ];
+
+  it('never repeats a product (or its photo) across slots', () => {
+    const picks = pickHomeBestSellers(liveBugShape);
+    const ids = picks.map((p) => p.product.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const images = picks.map((p) => p.product.images![0]);
+    expect(new Set(images).size).toBe(images.length);
+    // Only genuine dog/cat products exist → only those two curated slots render.
+    expect(ids).toEqual(['shirt', 'hammock']);
+  });
+
+  it('never attaches a category badge to a product from another category', () => {
+    const picks = pickHomeBestSellers(liveBugShape);
+    for (const { badge, product } of picks) {
+      if (badge === 'Wild Bird') expect(product.category).toContain('Bird');
+      if (badge === 'Equine Choice') expect(product.category).toContain('Horse');
+      if (badge === 'Farm Choice') expect(product.category).toContain('Cattle');
+    }
+    // The accessory row must never inherit a species badge either.
+    expect(picks.some((p) => p.product.id === 'carrier')).toBe(false);
+  });
+
+  it('treats two rows sharing one supplier image as the same card', () => {
+    const sameePhoto: BestSellerCandidate[] = [
+      item('bed-a', 'Dog Supplies', 'dog-bed', 'https://img.example.test/bed.jpg?w=500'),
+      item('bed-b', 'Dog Supplies', 'cozy-cat-nest-bed', 'https://img.example.test/bed.jpg?w=800'),
+    ];
+    const picks = pickHomeBestSellers(sameePhoto);
+    expect(picks).toHaveLength(1);
+    expect(picks[0].product.id).toBe('bed-a');
+  });
+
+  it('prefers the owner-curated slug over the first category match', () => {
+    const products: BestSellerCandidate[] = [
+      item('first-dog', 'Dog Supplies', 'some-other-dog-item', 'https://img.example.test/a.jpg'),
+      item('fountain', 'Dog Supplies', 'stainless-steel-pet-water-fountain-filtered-running-water-for-cats-dogs', 'https://img.example.test/b.jpg'),
+    ];
+    const picks = pickHomeBestSellers(products);
+    expect(picks[0].badge).toBe('Bestseller');
+    expect(picks[0].product.id).toBe('fountain');
+  });
+
+  it('fills every slot when the full catalog has each curated category', () => {
+    const full: BestSellerCandidate[] = [
+      item('fountain', 'Dog Supplies', 'stainless-steel-pet-water-fountain-filtered-running-water-for-cats-dogs', 'https://img.example.test/1.jpg'),
+      item('tunnel', 'Cat Supplies', 'collapsible-cat-tunnel-with-crinkle-peek-hole-3-way-play-tube', 'https://img.example.test/2.jpg'),
+      item('feeder', 'Bird Supplies', 'outdoor-hanging-bird-feeder', 'https://img.example.test/3.jpg'),
+      item('flymask', 'Horse', 'horse-fly-mask-with-ears', 'https://img.example.test/4.jpg'),
+      item('trough', 'Cattle', 'heavy-duty-cattle-feed-trough', 'https://img.example.test/5.jpg'),
+    ];
+    const picks = pickHomeBestSellers(full);
+    expect(picks.map((p) => p.badge)).toEqual(HOME_BEST_SELLER_SLOTS.map((s) => s.badge));
+    expect(picks.map((p) => p.product.id)).toEqual(['fountain', 'tunnel', 'feeder', 'flymask', 'trough']);
+  });
+
+  it('ignores products without a usable image', () => {
+    const picks = pickHomeBestSellers([
+      { id: 'noimage', category: 'Dog Supplies', slug: 'dog-bed' },
+      item('withimage', 'Dog Supplies', 'dog-bed-2', 'https://img.example.test/6.jpg'),
+    ]);
+    expect(picks.map((p) => p.product.id)).toEqual(['withimage']);
   });
 });
 
