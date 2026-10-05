@@ -34,7 +34,7 @@ export default async function dbSyncHandler(
 
   let payload: SyncPayload;
   try {
-    payload = await readJsonBody(req) as SyncPayload;
+    payload = await readJsonBody(req) as unknown as SyncPayload;
   } catch {
     return makeRes({ error: 'Invalid JSON body' }, 400);
   }
