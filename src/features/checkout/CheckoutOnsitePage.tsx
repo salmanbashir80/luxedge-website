@@ -31,6 +31,7 @@ import {
   type OnsiteIntentResult,
 } from '../../services/checkoutOnsite';
 import OnsitePaymentForm from './OnsitePaymentForm';
+import { checkUsShippingEligibility } from '../../services/supplier/usShipping';
 import { Lock01, ChevronDown } from '@untitledui/icons';
 
 const FREE_SHIPPING_FALLBACK = 4.99;
@@ -217,6 +218,8 @@ export default function CheckoutOnsitePage() {
     if (!f.city.trim()) e.city = 'Please enter your city';
     if (!f.state.trim()) e.state = 'Please select your state';
     if (!/^\d{5}(-\d{4})?$/.test(f.postalCode.trim())) e.postalCode = 'Please enter a valid ZIP code';
+    const usCheck = checkUsShippingEligibility({ country: f.country, state: f.state, zip: f.postalCode });
+    if (!usCheck.eligible && !e.state && !e.postalCode) e.postalCode = usCheck.reason;
     if (!billingSame) {
       if (!billing.fullName.trim()) e.billingName = 'Please enter the billing name';
       if (!billing.addressLine1.trim()) e.billingLine1 = 'Please enter the billing address';

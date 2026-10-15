@@ -4,8 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 import CategoryHero, { categoryHeroConfig, categoryImageVariant } from '../CategoryHero';
 import { categoryContentFor } from '../../content/categoryContent';
 
-const categories = ['Dog Supplies', 'Cat Supplies', 'Horse', 'Bird Supplies', 'Cattle', 'Feeding & Water', 'Pet Accessories', 'Pet Beds', 'Pet Toys', 'Grooming'];
-const slugs = ['dog-supplies', 'cat-supplies', 'horse', 'bird-supplies', 'cattle', 'feeding-water', 'pet-accessories', 'pet-beds', 'pet-toys', 'grooming'];
+const categories = ["Women's Clothing", "Men's Clothing", 'Dresses and Tops', 'Jeans and Pants', 'Jackets and Outerwear', 'Sneakers and Shoes', 'Handbags and Wallets', 'Jewelry', 'Watches', 'Sunglasses and Accessories'];
+const slugs = ['womens-clothing', 'mens-clothing', 'dresses-and-tops', 'jeans-and-pants', 'jackets-and-outerwear', 'sneakers-and-shoes', 'handbags-and-wallets', 'jewelry', 'watches', 'sunglasses-and-accessories'];
 
 describe('category hero public rendering', () => {
   it.each(categories)('%s has one heading, a photo and valid shopping links', name => {
@@ -64,7 +64,7 @@ describe('category hero public rendering', () => {
   it('sizes known CDN images without rewriting custom image URLs', () => {
     const custom = 'https://luxedge.us/images/custom.webp';
     expect(categoryImageVariant(custom, 360)).toBe(custom);
-    const image = new URL(categoryImageVariant(categoryHeroConfig('Dog Supplies', '').image, 360));
+    const image = new URL(categoryImageVariant('https://images.unsplash.com/photo-1552053831-71594a27632d?w=720&h=820&fit=crop', 360));
     expect(image.searchParams.get('w')).toBe('360');
     expect(image.searchParams.get('h')).toBe('324');
     expect(image.searchParams.get('auto')).toBe('format');

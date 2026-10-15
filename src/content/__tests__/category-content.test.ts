@@ -3,10 +3,10 @@ import { readFileSync } from 'node:fs';
 import { CATEGORY_CONTENT, categoryContentFor } from '../categoryContent';
 import { isLinkablePublicPath, setBlogPublicForTesting } from '../reviewHolds';
 
-/** The ten live, indexable categories (worker/sitemap.ts source of truth). */
+/** The ten USA Fashion categories (src/content/categoryContent.ts is the source of truth). */
 const CATEGORY_SLUGS = [
-  'dog-supplies', 'cat-supplies', 'pet-beds', 'pet-toys', 'feeding-water',
-  'grooming', 'pet-accessories', 'bird-supplies', 'horse', 'cattle',
+  'womens-clothing', 'mens-clothing', 'dresses-and-tops', 'jeans-and-pants', 'jackets-and-outerwear',
+  'sneakers-and-shoes', 'handbags-and-wallets', 'jewelry', 'watches', 'sunglasses-and-accessories',
 ];
 
 /** public/blog-seo.json is the offline snapshot of the PUBLISHED CMS corpus. */
@@ -59,8 +59,8 @@ describe('category content', () => {
   });
 
   it('resolves by display name as well as by slug (the client passes a name)', () => {
-    expect(categoryContentFor('Dog Supplies')?.desc).toBe(CATEGORY_CONTENT['dog-supplies'].desc);
-    expect(categoryContentFor('Horse')?.desc).toBe(CATEGORY_CONTENT['horse'].desc);
+    expect(categoryContentFor("Women's Clothing")?.desc).toBe(CATEGORY_CONTENT['womens-clothing'].desc);
+    expect(categoryContentFor('Jewelry')?.desc).toBe(CATEGORY_CONTENT['jewelry'].desc);
     expect(categoryContentFor('All')).toBeNull();
   });
 

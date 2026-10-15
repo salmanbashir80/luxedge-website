@@ -31,16 +31,17 @@ export const NAV_PATHS = {
   privacy: '/privacy',
   terms: '/terms',
   sitemap: '/sitemap',
-  dogSupplies: '/category/dog-supplies',
-  catSupplies: '/category/cat-supplies',
-  birdSupplies: '/category/bird-supplies',
-  horseSupplies: '/category/horse',
-  livestock: '/category/cattle',
-  accessories: '/category/pet-accessories',
-  beds: '/category/pet-beds',
-  feeding: '/category/feeding-water',
-  grooming: '/category/grooming',
-  toys: '/category/pet-toys',
+  // USA Fashion categories — slugs match CATEGORY_CONTENT in src/content/categoryContent.ts.
+  womensClothing: '/category/womens-clothing',
+  mensClothing: '/category/mens-clothing',
+  dressesTops: '/category/dresses-and-tops',
+  jeansPants: '/category/jeans-and-pants',
+  outerwear: '/category/jackets-and-outerwear',
+  footwear: '/category/sneakers-and-shoes',
+  handbags: '/category/handbags-and-wallets',
+  jewelry: '/category/jewelry',
+  watches: '/category/watches',
+  accessories: '/category/sunglasses-and-accessories',
 } as const;
 
 export type NavLink = { label: string; to: string };
@@ -62,17 +63,17 @@ export const UTILITY_NAV: NavLink[] = [
 /**
  * Desktop strip. `all` and `deals` are separated in the markup (left cluster,
  * amber pill on the right), so they are named rather than positional.
- * A `megaKey` marks the items backed by a MEGA_MENU panel; Bird has none
- * because birds have a single category, so a panel would only repeat it.
+ * A `megaKey` marks the items backed by a MEGA_MENU panel; Outerwear, Shoes,
+ * Handbags and Accessories are single categories, so they have no panel.
  */
 export const STRIP_NAV: { all: NavLink; items: (NavLink & { megaKey?: string })[]; deals: NavLink } = {
   all: { label: 'Shop All', to: NAV_PATHS.shop },
   items: [
-    { label: 'Dog', to: NAV_PATHS.dogSupplies, megaKey: 'Dog' },
-    { label: 'Cat', to: NAV_PATHS.catSupplies, megaKey: 'Cat' },
-    { label: 'Bird', to: NAV_PATHS.birdSupplies },
-    { label: 'Horse', to: NAV_PATHS.horseSupplies },
-    { label: 'Livestock', to: NAV_PATHS.livestock },
+    { label: 'Women', to: NAV_PATHS.womensClothing, megaKey: 'Women' },
+    { label: 'Men', to: NAV_PATHS.mensClothing, megaKey: 'Men' },
+    { label: 'Outerwear', to: NAV_PATHS.outerwear },
+    { label: 'Shoes', to: NAV_PATHS.footwear },
+    { label: 'Handbags', to: NAV_PATHS.handbags },
     { label: 'Accessories', to: NAV_PATHS.accessories },
     { label: 'Blog', to: NAV_PATHS.blog },
     { label: 'About', to: NAV_PATHS.about },
@@ -86,22 +87,21 @@ export const STRIP_NAV: { all: NavLink; items: (NavLink & { megaKey?: string })[
  */
 export const MEGA_MENU: MegaPanel[] = [
   {
-    label: 'Dog', to: NAV_PATHS.dogSupplies,
+    label: 'Women', to: NAV_PATHS.womensClothing,
     groups: [
-      { title: 'Walking & Gear', links: [{ label: 'Harnesses & Collars', to: NAV_PATHS.dogSupplies }, { label: 'Travel Accessories', to: NAV_PATHS.accessories }] },
-      { title: 'Comfort', links: [{ label: 'Beds, Blankets & Mats', to: NAV_PATHS.beds }] },
-      { title: 'Feeding', links: [{ label: 'Bowls, Feeders & Water Bottles', to: NAV_PATHS.feeding }] },
-      { title: 'Grooming', links: [{ label: 'Brushes & Grooming Tools', to: NAV_PATHS.grooming }] },
-      { title: 'Play', links: [{ label: 'Chew, Rope & Tug Toys', to: NAV_PATHS.toys }] },
+      { title: 'Clothing', links: [{ label: "Women's Clothing", to: NAV_PATHS.womensClothing }, { label: 'Dresses and Tops', to: NAV_PATHS.dressesTops }, { label: 'Jeans and Pants', to: NAV_PATHS.jeansPants }] },
+      { title: 'Outerwear', links: [{ label: 'Jackets and Outerwear', to: NAV_PATHS.outerwear }] },
+      { title: 'Shoes & Bags', links: [{ label: 'Sneakers and Shoes', to: NAV_PATHS.footwear }, { label: 'Handbags and Wallets', to: NAV_PATHS.handbags }] },
+      { title: 'Jewelry & Watches', links: [{ label: 'Jewelry', to: NAV_PATHS.jewelry }, { label: 'Watches', to: NAV_PATHS.watches }] },
     ],
   },
   {
-    label: 'Cat', to: NAV_PATHS.catSupplies,
+    label: 'Men', to: NAV_PATHS.mensClothing,
     groups: [
-      { title: 'Play', links: [{ label: 'Toys & Wands', to: NAV_PATHS.toys }] },
-      { title: 'Comfort', links: [{ label: 'Beds & Caves', to: NAV_PATHS.beds }, { label: 'Perches, Towers & Scratching', to: NAV_PATHS.catSupplies }] },
-      { title: 'Feeding', links: [{ label: 'Bowls, Fountains & Feeders', to: NAV_PATHS.feeding }] },
-      { title: 'Grooming', links: [{ label: 'Brushes & Nail Care', to: NAV_PATHS.grooming }] },
+      { title: 'Clothing', links: [{ label: "Men's Clothing", to: NAV_PATHS.mensClothing }, { label: 'Jeans and Pants', to: NAV_PATHS.jeansPants }] },
+      { title: 'Outerwear', links: [{ label: 'Jackets and Outerwear', to: NAV_PATHS.outerwear }] },
+      { title: 'Shoes & Bags', links: [{ label: 'Sneakers and Shoes', to: NAV_PATHS.footwear }, { label: 'Handbags and Wallets', to: NAV_PATHS.handbags }] },
+      { title: 'Watches & Accessories', links: [{ label: 'Watches', to: NAV_PATHS.watches }, { label: 'Sunglasses and Accessories', to: NAV_PATHS.accessories }] },
     ],
   },
 ];
@@ -109,16 +109,16 @@ export const MEGA_MENU: MegaPanel[] = [
 /** Mobile drawer: six category tiles, then the general links. */
 export const DRAWER_NAV: { tiles: NavLink[]; links: (NavLink & { highlight?: boolean })[] } = {
   tiles: [
-    { label: '🐶 Dog Supplies', to: NAV_PATHS.dogSupplies },
-    { label: '🐱 Cat Supplies', to: NAV_PATHS.catSupplies },
-    { label: '🦜 Bird Supplies', to: NAV_PATHS.birdSupplies },
-    { label: '🐴 Horse Supplies', to: NAV_PATHS.horseSupplies },
-    { label: '🐄 Livestock', to: NAV_PATHS.livestock },
-    { label: '✨ Accessories', to: NAV_PATHS.accessories },
+    { label: "👗 Women's Clothing", to: NAV_PATHS.womensClothing },
+    { label: "👔 Men's Clothing", to: NAV_PATHS.mensClothing },
+    { label: '🧥 Outerwear', to: NAV_PATHS.outerwear },
+    { label: '👟 Sneakers & Shoes', to: NAV_PATHS.footwear },
+    { label: '👜 Handbags & Wallets', to: NAV_PATHS.handbags },
+    { label: '🕶️ Sunglasses & Accessories', to: NAV_PATHS.accessories },
   ],
   links: [
     { label: 'Shop All Products', to: NAV_PATHS.shop },
-    { label: 'Care Guides & Blog', to: NAV_PATHS.blog },
+    { label: 'Style Guides & Blog', to: NAV_PATHS.blog },
     { label: 'About Us', to: NAV_PATHS.about },
     { label: 'Contact & Help', to: NAV_PATHS.contact },
     { label: '🔥 Special Deals', to: NAV_PATHS.deals, highlight: true },
@@ -131,12 +131,16 @@ export const FOOTER_COLUMNS: { title: string; links: NavLink[]; paymentsNote?: b
     title: 'Shop',
     links: [
       { label: 'All Products', to: NAV_PATHS.shop },
-      { label: 'Dog Supplies', to: NAV_PATHS.dogSupplies },
-      { label: 'Cat Supplies', to: NAV_PATHS.catSupplies },
-      { label: 'Bird Supplies', to: NAV_PATHS.birdSupplies },
-      { label: 'Horse Supplies', to: NAV_PATHS.horseSupplies },
-      { label: 'Livestock Supplies', to: NAV_PATHS.livestock },
-      { label: 'Accessories', to: NAV_PATHS.accessories },
+      { label: "Women's Clothing", to: NAV_PATHS.womensClothing },
+      { label: "Men's Clothing", to: NAV_PATHS.mensClothing },
+      { label: 'Dresses and Tops', to: NAV_PATHS.dressesTops },
+      { label: 'Jeans and Pants', to: NAV_PATHS.jeansPants },
+      { label: 'Jackets and Outerwear', to: NAV_PATHS.outerwear },
+      { label: 'Sneakers and Shoes', to: NAV_PATHS.footwear },
+      { label: 'Handbags and Wallets', to: NAV_PATHS.handbags },
+      { label: 'Jewelry', to: NAV_PATHS.jewelry },
+      { label: 'Watches', to: NAV_PATHS.watches },
+      { label: 'Sunglasses and Accessories', to: NAV_PATHS.accessories },
     ],
   },
   { title: 'Learn', links: [{ label: 'Blog & Guides', to: NAV_PATHS.blog }] },

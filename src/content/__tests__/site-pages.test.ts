@@ -53,7 +53,7 @@ const decode = (html: string) => html
   .replace(/&lt;/g, '<')
   .replace(/&gt;/g, '>')
   .replace(/&quot;/g, '"')
-  .replace(/&#0?39;|&apos;/g, "'")
+  .replace(/&#(?:0?39|x27);|&apos;/g, "'")
   .replace(/&nbsp;/g, ' ');
 
 const render = (node: ReactElement) => decode(renderToStaticMarkup(createElement(MemoryRouter, null, node)));
@@ -190,7 +190,6 @@ describe('homepage / contact copy — honesty', () => {
     // pinned by the faq-source suite, which owns FAQ_DATA.
     const pins: Array<[string, string]> = [
       ['express shipping', 'Express shipping is not currently offered unless it is specifically shown as an option at checkout'],
-      ['feed and label guidance', 'Review the product label, ingredients, intended species, warnings'],
       ['warranty coverage', 'Warranty coverage varies by product and manufacturer'],
     ];
     for (const [label, phrase] of pins) {

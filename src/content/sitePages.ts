@@ -46,7 +46,7 @@ export const HOME_SECTIONS: SiteSection[] = [
   {
     heading: 'What Luxedge sells',
     paragraphs: [
-      'Luxedge is an animal-care store for dogs, cats, birds, horses and livestock. The catalogue is kept deliberately small and is organised by the animal and the everyday job you are shopping for — walking and training, sleeping and resting, feeding and water, grooming, travel and enrichment.',
+      'Luxedge is an online fashion store for clothing, shoes and accessories, shipped to US addresses. The catalogue is organised into ten categories — from women’s and men’s clothing to jewelry, watches and sunglasses — so you can find the pieces you are shopping for quickly.',
       'Every listing states what the item is, the size or capacity the listing itself names, the price and whether it is currently available. Where a detail has not been confirmed, the product page says so rather than filling the gap with guesswork — you will see that noted as something to check before ordering.',
     ],
     links: [
@@ -57,15 +57,15 @@ export const HOME_SECTIONS: SiteSection[] = [
   {
     heading: 'Who it is for',
     paragraphs: [
-      'The range covers five groups of animals. Dog supplies include walking and training gear, clothing, shoes, car tethers and carriers. Cat essentials include beds, blankets, bowls, fountains, window perches and play tunnels. Bird supplies cover feeders and baths. Horse and livestock shopping covers feeding and water equipment, including Himalayan salt blocks and rope-mounted salt licks for horses and cattle.',
-      'It is for people buying for their own animals — pet owners, and smallholders keeping poultry, horses or cattle. It is not a veterinary service: our contact page sets out plainly what we can help with and what needs a vet or a feed adviser instead.',
+      'The range covers ten categories for shoppers in the USA: women\u2019s and men\u2019s clothing, dresses and tops, jeans and pants, jackets and outerwear, sneakers and shoes, handbags and wallets, jewelry, watches, and sunglasses and accessories.',
+      'It is for people buying for themselves or as gifts. It is not a styling or tailoring service: our contact page sets out plainly what we can help with and what needs a fit specialist instead.',
     ],
     links: [
-      { label: 'Dog', href: '/category/dog-supplies' },
-      { label: 'Cat', href: '/category/cat-supplies' },
-      { label: 'Bird', href: '/category/bird-supplies' },
-      { label: 'Horse', href: '/category/horse' },
-      { label: 'Livestock', href: '/category/cattle' },
+      { label: "Women's Clothing", href: '/category/womens-clothing' },
+      { label: "Men's Clothing", href: '/category/mens-clothing' },
+      { label: 'Jackets and Outerwear', href: '/category/jackets-and-outerwear' },
+      { label: 'Sneakers and Shoes', href: '/category/sneakers-and-shoes' },
+      { label: 'Sunglasses and Accessories', href: '/category/sunglasses-and-accessories' },
     ],
   },
   {
@@ -109,8 +109,8 @@ export const HOME_SECTIONS: SiteSection[] = [
   {
     heading: 'Before you buy',
     paragraphs: [
-      'Our guides explain how to measure and fit walking gear, how to check and clean equipment, and what to compare when two listings look similar. They are written by the Luxedge Editorial Team from the product information we hold and from published animal-care guidance, and they flag the details only an owner or a vet can confirm.',
-      'The guides cover the questions that come up before a purchase: how to fit walking gear so it does not rub, how to clean a feeder properly, where to site a livestock trough, and what to compare between two similar listings. If a guide does not cover something you need to know, email us — the answer usually helps the next buyer too.',
+      'Our guides explain how to choose the right fit and fabric, how to care for clothing and accessories, and what to compare when two listings look similar. They are written by the Luxedge Editorial Team from the product information we hold and from published care guidance, and they flag the details only the manufacturer’s label can confirm.',
+      'The guides cover the questions that come up before a purchase: how to find your size, how to care for leather and knitwear, and what to compare between two similar listings. If a guide does not cover something you need to know, email us — the answer usually helps the next buyer too.',
     ],
     links: [
       { label: 'All guides', href: '/blog' },
@@ -149,8 +149,8 @@ export const CONTACT_SECTIONS: SiteSection[] = [
   {
     heading: 'What we can — and cannot — help with',
     paragraphs: [
-      'We can help with order status, shipping problems, damaged, defective or incorrect items, and questions about what a listing says: what is included, the size or capacity the listing names, and whether an item is right for the animal you are buying for.',
-      'We cannot give veterinary or medical advice. Product information on this site is general shopping information, so follow the label, the instructions, the intended species and the warnings on the product itself — and speak to a vet or a feed adviser about your animal\u2019s health, diet or mineral needs.',
+      'We can help with order status, shipping problems, damaged, defective or incorrect items, and questions about what a listing says: the sizes and colors offered, the materials named, and the care instructions.',
+      'Product information on this site is general shopping information, so follow the care label, the size guidance and the instructions on the product itself.',
     ],
   },
   {
@@ -181,8 +181,8 @@ export const HOME_FAQ: SiteFaqItem[] = [
     a: 'Delivery timing is confirmed during order processing. Express shipping is not currently offered unless it is specifically shown as an option at checkout.',
   },
   {
-    q: 'Do you sell pet food or animal feed?',
-    a: 'Some listings may be animal food, feed, treats, seed, supplements, or mineral products. Review the product label, ingredients, intended species, warnings, and lot or expiry information before use, and follow the label for product-specific guidance.',
+    q: 'Do you ship outside the United States?',
+    a: 'No. Luxedge ships only to addresses in the United States. Shipping costs and delivery estimates are shown before you pay.',
   },
   {
     q: 'Do you offer warranties?',

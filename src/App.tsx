@@ -13,7 +13,7 @@ import { HOME_SECTIONS, HOME_FAQ, CONTACT_SECTIONS } from './content/sitePages';
 import { isHeldBlog } from './content/reviewHolds';
 import { authorFor } from './content/authors';
 import { COPYRIGHT_SECTIONS, DISCLAIMER_SECTIONS, EDITORIAL_SECTIONS, PRIVACY_SECTIONS, RETURNS_SECTIONS, SHIPPING_SECTIONS, TERMS_SECTIONS, POLICY_LAST_UPDATED, FAQ_DATA } from './content/policies';
-import { categoryContentFor } from './content/categoryContent';
+import { CATEGORY_NAMES, categoryContentFor, categorySlugFor } from './content/categoryContent';
 import { NAV_PATHS, UTILITY_NAV, STRIP_NAV, MEGA_MENU, DRAWER_NAV, FOOTER_COLUMNS } from './content/navigation';
 import { productContentFor } from './content/productContent';
 import ProductGallery from './components/ProductGallery';
@@ -155,7 +155,7 @@ function mapCatalogProduct(p: CatalogProduct): Product {
     description: p.description,
     price: p.price,
     originalPrice: p.originalPrice,
-    category: p.category || 'Pet Supplies',
+    category: p.category || 'Fashion',
     stock: p.stock,
     images: p.images.length ? p.images.map(src => proxiedImage(src)) : [],
     // Ensure primary (hero) image is always first
@@ -227,20 +227,53 @@ const INIT_USERS: AppUser[] = [];
 const INIT_REVIEWS: Review[] = [];
 
 const INIT_CATEGORIES: AdminCategory[] = [
-  { id: 'c1', name: 'Dog Supplies', isActive: true, subs: [{ id: 'c1s1', name: 'Dogs', isActive: true }, { id: 'c1s2', name: 'Puppies', isActive: true }] },
-  { id: 'c2', name: 'Cat Supplies', isActive: true, subs: [{ id: 'c2s1', name: 'Cats', isActive: true }, { id: 'c2s2', name: 'Kittens', isActive: true }] },
-  { id: 'c3', name: 'Pet Beds', isActive: true, subs: [] },
-  { id: 'c4', name: 'Pet Toys', isActive: true, subs: [] },
-  { id: 'c5', name: 'Feeding & Water', isActive: true, subs: [] },
-  { id: 'c6', name: 'Grooming', isActive: true, subs: [] },
-  { id: 'c7', name: 'Pet Accessories', isActive: true, subs: [] },
+  { id: 'c1', name: "Women's Clothing", isActive: true, subs: [] },
+  { id: 'c2', name: "Men's Clothing", isActive: true, subs: [] },
+  { id: 'c3', name: 'Dresses and Tops', isActive: true, subs: [] },
+  { id: 'c4', name: 'Jeans and Pants', isActive: true, subs: [] },
+  { id: 'c5', name: 'Jackets and Outerwear', isActive: true, subs: [] },
+  { id: 'c6', name: 'Sneakers and Shoes', isActive: true, subs: [] },
+  { id: 'c8', name: 'Handbags and Wallets', isActive: true, subs: [] },
+  { id: 'c9', name: 'Jewelry', isActive: true, subs: [] },
+  { id: 'c10', name: 'Watches', isActive: true, subs: [] },
+  { id: 'c11', name: 'Sunglasses and Accessories', isActive: true, subs: [] },
 ];
 
 const INIT_BLOGS: BlogPost[] = [
-  { id:'b19', slug:'best-bird-feeder-buyers-guide', title:'How to Choose the Best Bird Feeder for Your Backyard: 2026 Buyer\u2019s Guide', excerpt:'Tube, hopper, or tray? Seed or no-seed? Here is exactly how to pick a bird feeder that fits your yard and attracts the birds you want.', content:'A well-chosen bird feeder turns any yard into a daily wildlife show. With a little planning you can attract cardinals, finches, chickadees, and jays — and keep them coming back all year.\n\n## Decide What You Want to Attract\nDifferent feeders suit different birds. Tube feeders favor finches and chickadees, hopper feeders attract cardinals and jays, and tray feeders draw ground feeders like doves. If you are new to bird feeding, start with one versatile feeder and see who shows up.\n\n## Pick a Weather-Resistant Design\nSeed that gets wet molds quickly and can make birds sick. Look for a feeder with a covered roof, drainage holes, and sealed seed chambers. An [Outdoor Hanging Bird Feeder](/product/outdoor-hanging-bird-feeder) that keeps seed dry through rain and snow is the single most important choice you can make.\n\n## Match the Seed to the Birds\nBlack-oil sunflower brings the widest variety of birds, while millet and safflower appeal to specific species and deter squirrels. Match the blend to the birds you hope to attract, and store it in an [Outdoor Hanging Bird Feeder](/product/outdoor-hanging-bird-feeder) with a sealed seed chamber to keep the mix dry and fresh between fillings.\n\n## Add Water, and Birds Will Stay\nBirds need fresh water for drinking and bathing year-round. A [Solar Bird Bath Fountain](/product/solar-bird-bath-fountain) keeps water moving — moving water is far more attractive to birds and stays cleaner longer.\n\n## Placement Makes the Difference\nHang feeders 5–10 feet from cover so birds have a quick escape route from predators, but close enough to a window to enjoy. Keep cats indoors and clean feeders every couple of weeks with a mild bleach solution.\n\n## Be Consistent\nBirds learn reliable food sources. Once you start feeding, keep the feeder stocked through the seasons — especially in winter when natural food is scarce. Consistency builds a loyal backyard flock.\n\n## The Bottom Line\nStart simple: one weatherproof feeder, a quality seed mix, and a clean water source. That combination reliably attracts birds and makes your yard the most visited spot on the block.', image:'https://images.pexels.com/photos/7517035/pexels-photo-7517035.jpeg?auto=compress&cs=tinysrgb&w=800', images:[], tags:['bird feeder','wild birds','backyard','bird care'], authorId:'adm', authorName:'Admin', status:'published', date:'2026-08-18' },
-  { id:'b20', slug:'horse-grooming-kit-buyers-guide', title:'The Horse Grooming Kit Buyer\u2019s Guide: What to Buy, What to Skip', excerpt:'Curry comb, brushes, hoof pick — what does a horse actually need? This guide breaks down the essentials and what to skip to save money.', content:'Grooming is part of daily horse care, but you do not need a wall of brushes to do it right. A focused kit covers the essentials and lasts for years if you choose well.\n\n## Start with the Core Five\nA complete basic kit has five pieces: a curry comb to loosen dirt and mud, a stiff body brush, a soft brush for the face and sensitive areas, a hoof pick, and a mane-and-tail brush. That is genuinely all you need for most horses.\n\n## Buy a Set, Not a Grab Bag\nBuying pieces separately usually costs more and leaves gaps. A coordinated [12-Piece Horse Grooming Kit](/product/horse-grooming-kit-12-piece) with a storage bag covers the core tools plus extras like a shedding blade and finishing brushes — and the bag keeps everything organized at the barn.\n\n## Grooming Is About More Than Looks\nDaily grooming removes sweat and dirt, spreads natural oils, and — most importantly — gives you a chance to check for cuts, swelling, heat, or skin issues before they become problems. It is also the best bonding time you will have with your horse.\n\n## Don\u2019t Forget the Head\nFlies and sun bother horses constantly. A [Horse Fly Mask with Ears](/product/horse-fly-mask-with-ears) protects the face and eyes during turnout, and comfortable handling gear makes turnout and grooming safer and easier.\n\n## What to Skip\nSkip fancy scented shampoos, expensive detanglers, and oversized kits with tools you will never use. Horses rarely need frequent baths — spot-cleaning plus daily brushing does the job.\n\n## Care for the Kit\nHang brushes to dry, pick out the curry comb after each use, and replace anything with broken bristles. A well-maintained kit lasts years and costs far less per grooming session than cheap replacements.\n\n## The Bottom Line\nA complete 12-piece kit and a fly mask give you everything a happy, healthy horse needs. Start there and add specialty tools only when your routine genuinely calls for them.\n\n## Frequently Asked Questions\n\n### What do I need in a basic horse grooming kit?\nA complete basic kit has five pieces: a curry comb to loosen dirt, a stiff body brush, a soft brush for the face and sensitive areas, a hoof pick, and a mane-and-tail brush. That is genuinely all you need for most horses.\n\n### Do I need a full set when I\u2019m just starting out?\nA coordinated kit like the [12-Piece Horse Grooming Kit](/product/horse-grooming-kit-12-piece) covers the core five plus extras such as a shedding blade and finishing brushes. Starting with a set usually costs less than buying pieces separately, and you can add specialty tools later if your routine calls for them.\n\n### How often should I groom my horse?\nDaily grooming removes dirt, sweat, and loose hair, spreads natural oils, and gives you a chance to check for cuts, swelling, heat, or skin issues before they become problems. Even ten minutes a day is worthwhile.\n\n### How do I care for my grooming brushes?\nHang brushes to dry after use, pick out the curry comb each time, and replace anything with broken bristles. A well-maintained kit lasts years.\n\n### Should I bathe my horse often?\nHorses generally do not need frequent baths — over-bathing strips natural oils. Spot-clean and save full baths for shows or very dirty days.', image:'https://images.pexels.com/photos/1466205/pexels-photo-1466205.jpeg?auto=compress&cs=tinysrgb&w=800', images:[], tags:['horse','grooming','equestrian','buyers guide'], authorId:'adm', authorName:'Admin', faq:[{ q:'What do I need in a basic horse grooming kit?', a:'A complete basic kit has five pieces: a curry comb to loosen dirt, a stiff body brush, a soft brush for the face and sensitive areas, a hoof pick, and a mane-and-tail brush.' },{ q:'Do I need a full set when I am just starting out?', a:'A coordinated 12-piece kit covers the core five plus extras such as a shedding blade and finishing brushes. Starting with a set usually costs less than buying pieces separately.' },{ q:'How often should I groom my horse?', a:'Daily grooming removes dirt, sweat, and loose hair, spreads natural oils, and lets you check for cuts, swelling, heat, or skin issues from minor problems. Even ten minutes a day is worthwhile.' },{ q:'How do I care for my grooming brushes?', a:'Hang brushes to dry after use, pick out the curry comb each time, and replace anything with broken bristles.' },{ q:'Should I bathe my horse often?', a:'Horses generally do not need frequent baths, since over-bathing strips natural oils. Spot-clean and save full baths for shows or very dirty days.' }], status:'published', date:'2026-08-11' },
-  { id:'b26', slug:'horse-halter-lead-rope-buyers-guide', title:'How to Choose a Horse Halter & Lead Rope (Sizing + Fit)', excerpt:'Halters come in many sizes, but fit is what keeps a horse safe. Learn how to size a halter, pick a material, and pair it with the right lead rope.', content:'Choosing a halter is not about brand \u2014 it is about fit. A halter that fits correctly stays on safely, is comfortable for the horse, and makes daily handling, grooming, and leading easier. Here is how to size one, what material to pick, and how to pair it with the right lead rope.\n\n## Why Fit Matters More Than Brand\nA loose halter can slip over a horse\u2019s ears; a tight one can rub sores or cause discomfort. Fit, not price, is what keeps the halter on safely and comfortably. A correctly fitted halter also makes leading and cross-tying predictable, which is why fit matters more than the label.\n\n## How to Size a Horse Halter\n- Measure around the nose (just below the cheekbones) and over the crown behind the ears.\n- Compare those two measurements to the maker\u2019s sizing chart \u2014 a yearling often fits a pony-sized halter better than a mature horse\u2019s size.\n- Rule of thumb on the ground: fit two fingers flat under the noseband and crown once buckled, and make sure the cheek strap does not pull toward or pinch the eye.\n\n## Nylon vs Leather vs Rope\n- **Nylon:** tough, inexpensive, easy to wash \u2014 the most common choice for daily turn-out and travel.\n- **Leather:** classic show look, softer on sensitive skin, but needs more care and can weaken when soaked.\n- **Rope:** lightweight and strong, popular for groundwork, less forgiving if misused.\n- For a first halter or everyday handling, an adjustable nylon halter is the practical default. Adjustable crown fixtures also let one halter last as a foal grows.\n\n## Matching the Lead Rope\n- A lead rope about 8\u201310 feet gives you reach for leading and tying without excess drag.\n- A sturdy snap or clip attaches without chafing the jaw or twisting the halter ring.\n- Lead ropes for groundwork are thicker and stiffer than everyday leads.\n\n## A Natural Pair in Your Routine\nA halter and lead rope work alongside the daily handling basics covered in our [Horse Grooming Kit Buyer\u2019s Guide](/blog/horse-grooming-kit-buyers-guide) \u2014 grooming, leading, and cross-tying all start with a safe head-catch. Keeping your horse comfortable there pairs naturally with a [Himalayan salt lick](/blog/horse-salt-lick-buyers-guide) hung at nose height in the stall.\n\n**Shop the category \u2192 [Horse Supplies](/category/horse)**\n\n**Related product \u2192 [Horse Fly Mask with Ears](/product/horse-fly-mask-with-ears)**\n\n## Care\nRinse mud and sweat off, let it dry fully, and check the hardware for sharp edges or cracks before each use. Replace a halter with frayed stitching or a failing clasp.\n\n## Frequently Asked Questions\n\n### How tight should a horse halter fit?\nSnug but not pinching \u2014 about two fingers\u2019 width under the noseband and crown, with no pressure on the eyes or windpipe.\n\n### What size halter does my horse need?\nMeasure around the nose and over the crown, then compare those numbers to the maker\u2019s chart. Size by measurement, not by age or breed name.\n\n### Is a nylon or leather halter better?\nFor daily turn-out and most buyers, an adjustable nylon halter is durable, affordable, and easy to clean. Leather suits shows but needs more care.\n\n### How long should a lead rope be?\nAbout 8\u201310 feet is the practical all-round length for leading, tying, and groundwork.', image:'https://images.pexels.com/photos/1055436/pexels-photo-1055436.jpeg?auto=compress&cs=tinysrgb&w=800', images:[], tags:['horse','halter','lead rope','equestrian','buyers guide'], authorId:'adm', authorName:'Admin', faq:[{ q:'How tight should a horse halter fit?', a:'Snug but not pinching \u2014 about two fingers\u2019 width under the noseband and crown, with no pressure on the eyes or windpipe.' },{ q:'What size halter does my horse need?', a:'Measure around the nose and over the crown, then compare those numbers to the maker\u2019s chart. Size by measurement, not by age or breed name.' },{ q:'Is a nylon or leather halter better?', a:'For daily turn-out and most buyers, an adjustable nylon halter is durable, affordable, and easy to clean. Leather suits shows but needs more care.' },{ q:'How long should a lead rope be?', a:'About 8\u201310 feet is the practical all-round length for leading, tying, and groundwork.' }], status:'published', date:'2026-08-29' },
-  { id:'b27', slug:'horse-fly-mask-buyers-guide', title:'How to Choose a Horse Fly Mask (Fit, Material + UV)', excerpt:'The right fly mask shades a horse\u2019s eyes and ears from flies and sun. Learn how to size one, what a mask with ears covers, and how tight it should sit.', content:'A good fly mask shields the eyes and, on \u201cears\u201d versions, the ears from biting flies, dust, and UV \u2014 while still letting the horse see clearly. Measure around the head just behind the ears and follow the maker\u2019s sizing chart; a mask with ears covers more of the face down to the nose. It should sit snug \u2014 roughly one or two fingers\u2019 width under the jaw \u2014 with no seam pressing on the eyes or tearing at the corners.\n\n## What a Fly Mask Actually Protects\nA fly mask is a mesh head covering that keeps flies, gnats, and debris away from the eyes, forehead, and \u2014 on ears models \u2014 the ears themselves. Many mesh masks also block a portion of UV, which matters for horses with pale skin or light muzzles.\n\n## Fit Is the Number-One Factor\n- Measure around the head just behind the ears and ahead of the poll, then compare to the maker\u2019s chart \u2014 sizes vary by brand.\n- The mask should touch the face evenly: no flapping loose that lets flies or debris reach the eye, and no pressure points.\n- **Rule of thumb:** you should fit one or two fingers under the cheek or side strap once fastened, and the eye mesh should float slightly in front of the eyes rather than touching them.\n- Check that seams and edges do not rub the eye corners or the bridge of the nose.\n\n## Mask with Ears vs Open-Crown\n- **Mask with ears:** covers the ears (often a weak spot for biting flies) and shades a little more skin. Best for horses bothered by ear-biting flies.\n- **Open-crown or standard:** lighter and cooler for mild fly days, and leaves the ears free.\n- Match the style to your fly pressure and coverage needs rather than looks alone \u2014 that gets the better result.\n\n## Material, UV, and Durability\n- Look for a breathable mesh that still blocks UV if the horse is sun-sensitive.\n- Rope- or buckle-style closures hold better in the field than a simple snap if the horse rubs on posts.\n- Wash the mask regularly; salt from sweat dries stiff and can rub. A clean mask fits and protects like new.\n\n## Pair It with the Rest of the Turnout Kit\nA fly mask is part of a horse\u2019s daily handling setup. It works alongside a properly fitted [halter and lead rope](/blog/horse-halter-lead-rope-buyers-guide) for leading to and from turn-out, and comfortable fly season starts with the same grooming habits covered in our [Horse Grooming Kit Buyer\u2019s Guide](/blog/horse-grooming-kit-buyers-guide). In the stall, many owners hang the daily [salt lick at nose height](/blog/horse-salt-lick-placement-guide) once the mask comes off.\n\n**Shop the category \u2192 [Horse Supplies](/category/horse)**\n\n**Related product \u2192 [Horse Fly Mask with Ears \u2014 UV Protection](/product/horse-fly-mask-with-ears)**\n\n## Care\nShake out hay and debris, hand-wash in cool water, and let it dry in the shade. Check the mesh each use for tears or stretched seams, and replace a mask that no longer holds its shape.\n\n## Frequently Asked Questions\n\n### How tight should a horse fly mask fit?\nSnug but not pinching \u2014 about one or two fingers\u2019 width under the side strap, with the eye mesh sitting in front of the eyes without touching them.\n\n### What does a fly mask with ears protect?\nIt covers the ears, forehead, and face at the eyes and nose in addition to the usual eye area, protecting more skin from biting flies and sun.\n\n### Does a horse fly mask block UV?\nMany mesh masks block a portion of UV. If your horse has sensitive pale skin, choose a mask that states UV protection.\n\n### Should I buy a fly mask with or without ears?\nIf biting flies target your horse\u2019s ears, a mask with ears is the better choice. For mild fly days, a standard open-crown mask is cooler.', image:'https://images.pexels.com/photos/258083/pexels-photo-258083.jpeg?auto=compress&cs=tinysrgb&w=800', images:[], tags:['horse','fly mask','horse care','summer','equestrian'], authorId:'adm', authorName:'Admin', faq:[{ q:'How tight should a horse fly mask fit?', a:'Snug but not pinching \u2014 about one or two fingers\u2019 width under the side strap, with the eye mesh sitting in front of the eyes without touching them.' },{ q:'What does a fly mask with ears protect?', a:'It covers the ears, forehead, and face at the eyes and nose in addition to the usual eye area, protecting more skin from biting flies and sun.' },{ q:'Does a horse fly mask block UV?', a:'Many mesh masks block a portion of UV. If your horse has sensitive pale skin, choose a mask that states UV protection.' },{ q:'Should I buy a fly mask with or without ears?', a:'If biting flies target your horse\u2019s ears, a mask with ears is the better choice. For mild fly days, a standard open-crown mask is cooler.' }], status:'published', date:'2026-08-29' },
+  {
+    id: 'fallback-guide-midi-dress',
+    slug: 'how-to-choose-a-midi-dress',
+    title: 'How to Choose a Midi Dress',
+    excerpt: 'Fit, fabric and length tips for picking a midi dress that works for work and evenings out.',
+    content: 'A midi dress usually falls between the knee and the calf. Start with fit at the shoulders and waist, then check that the hem length suits your height. Breathable fabrics such as crepe and viscose drape well; heavier knits are better for cooler months.',
+    image: '/images/fashion/dresses-tops.jpg',
+    images: ['/images/fashion/dresses-tops.jpg'],
+    tags: ['dresses', 'women', 'guide'],
+    authorId: 'luxedge-editorial',
+    authorName: 'Luxedge Editorial',
+    status: 'published',
+    date: '2026-10-15',
+    faq: [
+      { q: 'What length is a midi dress?', a: 'A midi dress typically hits between the knee and the mid-calf.' },
+    ],
+  },
+  {
+    id: 'fallback-guide-leather-jacket',
+    slug: 'how-to-care-for-a-leather-jacket',
+    title: 'How to Care for a Leather Jacket',
+    excerpt: 'Simple cleaning and storage habits that keep a leather jacket looking new for years.',
+    content: 'Wipe leather with a soft, dry cloth after wearing it in the rain. Avoid soaking it or drying it near heat. Store it on a wide hanger in a breathable garment bag, away from direct sunlight, and condition it lightly once or twice a year.',
+    image: '/images/fashion/jackets-outerwear.jpg',
+    images: ['/images/fashion/jackets-outerwear.jpg'],
+    tags: ['jackets', 'outerwear', 'guide'],
+    authorId: 'luxedge-editorial',
+    authorName: 'Luxedge Editorial',
+    status: 'published',
+    date: '2026-10-15',
+    faq: [
+      { q: 'Can I machine wash a leather jacket?', a: 'No. Use a dry cloth or a leather-specific cleaner instead of water or a washing machine.' },
+    ],
+  },
 ];
 
 // The CMS is the live source of truth. This fallback is intentionally limited
@@ -248,41 +281,26 @@ const INIT_BLOGS: BlogPost[] = [
 // into public view.
 //
 // It lists EXACTLY the guides that have bundled fallback content in INIT_BLOGS
-// (asserted by src/content/__tests__/fallback-blog-parity.test.ts). Four of the
-// eight live guides — how-to-clean-a-bird-feeder,
-// how-to-choose-cattle-trough-feed-water-setup, how-to-fit-no-pull-dog-harness
-// and how-to-choose-a-cat-tunnel — exist only in the CMS, and deliberately have
-// no bundled copy: while the CMS is unreachable the worker serves the blog
-// routes as a noindex 503 rather than stale HTML, so an offline duplicate would
-// only risk serving superseded text.
+// (asserted by src/content/__tests__/fallback-blog-parity.test.ts). Guides that
+// exist only in the CMS deliberately have no bundled copy: while the CMS is
+// unreachable the worker serves the blog routes as a noindex 503 rather than
+// stale HTML, so an offline duplicate would only risk serving superseded text.
 const RETAINED_FALLBACK_BLOG_SLUGS = new Set([
-  'best-bird-feeder-buyers-guide',
-  'horse-grooming-kit-buyers-guide',
-  'horse-halter-lead-rope-buyers-guide',
-  'horse-fly-mask-buyers-guide',
+  'how-to-choose-a-midi-dress',
+  'how-to-care-for-a-leather-jacket',
 ]);
 const SAFE_INIT_BLOGS = INIT_BLOGS.filter((post) => RETAINED_FALLBACK_BLOG_SLUGS.has(post.slug));
 
-export const CAT_LIST = ['All', 'Dog Supplies', 'Cat Supplies', 'Pet Beds', 'Pet Toys', 'Feeding & Water', 'Grooming', 'Pet Accessories', 'Bird Supplies', 'Horse', 'Cattle'];
-const CAT_META: Record<string, { desc: string }> = {
-  'Dog Supplies': { desc: 'Walking, training & everyday dog essentials' },
-  'Cat Supplies': { desc: 'Play, comfort & everyday cat essentials' },
-  'Pet Beds': { desc: 'Comfort-led pieces for deeper rest' },
-  'Pet Toys': { desc: 'Interactive play and everyday enrichment' },
-  'Feeding & Water': { desc: 'Considered pieces for daily mealtimes' },
-  'Grooming': { desc: 'Simple tools for everyday care' },
-  'Pet Accessories': { desc: 'Useful pieces for life together' },
-  'Bird Supplies': { desc: 'Seed, feed & care essentials for feathered friends' },
-  'Horse': { desc: 'Practical care and stable essentials for horses' },
-  'Cattle': { desc: 'Useful feeding and care essentials for cattle and livestock' },
-};
+export const CAT_LIST = ['All', ...CATEGORY_NAMES];
 
 function firstUsableImage(product: Product | undefined, width?: number): string | undefined {
   const raw = product?.images.find((image) => Boolean(image));
   return raw ? proxiedImage(raw, width) : undefined;
 }
 const toSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-const fromSlug = (slug: string) => CAT_LIST.find(c => toSlug(c) === slug) || 'All';
+// Category routes use the curated slug ("womens-clothing"), not a slugified name ("women-s-clothing").
+const slugOf = (name: string) => categorySlugFor(name) ?? toSlug(name);
+const fromSlug = (slug: string) => categoryContentFor(slug)?.name || 'All';
 
 // ============================================================================
 // CONTEXT
@@ -739,12 +757,12 @@ function Header() {
             )}
             <span className="hidden md:inline-flex items-center gap-1.5 text-white/85">
               <ShieldTick strokeWidth={1.5} size={13} className="text-[#C5A880]" />
-              Trusted by Pet &amp; Livestock Owners
+              Curated Fashion Across the USA
             </span>
             <span className="hidden lg:inline text-white/30">•</span>
             <span className="hidden lg:inline-flex items-center gap-1.5 text-white/85">
               <Heart strokeWidth={1.5} size={13} className="text-[#C5A880]" />
-              Care for Every Animal, Every Day
+              Dress Well, Every Day
             </span>
           </div>
           <div className="flex items-center gap-3 sm:gap-4 shrink-0 text-white/80">
@@ -777,7 +795,7 @@ function Header() {
             <img src="/luxedge-mark.png" alt="Luxedge" className="h-11 sm:h-12 w-auto object-contain shrink-0 transition-transform duration-300 group-hover:scale-105" />
             <span className="hidden min-[375px]:flex flex-col leading-none min-w-0">
               <span className="font-brand text-base sm:text-xl font-bold tracking-[0.16em] text-gray-900">LUXEDGE</span>
-              <span className="hidden md:block text-[7px] sm:text-[7.5px] font-bold tracking-[0.22em] text-[#1E4636] mt-0.5">PETS • LIVESTOCK • A BRIGHTER TOMORROW</span>
+              <span className="hidden md:block text-[7px] sm:text-[7.5px] font-bold tracking-[0.22em] text-[#1E4636] mt-0.5">FASHION • STYLE FOR EVERY DAY • LUXEDGE</span>
             </span>
           </Link>
 
@@ -788,7 +806,7 @@ function Header() {
               <input
                 value={hq}
                 onChange={e => setHq(e.target.value)}
-                placeholder="Search products, brands, or animal care guides..."
+                placeholder="Search products, brands, or style guides..."
                 aria-label="Search products"
                 className="flex-1 min-w-0 bg-transparent text-sm text-gray-800 placeholder-gray-400 focus:outline-none pr-9"
               />
@@ -989,11 +1007,11 @@ function Footer() {
               </div>
               <span className="flex flex-col leading-none">
                 <span className="font-brand text-xl sm:text-2xl font-bold tracking-[0.16em] text-white">LUXEDGE</span>
-                <span className="text-[7.5px] tracking-[0.24em] text-[#C5A880] mt-1 font-bold">PETS • LIVESTOCK • A BRIGHTER TOMORROW</span>
+                <span className="text-[7.5px] tracking-[0.24em] text-[#C5A880] mt-1 font-bold">FASHION • STYLE FOR EVERY DAY • LUXEDGE</span>
               </span>
             </Link>
             <p className="text-sm leading-relaxed text-white/75 max-w-sm">
-              Quality products, expert guidance, and a community for everyone who cares for animals.
+              Quality fashion, clear sizing, and honest product information for every wardrobe.
             </p>
             {/* Operating-entity disclosure: the visitor and an ad reviewer should
                 both be able to see who runs this store without opening a policy.
@@ -1041,7 +1059,7 @@ function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/60">
           <p>© {new Date().getFullYear()} Luxedge. All rights reserved.</p>
           <p className="flex items-center gap-1.5 text-white/75 font-medium">
-            <span>A healthier tomorrow for every animal.</span>
+            <span>Style that lasts, for every wardrobe.</span>
             <Heart size={13} fill="currentColor" className="text-[#C5A880]" />
           </p>
         </div>
@@ -1211,10 +1229,10 @@ function RouteTitle() {
     } else if (['', 'shop', 'category', 'product', 'blog', 'media', 'about', 'contact', 'privacy', 'terms', 'returns', 'shipping-policy', 'copyright', 'faq', 'sitemap'].includes(segs[0] || '')) {
       setMeta('robots', 'index, follow');
     }
-    if (segs.length === 0) { full("Luxedge — Premium Pet & Animal Essentials"); desc("Shop practical pet and horse essentials, read buying guides, and find clear shipping and return information at Luxedge."); }
-    else if (segs[0] === "shop") { set("Shop All Products"); desc("Browse the full Luxedge collection of premium pet essentials for dogs and cats."); }
-    else if (segs[0] === "free-pet-gift") { set("Luxedge Pet Gift Drop — Free Gift for Dogs & Cats"); desc("Claim a complimentary Luxedge pet gift for your dog or cat — product and standard shipping are free. No purchase required and no card is ever asked for, while real supplies last."); }
-    else if (segs[0] === "category") { const c = fromSlug(decodeURIComponent(segs[1] || "")); set("Shop " + c); desc(CAT_META[c]?.desc || `Browse our ${c} collection at Luxedge.`); }
+    if (segs.length === 0) { full("Luxedge — Premium USA Fashion Store"); desc("Shop women's and men's clothing, dresses, jeans, jackets, sneakers, handbags, jewelry, watches, and sunglasses. USA shipping and clear return information at Luxedge."); }
+    else if (segs[0] === "shop") { set("Shop All Products"); desc("Browse the full Luxedge fashion collection across ten categories, shipped within the USA."); }
+    else if (segs[0] === "free-pet-gift") { set("Luxedge Gift Drop"); desc("Claim a complimentary Luxedge gift while supplies last. No purchase required."); }
+    else if (segs[0] === "category") { const c = fromSlug(decodeURIComponent(segs[1] || "")); set("Shop " + c); desc(categoryContentFor(c)?.desc || `Browse our ${c} collection at Luxedge.`); }
     else if (segs[0] === "product") {
       // Real catalog product (never the demo ALL_PRODUCTS fixture).
       // Canonical storefront URLs are /product/<slug>, so match slug OR id
@@ -1228,9 +1246,9 @@ function RouteTitle() {
     else if (segs[0] === "cart") { set("Shopping Cart"); desc("Review your Luxedge cart — shipping options and any applicable promotions are shown before payment."); }
     else if (segs[0] === "checkout") { set("Checkout"); desc("Complete your Luxedge order."); }
     else if (segs[0] === "orders") { set("My Orders"); desc("Track your Luxedge orders."); }
-    else if (segs[0] === "about") { set("About Us"); desc("Luxedge curates premium, honest pet essentials for dogs and cats — quality you can trust."); }
+    else if (segs[0] === "about") { set("About Us"); desc("Luxedge is a premium USA fashion store curating clothing, shoes, bags, jewelry, watches, and accessories — quality you can trust."); }
     else if (segs[0] === "contact") { set("Contact Us"); desc("Reach the Luxedge customer support team — Mon–Fri, 9AM–6PM CT."); }
-    else if (segs[0] === "privacy") { set("Privacy Policy"); desc("Luxedge privacy policy — how we handle your data, cookies and advertising."); }      else if (segs[0] === "terms") { set("Terms of Service"); desc("The rules for using Luxedge: orders and payment, shipping estimates, product information, returns, and liability, written in plain language."); }      else if (segs[0] === "returns") { set("Returns & Replacement Policy"); desc("How Luxedge returns work: request within 30 days for damaged, defective, or incorrect items, with replacement or refund where the law requires it."); }      else if (segs[0] === "editorial-policy") { set("Editorial Policy"); desc("How Luxedge prepares, checks, updates, sources, and corrects its animal-care buying guides and editorial content."); }      else if (segs[0] === "disclaimer") { set("Disclaimer"); desc("Important limits on Luxedge product information and general animal-care content."); }
+    else if (segs[0] === "privacy") { set("Privacy Policy"); desc("Luxedge privacy policy — how we handle your data, cookies and advertising."); }      else if (segs[0] === "terms") { set("Terms of Service"); desc("The rules for using Luxedge: orders and payment, shipping estimates, product information, returns, and liability, written in plain language."); }      else if (segs[0] === "returns") { set("Returns & Replacement Policy"); desc("How Luxedge returns work: request within 30 days for damaged, defective, or incorrect items, with replacement or refund where the law requires it."); }      else if (segs[0] === "editorial-policy") { set("Editorial Policy"); desc("How Luxedge prepares, checks, updates, sources, and corrects its fashion buying guides and editorial content."); }      else if (segs[0] === "disclaimer") { set("Disclaimer"); desc("Important limits on Luxedge product information, sizing, and general style content."); }
     else if (segs[0] === "shipping-policy" || segs[0] === "shipping") { set("Shipping Policy"); desc("How Luxedge ships orders: where we deliver, how shipping is priced, what affects your delivery estimate, delays, and lost-package help."); }
     else if (segs[0] === "copyright") { full("Copyright & DMCA — Reporting Infringement | Luxedge"); desc("How Luxedge handles copyright: what we own, how to reuse our content, and how a rights holder can report allegedly infringing material with a DMCA-style notice."); }
     else if (segs[0] === "faq") { set("Frequently Asked Questions"); desc("Answers to common questions about shopping at Luxedge."); }
@@ -1241,11 +1259,11 @@ function RouteTitle() {
       // the CMS read already filters, but a draft must never render here).
       const post = segs[1] && segs[1] !== "write" ? blogs.find(b => b.slug === segs[1] && b.status === 'published') : undefined;
       set(post ? post.title : (segs[1] ? (segs[1] === "write" ? "Write a Post" : "Blog") : "Blog & Insights"));
-      desc(post ? (post.excerpt || post.content.slice(0, 155)) : "Pet care tips and insights from the Luxedge team.");
+      desc(post ? (post.excerpt || post.content.slice(0, 155)) : "Style guides and fashion insights from the Luxedge team.");
     }
     else if (segs[0] === "media") {
       if (segs[1]) { set("Video"); desc("Watch and read the latest Luxedge media — guides, stories and product education from the official channel."); }
-      else { set("Media Hub"); desc("Watch Luxedge videos — product education, pet & animal care, how-to guides, buying guides and behind-the-brand stories."); }
+      else { set("Media Hub"); desc("Watch Luxedge videos — style guides, product education, and behind-the-brand stories."); }
     }
     else if (segs[0] === "login") { set("Sign In"); desc("Sign in to your Luxedge account."); }
     else if (segs[0] === "signup") { set("Create Account"); desc("Create your Luxedge account."); }
@@ -1307,7 +1325,7 @@ function CheckoutLayout({ children }: { children: ReactNode }) {
             <img src="/luxedge-mark.png" alt="" aria-hidden="true" className="h-10 w-auto transition-transform duration-300 group-hover:scale-105" />
             <span className="flex flex-col leading-none">
               <span className="font-brand text-base font-bold tracking-[0.15em] text-luxe-black">LUXEDGE</span>
-              <span className="hidden sm:block text-[7px] font-bold tracking-[0.22em] text-[#1E4636] mt-0.5">PETS • LIVESTOCK • A BRIGHTER TOMORROW</span>
+              <span className="hidden sm:block text-[7px] font-bold tracking-[0.22em] text-[#1E4636] mt-0.5">FASHION • STYLE FOR EVERY DAY • LUXEDGE</span>
             </span>
           </Link>
           <div className="flex items-center gap-1 sm:gap-3">
@@ -1627,7 +1645,7 @@ function ProductDetailPage() {
         <ChevronRight strokeWidth={1.5} size={11} />
         <Link to="/shop" className="hover:text-luxe-gold transition-colors">Shop</Link>
         <ChevronRight strokeWidth={1.5} size={11} />
-        <Link to={`/category/${toSlug(product.category)}`} className="hover:text-luxe-gold transition-colors">{product.category}</Link>
+        <Link to={`/category/${slugOf(product.category)}`} className="hover:text-luxe-gold transition-colors">{product.category}</Link>
         <ChevronRight strokeWidth={1.5} size={11} />
         <span aria-current="page" className="text-gray-700 truncate min-w-0 max-w-[220px] font-medium">{product.name}</span>
       </nav>
@@ -1720,17 +1738,6 @@ function ProductDetailPage() {
             </div>
           )}
 
-          {/* Free Gift eligibility banner (products $15 and below) */}
-          {product.price <= 15 && (
-            <div className="mb-4 rounded-xl border-2 border-violet-200 bg-violet-50 p-4">
-              <p className="text-sm font-bold text-violet-900">🎁 Eligible for New Customer Free Gift</p>
-              <p className="text-xs text-violet-700 mt-1">Have a Luxedge Free Gift code? This item can be claimed free with a valid code.</p>
-              <Link to="/free-pet-gift" className="mt-2.5 inline-flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold transition-colors">
-                🎁 Claim as My Free Gift
-              </Link>
-            </div>
-          )}
-
           {/* Buttons */}
           <div ref={ctaRef} className="pdp-purchase-actions mb-4">
             <WishlistButton product={product} size={20} notify={notify} className="px-4 bg-white border-2 border-gray-200 rounded-xl hover:border-rose-400" />
@@ -1775,7 +1782,7 @@ function ProductDetailPage() {
                 {/* The seller is always the store — a product's brand is not its
                     seller, so this must not fall back to (or show) the brand. */}
                 <p className="text-sm font-bold text-luxe-black">Luxedge</p>
-                <p className="text-[11px] text-luxe-gray truncate">Curated pet essentials · Embani LLC</p>
+                <p className="text-[11px] text-luxe-gray truncate">Curated fashion · Embani LLC</p>
               </div>
               <Link to="/contact" className="ml-auto shrink-0 px-3 py-2 text-[11px] font-bold text-luxe-gold border border-luxe-gold/40 rounded-lg hover:bg-luxe-gold-soft transition-colors">
                 Message
@@ -2076,31 +2083,31 @@ function HomePage() {
   // Initial curated bestsellers so the section renders immediately on SSR/first paint with 0ms delay
   const defaultBestsellers = [
     {
-      id: 'b4578bca-f04b-4b15-9a84-0a377755ae24',
-      slug: 'stainless-steel-pet-water-fountain-filtered-running-water-for-cats-dogs',
-      name: 'Stainless Steel Pet Water Fountain — Filtered Running Water',
-      price: 51.95,
-      originalPrice: 59.95,
-      image: '/images/redesign/products/dog-fountain.jpg',
-      badge: 'Bestseller'
+      id: 'fashion-placeholder-women-midi-dress',
+      slug: 'fashion-placeholder-women-midi-dress',
+      name: 'Women\'s Midi Dress (Placeholder Preview)',
+      price: 0,
+      originalPrice: 0,
+      image: '/images/fashion/dresses-tops.jpg',
+      badge: 'Coming Soon'
     },
     {
-      id: 'cozy-cat-nest-bed-round-plush-mat',
-      slug: 'cozy-cat-nest-bed-round-plush-mat',
-      name: 'Cozy Round Plush Cat Bed & Sleeping Cushion',
-      price: 29.95,
-      originalPrice: 36.95,
-      image: '/images/redesign/products/cat-bed.jpg',
-      badge: 'Popular'
+      id: 'fashion-placeholder-leather-jacket',
+      slug: 'fashion-placeholder-leather-jacket',
+      name: 'Leather-Style Jacket (Placeholder Preview)',
+      price: 0,
+      originalPrice: 0,
+      image: '/images/fashion/jackets-outerwear.jpg',
+      badge: 'Coming Soon'
     },
     {
-      id: 'f8e12ff5-b9f1-4db5-b82b-8ef94e43e264',
-      slug: 'outdoor-hanging-bird-feeder',
-      name: 'Outdoor Hanging Bird Feeder — Weather-Resistant Seed Station',
-      price: 39.95,
-      originalPrice: 44.95,
-      image: '/images/redesign/products/bird-feeder.jpg',
-      badge: 'Wild Bird'
+      id: 'fashion-placeholder-white-sneakers',
+      slug: 'fashion-placeholder-white-sneakers',
+      name: 'White Everyday Sneakers (Placeholder Preview)',
+      price: 0,
+      originalPrice: 0,
+      image: '/images/fashion/sneakers-shoes.jpg',
+      badge: 'Coming Soon'
     },
   ];
 
@@ -2159,16 +2166,16 @@ function HomePage() {
             <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1E4636]/10 text-[#1E4636] text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em]">
                 <ShieldTick strokeWidth={2} size={14} />
-                For Every Animal. A Brighter Tomorrow.
+                New Season. Premium USA Fashion.
               </div>
 
               <h1 className="font-serif text-4xl sm:text-5xl lg:text-[56px] font-bold text-[#111827] leading-[1.12] tracking-tight">
-                Better Care<br />
-                for <span className="text-[#1E4636]">Every Animal.</span>
+                Dress Well<br />
+                for <span className="text-[#1E4636]">Every Occasion.</span>
               </h1>
 
               <p className="text-base sm:text-lg text-gray-600 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                Premium pet supplies, livestock solutions, and expert guides — all in one place. Trusted by animal lovers who care.
+                Clothing, shoes, bags, jewelry, watches, and sunglasses — curated for everyday style, with clear sizing and USA shipping.
               </p>
 
               {/* Action Buttons */}
@@ -2180,10 +2187,10 @@ function HomePage() {
                   Shop Now <ArrowRight strokeWidth={2} size={16} />
                 </Link>
                 <a
-                  href="#shop-by-animal"
+                  href="#shop-by-category"
                   className="inline-flex items-center gap-2 px-7 py-4 bg-white hover:bg-gray-50 text-[#1E4636] border-2 border-[#1E4636]/30 hover:border-[#1E4636] rounded-full font-bold text-sm sm:text-base transition-all"
                 >
-                  Explore by Animal
+                  Shop by Category
                 </a>
               </div>
 
@@ -2195,7 +2202,7 @@ function HomePage() {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-gray-900">Quality Products</p>
-                    <p className="text-[11px] text-gray-500">Carefully selected</p>
+                    <p className="text-[11px] text-gray-500">Curated styles</p>
                   </div>
                 </div>
 
@@ -2225,8 +2232,8 @@ function HomePage() {
             <div className="lg:col-span-6 relative">
               <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-black/5 bg-white aspect-[16/10] sm:aspect-[16/10]">
                 <img
-                  src="/images/redesign/hero-animals.jpg"
-                  alt="Healthy dog, cat, parrot, horse, and livestock together in natural farm meadow"
+                  src="/images/fashion/women-clothing.jpg"
+                  alt="Woman in a modern fashion outfit"
                   loading="eager"
                   fetchPriority="high"
                   className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-105"
@@ -2238,7 +2245,7 @@ function HomePage() {
                     <Heart size={16} fill="currentColor" />
                   </div>
                   <p className="text-xs font-medium leading-snug text-white/95">
-                    Care for Pets. Support Livestock. Build a Kinder World.
+                    Style that fits your life. Shipped across the USA.
                   </p>
                 </div>
               </div>
@@ -2249,16 +2256,16 @@ function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════
-          2. SHOP BY ANIMAL (6 Clean Category Cards)
+          2. SHOP BY CATEGORY (Fashion Category Cards)
       ══════════════════════════════════════════════════════════ */}
-      <section id="shop-by-animal" className="py-14 sm:py-18 bg-white border-b border-gray-100">
+      <section id="shop-by-category" className="py-14 sm:py-18 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
             <div>
-              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#111827]">Shop by Animal</h2>
-              <p className="text-sm text-gray-500 mt-1">Find exactly what they need. Tailored care for every kind of companion.</p>
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#111827]">Shop by Category</h2>
+              <p className="text-sm text-gray-500 mt-1">Find the pieces you need, from everyday basics to statement accessories.</p>
             </div>
             <Link
               to="/shop"
@@ -2271,12 +2278,12 @@ function HomePage() {
           {/* 6 Category Cards Responsive Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5">
             {[
-              { name: 'Dog Supplies', to: '/category/dog-supplies', img: '/images/redesign/cat-dog.jpg' },
-              { name: 'Cat Supplies', to: '/category/cat-supplies', img: '/images/redesign/cat-cat.jpg' },
-              { name: 'Bird Supplies', to: '/category/bird-supplies', img: '/images/redesign/cat-bird.jpg' },
-              { name: 'Horse Supplies', to: '/category/horse', img: '/images/redesign/cat-horse.jpg' },
-              { name: 'Livestock Supplies', to: '/category/cattle', img: '/images/redesign/cat-livestock.jpg' },
-              { name: 'Accessories', to: '/category/pet-accessories', img: '/images/redesign/cat-accessories.jpg' },
+              { name: "Women's Clothing", to: '/category/womens-clothing', img: '/images/fashion/women-clothing.jpg' },
+              { name: "Men's Clothing", to: '/category/mens-clothing', img: '/images/fashion/men-clothing.jpg' },
+              { name: 'Outerwear', to: '/category/jackets-and-outerwear', img: '/images/fashion/jackets-outerwear.jpg' },
+              { name: 'Sneakers & Shoes', to: '/category/sneakers-and-shoes', img: '/images/fashion/sneakers-shoes.jpg' },
+              { name: 'Handbags & Wallets', to: '/category/handbags-and-wallets', img: '/images/fashion/handbags-wallets.jpg' },
+              { name: 'Sunglasses & Accessories', to: '/category/sunglasses-and-accessories', img: '/images/fashion/sunglasses-accessories.jpg' },
             ].map((cat) => (
               <Link
                 key={cat.name}
@@ -2313,7 +2320,7 @@ function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <BuyerGuidance
             title="Shop with the details in view"
-            note="Start with the animal and everyday task you are shopping for, then use each listing’s stated size, materials, price, and availability to narrow the options."
+            note="Start with the category and occasion you are shopping for, then use each listing’s stated size, materials, price, and availability to narrow the options."
           />
         </div>
       </section>
@@ -2360,8 +2367,8 @@ function HomePage() {
                 <Headphones01 strokeWidth={1.5} size={20} />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-gray-900">Support for Every Animal</h4>
-                <p className="text-[11px] text-gray-500">Pets, livestock and beyond</p>
+                <h4 className="text-xs sm:text-sm font-bold text-gray-900">Customer Support</h4>
+                <p className="text-[11px] text-gray-500">Mon–Fri, 9AM–6PM CT</p>
               </div>
             </div>
 
@@ -2379,7 +2386,7 @@ function HomePage() {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
             <div>
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#111827]">Best Sellers</h2>
-              <p className="text-sm text-gray-500 mt-1">Popular products loved by pet and animal owners.</p>
+              <p className="text-sm text-gray-500 mt-1">Popular pieces from the Luxedge collection.</p>
             </div>
             <Link
               to="/shop"
@@ -2441,7 +2448,7 @@ function HomePage() {
                       </Link>
                       <div className="mt-2 flex items-center justify-between">
                         <span className="font-bold text-sm sm:text-base text-gray-900">
-                          ${Number(item.price).toFixed(2)}
+                          {Number(item.price) > 0 ? `$${Number(item.price).toFixed(2)}` : 'Price at launch'}
                         </span>
                         {item.originalPrice > item.price && (
                           <span className="text-xs text-gray-400 line-through">
@@ -2478,23 +2485,23 @@ function HomePage() {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             
-            {/* Block 1: A Community of Animal Lovers */}
+            {/* Block 1: Fashion editorial */}
             <div className="rounded-3xl overflow-hidden bg-white border border-gray-150 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
               <div className="aspect-[16/10] w-full overflow-hidden bg-gray-100">
                 <img
-                  src="/images/redesign/editorial-community.jpg"
-                  alt="Smiling owner hugging golden retriever outdoors"
+                  src="/images/fashion/dresses-tops.jpg"
+                  alt="Model in a red evening dress"
                   className="w-full h-full object-cover object-[center_20%] transition-transform duration-500 hover:scale-105"
                 />
               </div>
               <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#1E4636] mb-1.5">More Than a Store</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#1E4636] mb-1.5">Dresses &amp; Tops</p>
                   <h3 className="font-serif text-xl sm:text-2xl font-bold text-gray-900 mb-2.5">
-                    A Community of Animal Lovers
+                    Dresses for Every Occasion
                   </h3>
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    Helpful guides, real advice, and curated products — because caring for animals is a way of life.
+                    Easy-to-wear dresses, tops, and layers, with sizing details listed on every product page.
                   </p>
                 </div>
                 <div className="mt-6 pt-4 border-t border-gray-100">
@@ -2512,19 +2519,19 @@ function HomePage() {
             <div className="rounded-3xl overflow-hidden bg-white border border-gray-150 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
               <div className="aspect-[16/10] w-full overflow-hidden bg-gray-100">
                 <img
-                  src="/images/redesign/cat-cat.jpg"
-                  alt="Gentle domestic cat"
+                  src="/images/fashion/jeans-pants.jpg"
+                  alt="Denim jeans and pants"
                   className="w-full h-full object-cover object-center transition-transform duration-500 hover:scale-105"
                 />
               </div>
               <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#1E4636] mb-1.5">Care Knowledge</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#1E4636] mb-1.5">Style Guides</p>
                   <h3 className="font-serif text-xl sm:text-2xl font-bold text-gray-900 mb-2.5">
-                    Expert Guides &amp; Tips
+                    Fit &amp; Style Guides
                   </h3>
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    Practical buying guides, product setup, and everyday care routines for the animals you look after.
+                    Practical guides to choosing jeans, jackets, and shoes that fit well and wear well.
                   </p>
                 </div>
                 <div className="mt-6 pt-4 border-t border-gray-100">
@@ -2542,24 +2549,24 @@ function HomePage() {
             <div className="rounded-3xl overflow-hidden bg-white border border-gray-150 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
               <div className="aspect-[16/10] w-full overflow-hidden bg-gray-100">
                 <img
-                  src="/images/redesign/editorial-livestock.jpg"
-                  alt="Cattle grazing in open farm pasture"
+                  src="/images/fashion/watches.jpg"
+                  alt="Wristwatch on a clean background"
                   className="w-full h-full object-cover object-[center_60%] transition-transform duration-500 hover:scale-105"
                 />
               </div>
               <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#1E4636] mb-1.5">Farm &amp; Stable Care</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#1E4636] mb-1.5">Accessories</p>
                   <h3 className="font-serif text-xl sm:text-2xl font-bold text-gray-900 mb-2.5">
-                    Livestock Solutions
+                    Watches &amp; Jewelry
                   </h3>
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    Essential trace mineral salt blocks, feeders, and grooming supplies for healthier farms and animals.
+                    Watches, jewelry, and sunglasses to finish any outfit.
                   </p>
                 </div>
                 <div className="mt-6 pt-4 border-t border-gray-100">
                   <Link
-                    to="/category/cattle"
+                    to="/shop"
                     className="inline-flex items-center gap-2 text-sm font-bold text-[#1E4636] hover:text-[#153428] transition-colors"
                   >
                     Explore Now <ArrowRight strokeWidth={2} size={15} />
@@ -2592,7 +2599,7 @@ function HomePage() {
             Join the Luxedge Family
           </h2>
           <p className="text-sm sm:text-base text-gray-600 max-w-md mx-auto mb-6">
-            Get exclusive offers, animal-care tips, and new arrivals delivered to your inbox.
+            Get exclusive offers, style tips, and new arrivals delivered to your inbox.
           </p>
 
           {nlDone ? (
@@ -2736,14 +2743,14 @@ function ShopPage() {
 
   const handleCatChange = (newCat: string) => {
     if (newCat === 'All') nav('/shop');
-    else nav(`/category/${toSlug(newCat)}`);
+    else nav(`/category/${slugOf(newCat)}`);
   };
 
   const pageTitle = isDeals ? 'Deals' : (cat === 'All' ? 'Shop All Products' : cat);
   const pageDesc = isDeals
-    ? (hasRealDeals ? 'Real catalog offers and sale picks, updated as new deals land.' : 'Featured pet essentials selected from the current collection.')
+    ? (hasRealDeals ? 'Real catalog offers and sale picks, updated as new deals land.' : 'Featured fashion picks selected from the current collection.')
     : (cat === 'All' ? 'Handpicked for quality, comfort, and value.'
-      : categoryContentFor(cat)?.desc || CAT_META[cat]?.desc || `Browse our ${cat} collection`);
+      : categoryContentFor(cat)?.desc || `Browse our ${cat} collection`);
   // Per-category buying guidance, shared with the worker's pre-rendered category
   // page (src/content/categoryContent.ts) so both surfaces show the same copy.
   const catContent = cat === 'All' || isDeals ? null : categoryContentFor(cat);
@@ -2915,7 +2922,7 @@ function ShopPage() {
                  premium curation notice, never fake cards or fake counts. */
               <div className="text-center py-20">
                 <div className="w-16 h-16 mx-auto rounded-full bg-luxe-gold-soft ring-1 ring-luxe-gold/20 flex items-center justify-center mb-4"><Stars01 strokeWidth={1.5} size={22} className="text-luxe-gold" /></div>
-                <p className="font-serif text-lg font-bold text-luxe-black mb-1">New premium pet essentials are being curated</p>
+                <p className="font-serif text-lg font-bold text-luxe-black mb-1">New premium fashion pieces are being curated</p>
                 <p className="text-sm text-luxe-gray mb-5">Every product is verified before it reaches your door. Please check back soon.</p>
                 <Link to="/" className="inline-block px-6 py-2.5 bg-luxe-gold hover:bg-luxe-gold-dark text-white text-xs font-bold uppercase tracking-wider rounded-full transition-colors">Back to home</Link>
               </div>
@@ -3100,7 +3107,7 @@ function CartPage() {
       <div className="text-center">
         <div className="w-16 h-16 mx-auto rounded-full bg-luxe-gold-soft ring-1 ring-luxe-gold/20 flex items-center justify-center mb-4"><ShoppingBag01 strokeWidth={1.5} size={28} className="text-luxe-gold" /></div>
         <h1 className="font-serif text-2xl font-bold text-luxe-black mb-2">Your cart is empty</h1>
-        <p className="text-luxe-gray text-sm mb-6">Discover handpicked essentials your pet will love.</p>
+        <p className="text-luxe-gray text-sm mb-6">Discover handpicked pieces for your wardrobe.</p>
         <Link to="/shop" className="btn-glow inline-block px-6 py-3 bg-luxe-gold hover:bg-luxe-gold-dark text-white font-bold rounded-full text-sm transition-colors">Shop Now</Link>
       </div>
     </div>
@@ -3414,7 +3421,7 @@ function LoginPage() {
             <img src="/luxedge-mark.png" alt="Luxedge" className="h-12 sm:h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
             <span className="flex flex-col leading-none text-left">
               <span className="font-brand text-2xl font-bold tracking-[0.16em] text-gray-900">LUXEDGE</span>
-              <span className="text-[8px] font-bold tracking-[0.22em] text-[#1E4636] mt-1">PETS • LIVESTOCK • A BRIGHTER TOMORROW</span>
+              <span className="text-[8px] font-bold tracking-[0.22em] text-[#1E4636] mt-1">FASHION • STYLE FOR EVERY DAY • LUXEDGE</span>
             </span>
           </Link>
         </div>
@@ -3540,7 +3547,7 @@ function SignupPage() {
             <img src="/luxedge-mark.png" alt="Luxedge" className="h-12 sm:h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
             <span className="flex flex-col leading-none text-left">
               <span className="font-brand text-2xl font-bold tracking-[0.16em] text-gray-900">LUXEDGE</span>
-              <span className="text-[8px] font-bold tracking-[0.22em] text-[#1E4636] mt-1">PETS • LIVESTOCK • A BRIGHTER TOMORROW</span>
+              <span className="text-[8px] font-bold tracking-[0.22em] text-[#1E4636] mt-1">FASHION • STYLE FOR EVERY DAY • LUXEDGE</span>
             </span>
           </Link>
         </div>
@@ -3682,7 +3689,7 @@ function AdminLoginPage() {
             <img src="/luxedge-mark.png" alt="Luxedge" className="h-11 w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
             <span className="flex flex-col leading-none text-left">
               <span className="font-brand text-xl font-bold tracking-[0.16em] text-gray-900">LUXEDGE</span>
-              <span className="text-[7.5px] font-bold tracking-[0.22em] text-[#1E4636] mt-0.5">PETS • LIVESTOCK • A BRIGHTER TOMORROW</span>
+              <span className="text-[7.5px] font-bold tracking-[0.22em] text-[#1E4636] mt-0.5">FASHION • STYLE FOR EVERY DAY • LUXEDGE</span>
             </span>
           </Link>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EBF3EE] text-[#1E4636] text-xs font-semibold mb-1">
@@ -3932,7 +3939,7 @@ function SitemapPage() {
     { title: 'Main pages', links: pageLinks },
     {
       title: 'Shop by category',
-      links: categories.filter((c) => c.isActive).map((c) => ({ to: `/category/${c.slug || toSlug(c.name)}`, label: c.name })),
+      links: categories.filter((c) => c.isActive).map((c) => ({ to: `/category/${c.slug || slugOf(c.name)}`, label: c.name })),
     },
     {
       title: 'Guides & articles',
@@ -4330,11 +4337,11 @@ export default function App() {
           <Route path="/free-pet-gift" element={<SLayout><GiftDropPage /></SLayout>} />
           <Route path="/campaigns/:slug" element={<SLayout><CampaignLanding /></SLayout>} />
                     {/* Category Aliases & Redirects */}
-          <Route path="/category/dog" element={<Navigate to="/category/dog-supplies" replace />} />
-          <Route path="/category/cat" element={<Navigate to="/category/cat-supplies" replace />} />
-          <Route path="/category/bird" element={<Navigate to="/category/bird-supplies" replace />} />
-          <Route path="/category/livestock" element={<Navigate to="/category/cattle" replace />} />
-          <Route path="/category/horses" element={<Navigate to="/category/horse" replace />} />
+          <Route path="/category/dog" element={<Navigate to="/shop" replace />} />
+          <Route path="/category/cat" element={<Navigate to="/shop" replace />} />
+          <Route path="/category/bird" element={<Navigate to="/shop" replace />} />
+          <Route path="/category/livestock" element={<Navigate to="/shop" replace />} />
+          <Route path="/category/horses" element={<Navigate to="/shop" replace />} />
 
           {/* Archived Duplicate Product 301 Redirects */}
           <Route path="/product/1-5-10pcs-cat-dog-massage-brush-pet-special-brush-multifunctional-dust-removal-sponge-cleaning-brush-simulated-cat-tongue-comb-2" element={<Navigate to="/product/1-5-10pcs-cat-dog-massage-brush-pet-special-brush-multifunctional-dust-removal-sponge-cleaning-brush-simulated-cat-tongue-comb" replace />} />

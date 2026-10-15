@@ -7,12 +7,12 @@
 // published Luxedge policies — nothing invented.
 // ============================================================================
 
-export const ABOUT_QUOTE = 'A curated online store for practical pet and animal essentials.';
+export const ABOUT_QUOTE = 'A curated online store for premium everyday fashion, shipped across the United States.';
 
 export const ABOUT_LEAD =
-  'Luxedge is an online store for thoughtfully selected pet and animal essentials — dog walking ' +
-  'and training gear, cat toys and comfort pieces, bird feeders and seed, horse grooming and stable ' +
-  'essentials, and cattle and livestock care items.';
+  'Luxedge is an online fashion store for thoughtfully selected clothing and accessories — women’s and ' +
+  'men’s clothing, dresses and tops, jeans and pants, jackets and outerwear, sneakers and shoes, handbags ' +
+  'and wallets, jewelry, watches, and sunglasses.';
 
 export interface AboutSection {
   title: string;
@@ -23,63 +23,57 @@ export const ABOUT_SECTIONS: AboutSection[] = [
   {
     title: 'What we sell',
     body:
-      'Our catalog focuses on practical, everyday essentials: grooming kits and brushes, collars and ' +
-      'leashes, beds and mats, feeding and water pieces, salt licks and mineral blocks, food and seed, and ' +
-      'travel accessories. Products are organized by pet — from dogs, cats and birds to horses and cattle — ' +
-      'so it is easy to find what your animal actually needs.',
+      'Our catalog covers everyday fashion across ten categories: women’s clothing, men’s clothing, dresses ' +
+      'and tops, jeans and pants, jackets and outerwear, sneakers and shoes, handbags and wallets, jewelry, ' +
+      'watches, and sunglasses and accessories. Each product page lists its size and color options, its ' +
+      'price in US dollars, and its estimated US shipping cost.',
   },
   {
     title: 'How we source and curate',
     body:
       'Product listings use information supplied by manufacturers and suppliers. A listing is not a claim ' +
-      'that Luxedge has independently tested or certified the product. Check the selected size, materials, ' +
-      'pack quantity and delivery information before ordering. For animal feed or supplements, verify the ' +
-      'label and intended species with the supplier and your animal-care professional.',
+      'that Luxedge has independently verified fabric content or fit. Check the size chart, materials, care ' +
+      'instructions and delivery information before ordering. Products marked as previews are not yet ' +
+      'available to purchase.',
   },
   {
     title: 'Our buying guides',
     body:
-      'Our guides explain product choices, fit and everyday care. Luxedge Editorial Team is the site’s ' +
-      'publishing byline, not a claim of professional credentials or independent laboratory testing. ' +
-      'Luxedge sells products linked from its guides and may earn advertising revenue. Product links are ' +
-      'commercial recommendations, not proof of test results. For a correction or a source question, ' +
-      'email hello@luxedge.us with the page URL and the passage concerned.',
+      'Our guides explain how to choose fit, fabric and care for clothing and accessories. Luxedge Editorial ' +
+      'Team is the site’s publishing byline. Luxedge sells products linked from its guides and may earn ' +
+      'advertising revenue. For a correction or a source question, email hello@luxedge.us with the page URL ' +
+      'and the passage concerned.',
   },
   {
     title: 'Who we are',
     body:
       'Luxedge.us is an independent US online store operated by Embani LLC. We are a retailer, not a ' +
-      'manufacturer, a veterinary practice, or a marketplace: we choose the items we list, write the ' +
-      'descriptions and guides that accompany them, and answer the messages that come back. Luxedge is ' +
-      'not affiliated with LuxEdge Furniture Co. (Canada) or LuxEdge Property (UK); those are unrelated ' +
-      'businesses with similar names.',
+      'manufacturer or a marketplace: we choose the items we list, write the descriptions and guides that ' +
+      'accompany them, and answer the messages that come back. Luxedge is not affiliated with LuxEdge ' +
+      'Furniture Co. (Canada) or LuxEdge Property (UK); those are unrelated businesses with similar names.',
   },
   {
     title: 'How our products reach you',
     body:
       'Luxedge holds no warehouse of its own. Orders are fulfilled through third-party suppliers and ' +
-      'fulfilment partners, and some items ship from outside the United States. That model is why the ' +
-      'catalogue can stay broad and why delivery estimates vary by product: the delivery window shown on ' +
-      'a product page reflects how that item is stocked and shipped, and the shipping policy explains how ' +
-      'tracking and delays are handled. We would rather state that plainly than imply a domestic warehouse ' +
-      'we do not have.',
+      'fulfilment partners. Orders ship only to US addresses, and the delivery window shown on a product page ' +
+      'reflects how that item is stocked and shipped. The shipping policy explains how tracking and delays ' +
+      'are handled. We would rather state that plainly than imply a domestic warehouse we do not have.',
   },
   {
     title: 'What you can expect from us',
     body:
-      'Listings state what we can verify — size, material, quantity, and intended species — and omit ' +
-      'specifications we cannot confirm rather than guessing at them. Where a product has a limitation that ' +
-      'matters before you buy, the page says so. Prices and availability are shown at checkout, delivery ' +
-      'estimates are described as estimates, and returns follow the published returns policy. If something ' +
-      'arrives damaged, defective, or different from its listing, email hello@luxedge.us and we will work ' +
-      'through it with you.',
+      'Listings state what we can verify — size, color, material and care — and omit specifications we cannot ' +
+      'confirm rather than guessing at them. Prices and availability are shown at checkout, delivery estimates ' +
+      'are described as estimates, and returns follow the published returns policy. If something arrives ' +
+      'damaged, defective, or different from its listing, email hello@luxedge.us and we will work through it ' +
+      'with you.',
   },
   {
     title: 'Customer support',
     body:
       'Our team is available Monday to Friday, 9AM\u20136PM CT. Order processing takes about 1\u20133 business days, and ' +
-      'eligible products ship across the United States where the destination is supported. We offer 30-day return ' +
-      'and replacement support for damaged, defective, or incorrect items. Questions? Contact hello@luxedge.us ' +
-      'or call (440) 941-8002.',
+      'orders ship only to addresses in the United States. We offer 30-day return and replacement support for ' +
+      'damaged, defective, or incorrect items. Questions? Contact hello@luxedge.us or call (440) 941-8002.',
   },
 ];

@@ -238,11 +238,24 @@ describe('POST /api/checkout/onsite (start on-site payment)', () => {
     process.env.SHIPPO_API_KEY = 'shippo_test_abc';
     const { reserveCalls, insertedOrders } = stubEnv({ invalidAddress: true });
     const bad = validBody();
-    bad.address = { line1: '999 NOPE ST', line2: '', city: 'Nowhere', state: 'ZZ', zip: '99999', country: 'US' };
+    bad.address = { line1: '999 NOPE ST', line2: '', city: 'Nowhere', state: 'TX', zip: '99999', country: 'US' };
     const { server, cap } = res();
     await handler(req('POST', '/api/checkout/onsite', bad), server);
     expect(cap.status).toBe(400);
     expect((cap.body as { error: string }).error).toMatch(/verif|double-check/i);
+    expect(reserveCalls.length).toBe(0);
+    expect(insertedOrders.length).toBe(0);
+  });
+
+  it('blocks non-US shipping addresses (USA-only storefront) BEFORE any reservation/order', async () => {
+    process.env.SHIPPO_API_KEY = 'shippo_test_abc';
+    const { reserveCalls, insertedOrders } = stubEnv();
+    const body = validBody();
+    body.address = { line1: '1 Maple Ave', line2: '', city: 'Toronto', state: 'ON', zip: 'M5V 2T6', country: 'CA' };
+    const { server, cap } = res();
+    await handler(req('POST', '/api/checkout/onsite', body), server);
+    expect(cap.status).toBe(400);
+    expect((cap.body as { error: string }).error).toMatch(/United States/i);
     expect(reserveCalls.length).toBe(0);
     expect(insertedOrders.length).toBe(0);
   });

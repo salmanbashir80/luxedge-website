@@ -51,6 +51,7 @@ import {
   type ProviderId,
 } from './_lib/payment-providers.js';
 import { commerceFetch, commerceRpc, commerceDbActive } from '../worker/d1/commerce';
+import { checkUsShippingEligibility } from '../src/services/supplier/usShipping.js';
 
 // ---------------------------------------------------------------------------
 // Environment + order persistence
@@ -272,6 +273,9 @@ function parseBody(body: unknown): { ok: true; r: OnsiteRequest } | { ok: false;
   })) {
     return { ok: false, message: 'Please complete your shipping address (street, city, state, ZIP).' };
   }
+  // USA-only storefront: reject non-US countries and non-shipping states/ZIPs here, server-side.
+  const usEligibility = checkUsShippingEligibility({ country: address.country, state: address.state, zip: address.zip });
+  if (!usEligibility.eligible) return { ok: false, message: usEligibility.reason };
   const shippingRateId = typeof b.shippingRateId === 'string' && b.shippingRateId.trim() ? b.shippingRateId.trim().slice(0, 120) : undefined;
   return {
     ok: true,

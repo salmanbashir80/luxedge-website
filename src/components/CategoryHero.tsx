@@ -38,112 +38,51 @@ export interface CategoryHeroConfig {
   chips: { label: string; href: string }[]; // subcategory shortcuts (real links)
 }
 
-export const CATEGORY_HERO_CONFIG: Record<string, CategoryHeroConfig> = {
-  'Dog Supplies': {
-    label: 'Dog Supplies',
-    headline: 'Gear That Keeps Up With Your Dog',
-    desc: 'Walking, training & everyday dog essentials — picked for comfort, durability and real everyday use.',
-    image: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=720&h=820&fit=crop&crop=faces&auto=format&q=88',
-    imageAlt: 'Golden retriever holding a stick on a wooden deck',
-    imagePosition: '50% 55%',
-    tint: 'dog',
-    ctaHref: '#product-grid',
-    ctaLabel: 'Shop dog essentials',
-    buyerNote: 'Start with the routine you are shopping for—walking, play, rest, feeding, or grooming—then compare the details shown on each listing.',
-    chips: [
-      { label: 'Toys', href: '/category/pet-toys' },
-      { label: 'Beds', href: '/category/pet-beds' },
-      { label: 'Grooming', href: '/category/grooming' },
-      { label: 'Feeding & Water', href: '/category/feeding-water' },
-    ],
-  },
-  'Cat Supplies': {
-    label: 'Cat Supplies',
-    headline: 'Soft Comfort for Curious Cats',
-    desc: 'Play, comfort & everyday cat essentials — calm, considered pieces your cat will actually love.',
-    image: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=720&h=820&fit=crop&crop=faces&auto=format&q=88',
-    imageAlt: 'Black and white cat looking toward the camera',
-    tint: 'cat',
-    ctaHref: '#product-grid',
-    ctaLabel: 'Shop cat essentials',
-    buyerNote: 'Choose by the space and routine you have in mind, then compare the product details provided for play, rest, feeding, or travel.',
-    chips: [
-      { label: 'Toys', href: '/category/pet-toys' },
-      { label: 'Beds', href: '/category/pet-beds' },
-      { label: 'Accessories', href: '/category/pet-accessories' },
-      { label: 'Grooming', href: '/category/grooming' },
-    ],
-  },
-  'Horse': {
-    label: 'Horse',
-    headline: 'Stable & Field Essentials, Built to Last',
-    desc: 'Practical care and stable essentials for horses — quality tack and care you can depend on.',
-    image: 'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=720&h=820&fit=crop&crop=faces&auto=format&q=88',
-    imageAlt: 'White horse moving beside trees',
-    tint: 'horse',
-    ctaHref: '#product-grid',
-    ctaLabel: 'Shop horse care',
-    buyerNote: 'For stable and field supplies, begin with the intended task and compare the product’s listed size, materials, and use details.',
-    chips: [
-      { label: 'Feeding & Water', href: '/category/feeding-water' },
-      { label: 'Cattle & Livestock', href: '/category/cattle' },
-      { label: 'Accessories', href: '/category/pet-accessories' },
-    ],
-  },
-  'Bird Supplies': {
-    label: 'Bird Supplies',
-    headline: 'Fresh Care for Feathered Friends',
-    desc: 'Seed, feed & care essentials for birds — light, natural and made for everyday feeding.',
-    image: 'https://images.unsplash.com/photo-1552728089-57bdde30beb3?w=720&h=820&fit=crop&crop=top&auto=format&q=88',
-    imageAlt: 'Colorful bird perched on a branch',
-    imagePosition: '50% 15%',
-    tint: 'bird',
-    ctaHref: '#product-grid',
-    ctaLabel: 'Shop bird supplies',
-    buyerNote: 'Start with the type of feeding, care, or enrichment item you need and use the listing details to compare options.',
-    chips: [
-      { label: 'Feeding & Water', href: '/category/feeding-water' },
-      { label: 'Toys', href: '/category/pet-toys' },
-    ],
-  },
-  'Cattle': {
-    label: 'Cattle',
-    headline: 'Dependable Feeding & Care for Livestock',
-    desc: 'Useful feeding and care essentials for cattle and livestock — practical tools for working farms.',
-    image: 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=720&h=820&fit=crop&crop=faces&auto=format&q=88',
-    imageAlt: 'Sturdy cattle on the pasture',
-    tint: 'cattle',
-    ctaHref: '#product-grid',
-    ctaLabel: 'Shop livestock care',
-    buyerNote: 'For livestock supplies, match the item to the intended feeding or care task and review the listed size and materials before ordering.',
-    chips: [
-      { label: 'Feeding & Water', href: '/category/feeding-water' },
-      { label: 'Horse Care', href: '/category/horse' },
-    ],
-  },
+const FASHION_HERO_COPY: { name: string; headline: string; desc: string; ctaLabel: string; buyerNote: string; chips: string[] }[] = [
+  { name: "Women's Clothing", headline: 'Everyday Pieces for Every Wardrobe', desc: 'Tops, layers and wardrobe staples chosen for comfort, fit and everyday wear.', ctaLabel: "Shop women's clothing", buyerNote: 'Start with the occasion or the layers you need, then compare the measurements and fabric details on each listing.', chips: ['Dresses and Tops', 'Jackets and Outerwear', 'Handbags and Wallets'] },
+  { name: "Men's Clothing", headline: 'Easy Essentials for Everyday Style', desc: 'Shirts, knitwear and everyday staples for men, selected for fit and comfort.', ctaLabel: "Shop men's clothing", buyerNote: 'Begin with the occasion, then compare the chest, length and fabric details listed on each product.', chips: ['Jeans and Pants', 'Jackets and Outerwear', 'Sneakers and Shoes'] },
+  { name: 'Dresses and Tops', headline: 'Light Layers and Easy Dresses', desc: 'Dresses, blouses and tees for work, weekends and occasions.', ctaLabel: 'Shop dresses and tops', buyerNote: 'Compare the listed measurements and fabric content, and match the length and neckline to the occasion.', chips: ["Women's Clothing", 'Jewelry', 'Sneakers and Shoes'] },
+  { name: 'Jeans and Pants', headline: 'Denim and Trousers That Fit Your Day', desc: 'Jeans, trousers and chinos in a range of cuts and washes.', ctaLabel: 'Shop jeans and pants', buyerNote: 'Check the waist, rise and inseam on each listing, since cut and length vary between styles.', chips: ["Men's Clothing", "Women's Clothing", 'Jackets and Outerwear'] },
+  { name: 'Jackets and Outerwear', headline: 'Layers for Cooler Days', desc: 'Denim jackets, lightweight coats and everyday outerwear.', ctaLabel: 'Shop jackets and outerwear', buyerNote: 'Compare the listed chest and length measurements, and consider what you will wear underneath.', chips: ["Men's Clothing", "Women's Clothing", 'Jeans and Pants'] },
+  { name: 'Sneakers and Shoes', headline: 'Footwear for Every Step', desc: 'Sneakers, boots and dress shoes for every day of the week.', ctaLabel: 'Shop sneakers and shoes', buyerNote: 'Check the size chart on the listing, since shoe fit varies between brands and styles.', chips: ["Men's Clothing", "Women's Clothing", 'Sunglasses and Accessories'] },
+  { name: 'Handbags and Wallets', headline: 'Carry Everything You Need', desc: 'Handbags, crossbody bags and wallets for work and everyday use.', ctaLabel: 'Shop handbags and wallets', buyerNote: 'Compare the listed dimensions and materials to be sure the bag fits your everyday essentials.', chips: ["Women's Clothing", 'Jewelry', 'Sunglasses and Accessories'] },
+  { name: 'Jewelry', headline: 'Small Details, Everyday Shine', desc: 'Earrings, necklaces, bracelets and rings for everyday wear and gifts.', ctaLabel: 'Shop jewelry', buyerNote: 'Check the listed materials and dimensions, and read the care notes before you wear pieces daily.', chips: ['Watches', 'Dresses and Tops', 'Handbags and Wallets'] },
+  { name: 'Watches', headline: 'Time Worn Well', desc: 'Wristwatches for work, weekends and gifting, with straps and dials to suit.', ctaLabel: 'Shop watches', buyerNote: 'Compare the case size, strap type and other details shown on each listing.', chips: ['Jewelry', "Men's Clothing", 'Sunglasses and Accessories'] },
+  { name: 'Sunglasses and Accessories', headline: 'Finishing Touches for Every Outfit', desc: 'Sunglasses, belts, scarves and everyday small accessories.', ctaLabel: 'Shop sunglasses and accessories', buyerNote: 'Check the frame and lens details on each listing, and choose a size that suits your face and daily use.', chips: ['Handbags and Wallets', 'Jewelry', 'Watches'] },
+];
+
+const toHeroSlug = (name: string) => name.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+// Temporary, replaceable sample photography (CC-licensed Wikimedia Commons files, see public/images/fashion/SOURCES.md).
+// Served from the production origin's public folder; owner-supplied images can replace these files in place.
+const FASHION_IMAGE_ORIGIN = 'https://luxedge.us/images/fashion';
+const FASHION_HERO_IMAGES: Record<string, { file: string; alt: string }> = {
+  "Women's Clothing": { file: 'women-clothing.jpg', alt: 'Model walking the runway in a fashion show' },
+  "Men's Clothing": { file: 'men-clothing.jpg', alt: 'Man in a green shirt-jacket, blue jeans and desert boots' },
+  'Dresses and Tops': { file: 'dresses-tops.jpg', alt: 'Woman in a red gown at a fashion show' },
+  'Jeans and Pants': { file: 'jeans-pants.jpg', alt: 'Pairs of blue jeans displayed together' },
+  'Jackets and Outerwear': { file: 'jackets-outerwear.jpg', alt: 'Leather jacket on display' },
+  'Sneakers and Shoes': { file: 'sneakers-shoes.jpg', alt: 'Pair of white sneakers' },
+  'Handbags and Wallets': { file: 'handbags-wallets.jpg', alt: 'Black mini handbag styled with a minidress' },
+  Jewelry: { file: 'jewelry.jpg', alt: 'Rings and necklaces displayed as jewelry' },
+  Watches: { file: 'watches.jpg', alt: 'Wristwatch close-up' },
+  'Sunglasses and Accessories': { file: 'sunglasses-accessories.jpg', alt: 'Pair of sunglasses for summer' },
 };
 
-// Existing lifestyle sources keep the collection photography consistent.
-// General collections use context-setting photography, not product thumbnails.
-const generalCollections = [
-  { name: 'Feeding & Water', headline: 'A little care, every mealtime.', desc: 'Explore bowls, feeders and water essentials for your everyday routine.', source: 'Cat Supplies', chips: ['Dog Supplies', 'Cat Supplies', 'Cattle'] },
-  { name: 'Pet Accessories', headline: 'For all the places you go together.', desc: 'Explore useful extras for days out, travel and life at home.', source: 'Dog Supplies', chips: ['Dog Supplies', 'Cat Supplies', 'Grooming'] },
-  { name: 'Pet Beds', headline: 'Their own little place to unwind.', desc: 'Find a comfortable corner with beds and resting essentials for dogs and cats.', source: 'Cat Supplies', chips: ['Dog Supplies', 'Cat Supplies', 'Pet Accessories'] },
-  { name: 'Pet Toys', headline: 'Make room for a little play.', desc: 'Explore toys for curious noses, playful paws and time together.', source: 'Dog Supplies', chips: ['Dog Supplies', 'Cat Supplies', 'Bird Supplies'] },
-  { name: 'Grooming', headline: 'Everyday care. A closer connection.', desc: 'Browse grooming tools and care accessories for your companion’s routine.', source: 'Horse', chips: ['Dog Supplies', 'Cat Supplies', 'Horse'] },
-];
-const collectionSlugs: Record<string, string> = {
-  'Dog Supplies': 'dog-supplies', 'Cat Supplies': 'cat-supplies', Horse: 'horse',
-  Cattle: 'cattle', 'Bird Supplies': 'bird-supplies', 'Pet Accessories': 'pet-accessories', Grooming: 'grooming',
-};
-for (const collection of generalCollections) {
-  const source = CATEGORY_HERO_CONFIG[collection.source];
-  CATEGORY_HERO_CONFIG[collection.name] = {
-    ...source, label: collection.name, headline: collection.headline, desc: collection.desc,
-    tint: 'neutral', ctaLabel: `Shop ${collection.name.toLowerCase()}`,
-    chips: collection.chips.map(label => ({ label, href: `/category/${collectionSlugs[label]}` })),
-  };
-}
+export const CATEGORY_HERO_CONFIG: Record<string, CategoryHeroConfig> = Object.fromEntries(
+  FASHION_HERO_COPY.map((c) => [c.name, {
+    label: c.name,
+    headline: c.headline,
+    desc: c.desc,
+    image: `${FASHION_IMAGE_ORIGIN}/${FASHION_HERO_IMAGES[c.name].file}`,
+    imageAlt: FASHION_HERO_IMAGES[c.name].alt,
+    tint: 'neutral' as const,
+    ctaHref: '#product-grid',
+    ctaLabel: c.ctaLabel,
+    buyerNote: c.buyerNote,
+    chips: c.chips.map((label) => ({ label, href: `/category/${toHeroSlug(label)}` })),
+  }]),
+);
 
 /** Sized variants only for the existing image CDN; custom CMS sources pass through. */
 export function categoryImageVariant(source: string, width: number): string {

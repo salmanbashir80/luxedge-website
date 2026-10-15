@@ -13,7 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PUBLIC_TABLE_COLUMNS, PUBLIC_TABLES, handleDbApi } from '../db-api';
 import { TABLE_SCHEMA } from '../d1/table-schema';
 import { resetDataRuntime, setDataRuntime } from '../d1/runtime';
@@ -84,6 +84,7 @@ function get(p: string, init?: RequestInit) {
 
 afterEach(() => {
   resetDataRuntime(null);
+  vi.unstubAllEnvs();
 });
 
 describe('access control — deny by default', () => {
@@ -160,6 +161,10 @@ describe('serving reads from D1', () => {
   });
 
   it('reports 503 — never an empty 200 — when no backend can answer', async () => {
+    // A local .env may define Supabase settings; the runtime reads process.env as a
+    // fallback, so blank them here to make "nothing configured" the real precondition.
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
     setDataRuntime({}); // no D1 binding and no Supabase URL configured
     const res = await get('/api/db/products?select=id&limit=10');
     expect(res.status).toBe(503);
