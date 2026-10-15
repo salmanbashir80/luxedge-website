@@ -58,3 +58,4 @@ scripts/seed-premium-direct.mjs
 .dev.vars
 .dev.vars.*
 .wrangler/
+vercel_env.json
