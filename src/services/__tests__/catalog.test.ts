@@ -4,6 +4,9 @@ import { resetDbForTests, __setDbConfigForTests } from '../db';
 
 const URL = 'https://project.supabase.co';
 const ANON = 'anon-key-123';
+// The storefront only lists products in the ten Fashion categories, so every
+// product fixture defaults to this category unless a test sets its own.
+const FASHION_CATEGORY = { id: 'cat-fashion', name: "Women's Clothing", slug: 'womens-clothing', is_active: true, sort_order: 0 };
 
 function jsonResponse(body: unknown, status = 200): Response {
   // Mapper-focused fixtures need the independent public-indexability facts.
@@ -15,6 +18,7 @@ function jsonResponse(body: unknown, status = 200): Response {
           description: 'A detailed verified product description that gives a shopper enough factual information to evaluate the listed item before ordering.',
           image_url: 'https://images.example.test/verified-product.jpg',
           slug: `verified-${String((row as Record<string, unknown>).id || 'product')}`,
+          category_id: FASHION_CATEGORY.id,
           ...row,
         }
       : row
@@ -46,7 +50,7 @@ describe('loadStorefrontCatalog', () => {
 
   it('returns an EMPTY REAL CATALOG (not null, not demo fallback) when the DB is reachable with zero published products', async () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/categories')) return Promise.resolve(jsonResponse([{ id: 'c1', name: 'Pet Toys', slug: 'pet-toys', is_active: true, sort_order: 0 }]));
+      if (url.includes('/categories')) return Promise.resolve(jsonResponse([FASHION_CATEGORY]));
       if (url.includes('/products')) return Promise.resolve(jsonResponse([]));
       return Promise.resolve(jsonResponse([]));
     }));
@@ -56,13 +60,13 @@ describe('loadStorefrontCatalog', () => {
     expect(cat!.products).toEqual([]);
     // Categories still load — only the product list is intentionally empty.
     expect(cat!.categories.length).toBe(1);
-    expect(cat!.categories[0].name).toBe('Pet Toys');
+    expect(cat!.categories[0].name).toBe("Women's Clothing");
   });
 
   it('filters to published commerce-ready products (V2 schema: name/price)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
       if (url.includes('/categories')) {
-        return Promise.resolve(jsonResponse([{ id: 'c1', name: 'Pet Beds', slug: 'pet-beds', is_active: true, sort_order: 0 }]));
+        return Promise.resolve(jsonResponse([{ ...FASHION_CATEGORY, id: 'c1' }]));
       }
       if (url.includes('/products')) {
         return Promise.resolve(jsonResponse([
@@ -83,7 +87,7 @@ describe('loadStorefrontCatalog', () => {
     expect(cat!.products.map((p) => p.id)).toEqual(['p1']);
     expect(cat!.products[0].name).toBe('Dog Bed');
     expect(cat!.products[0].price).toBe(49.99);
-    expect(cat!.products[0].category).toBe('Pet Beds');
+    expect(cat!.products[0].category).toBe("Women's Clothing");
     expect(cat!.products[0].commerceReadiness).toBe('COMMERCE_READY');
     expect(cat!.categories.length).toBe(1);
   });
@@ -94,10 +98,10 @@ describe('loadStorefrontCatalog', () => {
     // same way select=* did: name→display, price_amount absent → price used,
     // image_url absent → product_images table still supplies the images.
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/categories')) return Promise.resolve(jsonResponse([]));
+      if (url.includes('/categories')) return Promise.resolve(jsonResponse([FASHION_CATEGORY]));
       if (url.includes('/products')) {
         return Promise.resolve(jsonResponse([
-          { id: 'p1', name: 'Dog Bed', slug: 'dog-bed', status: 'active', price: 49.99, short_description: 'Comfy', category_id: null, inventory_qty: 5, supplier_source: 'CJ', cost_price: 12, us_inventory: true, stock_status: 'in_stock', commerce_readiness: 'COMMERCE_READY' },
+          { id: 'p1', name: 'Dog Bed', slug: 'dog-bed', status: 'active', price: 49.99, short_description: 'Comfy', inventory_qty: 5, supplier_source: 'CJ', cost_price: 12, us_inventory: true, stock_status: 'in_stock', commerce_readiness: 'COMMERCE_READY' },
           // No name → falls back to id (title is not a column, so never present).
           { id: 'p2', slug: 'nameless', status: 'active', price: 9.99, commerce_readiness: 'COMMERCE_READY' },
         ]));
@@ -118,7 +122,7 @@ describe('loadStorefrontCatalog', () => {
 
   it('withholds active rows without a verified purchasing path', async () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/categories')) return Promise.resolve(jsonResponse([]));
+      if (url.includes('/categories')) return Promise.resolve(jsonResponse([FASHION_CATEGORY]));
       if (url.includes('/products')) {
         return Promise.resolve(jsonResponse([
           // Admin-activated despite no cost basis — the owner's explicit
@@ -144,7 +148,7 @@ describe('loadStorefrontCatalog', () => {
     // plain text value e.g. "horse,grooming,brush,tack,equestrian" instead of a
     // jsonb array — PostgREST returns it as a JSON string. tagsOf must split it.
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/categories')) return Promise.resolve(jsonResponse([]));
+      if (url.includes('/categories')) return Promise.resolve(jsonResponse([FASHION_CATEGORY]));
       if (url.includes('/products')) {
         return Promise.resolve(jsonResponse([
           { id: 'p1', name: 'Horse Grooming Kit', slug: 'horse-grooming-kit', status: 'active', price: 39.99, tags: 'horse,grooming,brush,tack,equestrian', supplier_source: 'CJ', cost_price: 10, us_inventory: true, stock_status: 'in_stock', commerce_readiness: 'COMMERCE_READY' },
@@ -161,7 +165,7 @@ describe('loadStorefrontCatalog', () => {
 
   it('accepts a JSON-string array shape and keeps jsonb arrays unchanged', async () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/categories')) return Promise.resolve(jsonResponse([]));
+      if (url.includes('/categories')) return Promise.resolve(jsonResponse([FASHION_CATEGORY]));
       if (url.includes('/products')) {
         return Promise.resolve(jsonResponse([
           { id: 'p1', name: 'JSON String Array', slug: 'json-string', status: 'active', price: 9.99, tags: '["cat","toys"]', supplier_source: 'CJ', cost_price: 2, us_inventory: true, stock_status: 'in_stock', commerce_readiness: 'COMMERCE_READY' },
@@ -202,7 +206,7 @@ describe('loadStorefrontCatalog', () => {
         us_inventory: true, stock_status: 'in_stock', commerce_readiness: 'COMMERCE_READY',
       };
       vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-        if (url.includes('/categories')) return Promise.resolve(jsonResponse([]));
+        if (url.includes('/categories')) return Promise.resolve(jsonResponse([FASHION_CATEGORY]));
         if (url.includes('/products')) return Promise.resolve(jsonResponse([row]));
         return Promise.resolve(jsonResponse([]));
       }));
@@ -214,7 +218,7 @@ describe('loadStorefrontCatalog', () => {
 
   it('handles the legacy schema (title + integer cents) defensively', async () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/categories')) return Promise.resolve(jsonResponse([]));
+      if (url.includes('/categories')) return Promise.resolve(jsonResponse([FASHION_CATEGORY]));
       if (url.includes('/products')) {
         return Promise.resolve(jsonResponse([
           { id: 'p1', title: 'Legacy Bed', status: 'published', price_amount: 4999, compare_at_amount: 8999, image_url: 'https://img/x.jpg', supplier_source: 'CJ', cost_price: 12, us_inventory: true, stock_status: 'in_stock' },
@@ -233,7 +237,7 @@ describe('loadStorefrontCatalog', () => {
 
   it('tolerates a missing product_images table without failing the catalog', async () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/categories')) return Promise.resolve(jsonResponse([]));
+      if (url.includes('/categories')) return Promise.resolve(jsonResponse([FASHION_CATEGORY]));
       if (url.includes('/products')) {
         return Promise.resolve(jsonResponse([{ id: 'p1', name: 'Bed', status: 'published', price: 10, supplier_source: 'CJ', cost_price: 3, us_inventory: true, stock_status: 'in_stock' }]));
       }
@@ -247,7 +251,7 @@ describe('loadStorefrontCatalog', () => {
 
   it('Catalog Launch: ACTIVE products are storefront-visible (status IN published/active)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/categories')) return Promise.resolve(jsonResponse([]));
+      if (url.includes('/categories')) return Promise.resolve(jsonResponse([FASHION_CATEGORY]));
       if (url.includes('/products')) {
         return Promise.resolve(jsonResponse([
           { id: 'p1', name: 'Active Bed', status: 'active', price: 39.99, featured: true, new_arrival: true, free_shipping: true, sale_enabled: true, discount_type: 'percent', discount_value: 10, price_amount: 3999, supplier_source: 'CJ', cost_price: 10, us_inventory: true, stock_status: 'in_stock' },
@@ -327,7 +331,7 @@ describe('loadProductByIdOrSlug', () => {
     // SSR layer and the admin editor's "Preview" button still serve it. The
     // resolver must return it — this is the exact bug reported on live.
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/categories')) return Promise.resolve(jsonResponse([{ id: 'c1', name: 'Pet Beds', slug: 'pet-beds', is_active: true, sort_order: 0 }]));
+      if (url.includes('/categories')) return Promise.resolve(jsonResponse([{ ...FASHION_CATEGORY, id: 'c1' }]));
       if (url.includes('/products')) {
         return Promise.resolve(jsonResponse([
           { id: 'p1', name: 'Dog Bed', slug: 'dog-bed', status: 'active', price: 49.99, category_id: 'c1', inventory_qty: 10, supplier_source: 'KONG Company (official manufacturer)', cost_price: 0 },
@@ -343,7 +347,7 @@ describe('loadProductByIdOrSlug', () => {
 
   it('resolves a UUID direct lookup when it has no canonical slug match', async () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/categories')) return Promise.resolve(jsonResponse([]));
+      if (url.includes('/categories')) return Promise.resolve(jsonResponse([FASHION_CATEGORY]));
       if (url.includes('/products')) {
         return Promise.resolve(jsonResponse([{ id: '00000000-0000-4000-8000-000000000009', name: 'Cat Toy', slug: 'cat-toy', status: 'active', price: 4.99, commerce_readiness: 'COMMERCE_READY' }]));
       }

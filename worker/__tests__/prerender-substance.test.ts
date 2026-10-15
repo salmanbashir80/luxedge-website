@@ -99,10 +99,14 @@ describe('server HTML carries substantive content for each page type', () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'https://test-project.supabase.co');
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test');
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).includes('/categories')) {
+        return new Response(JSON.stringify([{ id: 'cat-fashion', slug: 'womens-clothing', name: "Women's Clothing" }]));
+      }
       if (String(input).includes('/products')) {
         return new Response(JSON.stringify([{
           id: '11111111-1111-4111-8111-111111111111',
           slug: 'orthopedic-dog-bed-verified',
+          category_id: 'cat-fashion',
           name: 'Orthopedic Dog Bed',
           status: 'active',
           description: 'A supportive foam bed for older dogs with stiff joints, sized for medium and large dogs.',

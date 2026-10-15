@@ -76,9 +76,9 @@ describe('editorial release boundaries', () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test');
     vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(
-      url.includes('/products?') ? [
+      url.includes('/categories') ? [{ id: 'cat-fashion', slug: 'womens-clothing', name: "Women's Clothing" }] : url.includes('/products?') ? [
         { slug: 'promo-probe-1788640230930', status: 'active', commerce_readiness: 'COMMERCE_READY' },
-        { slug: 'dog-bed', name: 'Verified Dog Bed', status: 'active', price: 49.99, image_url: 'https://example.test/dog-bed.jpg', description: 'A verified catalog description with enough factual detail for a customer to understand this product before purchasing.', commerce_readiness: 'COMMERCE_READY' },
+        { slug: 'dog-bed', category_id: 'cat-fashion', name: 'Verified Dog Bed', status: 'active', price: 49.99, image_url: 'https://example.test/dog-bed.jpg', description: 'A verified catalog description with enough factual detail for a customer to understand this product before purchasing.', commerce_readiness: 'COMMERCE_READY' },
         { slug: 'kong-classic', name: 'KONG Classic', status: 'active', price: 12.99, image_url: 'https://example.test/kong.jpg', description: 'A factual product description with enough verified catalog detail for a customer to understand the listed item before ordering.', supplier_source: 'KONG Company (official manufacturer)', commerce_readiness: 'COMMERCE_READY' },
       ] : []
     ))));

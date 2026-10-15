@@ -19,8 +19,9 @@ const staticSitemapXml = readFileSync('public/sitemap.xml', 'utf8');
 
 const VALID_PRODUCT = {
   id: '11111111-1111-4111-8111-111111111111',
-  slug: 'orthopedic-dog-bed-verified',
-  name: 'Orthopedic Dog Bed',
+  slug: 'everyday-knit-cardigan-verified',
+  name: 'Everyday Knit Cardigan',
+  category_id: 'cat-womens-clothing',
   status: 'active',
   description: 'A'.repeat(60),
   short_description: 'B'.repeat(60),
@@ -62,7 +63,7 @@ describe('sitemap — XML and the visitor-facing page share one source', () => {
   beforeEach(() => {
     stubDb({
       products: [VALID_PRODUCT, HELD_PRODUCT, PRICELESS_PRODUCT],
-      categories: [{ slug: 'dog-supplies', name: 'Dog Supplies' }],
+      categories: [{ id: 'cat-womens-clothing', slug: 'womens-clothing', name: "Women's Clothing" }],
       blogs: [LIVE_BLOG, HELD_BLOG],
     });
   });
@@ -110,8 +111,8 @@ describe('sitemap — XML and the visitor-facing page share one source', () => {
   it('labels links with the real record name, not a slug-derived guess', async () => {
     const groups = await buildSitemapGroups();
     const html = renderHtmlSitemapBody(groups!);
-    expect(html).toContain('>Dog Supplies<');
-    expect(html).toContain('>Orthopedic Dog Bed<');
+    expect(html).toContain(">Women's Clothing<");
+    expect(html).toContain('>Everyday Knit Cardigan<');
   });
 
   it('drops the blog from every sitemap surface while it is withdrawn from the index', async () => {

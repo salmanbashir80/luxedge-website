@@ -155,7 +155,7 @@ afterEach(() => {
 
 describe('google feed — D1 backend', () => {
   it('serves active products with a real image, price, brand and category from D1', async () => {
-    db.exec("INSERT INTO categories (id, name, slug, description) VALUES ('c1', 'Dog Travel', 'dog-travel', '')");
+    db.exec("INSERT INTO categories (id, name, slug, description) VALUES ('c1', 'Womens Clothing', 'womens-clothing', '')");
     insertProduct(product());
     insertImage(image());
 
@@ -166,11 +166,12 @@ describe('google feed — D1 backend', () => {
     expect(body()).toContain('<g:title>Test Product</g:title>');
     expect(body()).toContain('<g:price>24.99 USD</g:price>');
     expect(body()).toContain('<g:brand>Luxedge</g:brand>');
-    expect(body()).toContain('<g:product_type>Dog Travel</g:product_type>');
+    expect(body()).toContain('<g:product_type>Womens Clothing</g:product_type>');
     expect(feedImageLinks(body())[0]).toBe('https://cdn.example.test/x.jpg');
   });
 
   it('excludes non-active products and products without images or price', async () => {
+    db.exec("INSERT INTO categories (id, name, slug, description) VALUES ('c1', 'Womens Clothing', 'womens-clothing', '')");
     insertProduct(product({ id: 'p1', slug: 'draft-one' }));
     insertImage(image({ id: 'i1', product_id: 'p1', url: 'https://cdn.example.test/kept.jpg' }));
     insertProduct(product({ id: 'p2', slug: 'draft-two', status: 'draft' }));
@@ -192,7 +193,7 @@ describe('google feed — D1 backend', () => {
   it('orders images primary-first and orders items by slug', async () => secondary());
 
   async function secondary(): Promise<void> {
-    db.exec("INSERT INTO categories (id, name, slug, description) VALUES ('c1', 'Cat', 'cat', '')");
+    db.exec("INSERT INTO categories (id, name, slug, description) VALUES ('c1', 'Womens Clothing', 'womens-clothing', '')");
     insertProduct(product({ id: 'pA', slug: 'a-first', name: 'A First', brand: 'B', category_id: 'c1' }));
     insertProduct(product({ id: 'pB', slug: 'b-second', name: 'B Second', brand: 'B', category_id: 'c1' }));
     insertImage(image({ id: 'iA1', product_id: 'pA', url: 'https://cdn.example.test/a-gallery.jpg', sort_order: 2, is_primary: 0 }));
@@ -216,6 +217,7 @@ describe('google feed — D1 backend', () => {
 
   it('keeps a site-relative url when present and absolutizes a public_url fallback for Merchant Center', async () => {
     // Case 1: url is a site-relative mirror (post-0005 state) — absolutized
+    db.exec("INSERT INTO categories (id, name, slug, description) VALUES ('c1', 'Womens Clothing', 'womens-clothing', '')");
     insertProduct(product());
     insertImage(image({ id: 'i1', url: '/img/hk/hk-salt-lump.jpg', public_url: '/img/hk/hk-salt-lump.jpg' }));
 

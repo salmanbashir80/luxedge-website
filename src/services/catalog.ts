@@ -34,6 +34,7 @@ import { deriveCommerceReadiness, deriveInventorySource, deriveSourceType, type 
 import { parseTagList } from '../features/catalog/tags';
 import { isHeldProduct } from '../content/reviewHolds';
 import { isPubliclyListableProduct } from '../content/productEligibility';
+import { FASHION_CATEGORY_SLUGS } from '../content/categoryContent';
 
 export interface CatalogProduct {
   id: string;
@@ -481,10 +482,20 @@ export async function loadProductByIdOrSlug(key: string): Promise<CatalogProduct
     if (Array.isArray(varRows)) variantsByProduct.set(row.id, varRows as DbVariantRow[]);
 
     const product = mapProductRow(row, categories, imagesByProduct, variantsByProduct);
-    return product && !isHeldProduct(product.slug) && isPubliclyListableProduct(product) ? product : null;
+    return product && inFashionCatalog(product.categoryId, categories) && !isHeldProduct(product.slug) && isPubliclyListableProduct(product) ? product : null;
   } catch {
     return null;
   }
+}
+
+/**
+ * True only when the product's category is a Fashion storefront category.
+ * Historical Pet-store rows (other category slugs, or no category) stay in the
+ * database but never reach the public catalog.
+ */
+function inFashionCatalog(categoryId: string | null | undefined, categories: CatalogCategory[]): boolean {
+  const slug = categories.find((c) => c.id === categoryId)?.slug;
+  return !!slug && FASHION_CATEGORY_SLUGS.has(slug);
 }
 
 export interface StorefrontCatalogOptions {
@@ -495,7 +506,7 @@ export interface StorefrontCatalogOptions {
 
 export async function loadStorefrontCatalog(opts?: StorefrontCatalogOptions): Promise<StorefrontCatalog | null> {
   if (!isRemoteDb()) return null;
-  const cacheKey = `luxedge:storefront-catalog:v1:${opts?.limit ?? 24}:${opts?.offset ?? 0}:${opts?.categoryId ?? 'all'}`;
+  const cacheKey = `luxedge:storefront-catalog:v2:${opts?.limit ?? 24}:${opts?.offset ?? 0}:${opts?.categoryId ?? 'all'}`;
   const cached = readPublicCache<StorefrontCatalog>(cacheKey);
   if (cached) return { ...cached, products: cached.products.filter((p) => !isHeldProduct(p.slug) && isPubliclyListableProduct(p)) };
   const db = getDb();
@@ -544,7 +555,7 @@ export async function loadStorefrontCatalog(opts?: StorefrontCatalogOptions): Pr
       .filter((p) => p && typeof p.id === 'string' && (p.status === 'active' || (p.status === 'published' && isStorefrontReady(p))));
 
     // Products without any price info are not ready for the storefront.
-    const usable = published.filter((p) => !isHeldProduct(p.slug) && (num(p.price) > 0 || num(p.price_amount) > 0));
+    const usable = published.filter((p) => inFashionCatalog(p.category_id, categories) && !isHeldProduct(p.slug) && (num(p.price) > 0 || num(p.price_amount) > 0));
     // Phase 4E.2 — a reachable DB with ZERO published products is a valid
     // EMPTY REAL CATALOG, not an error. Never signal "use demo fallback".
     if (usable.length === 0) {

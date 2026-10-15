@@ -13,7 +13,8 @@ import { HOME_SECTIONS, HOME_FAQ, CONTACT_SECTIONS } from './content/sitePages';
 import { isHeldBlog } from './content/reviewHolds';
 import { authorFor } from './content/authors';
 import { COPYRIGHT_SECTIONS, DISCLAIMER_SECTIONS, EDITORIAL_SECTIONS, PRIVACY_SECTIONS, RETURNS_SECTIONS, SHIPPING_SECTIONS, TERMS_SECTIONS, POLICY_LAST_UPDATED, FAQ_DATA } from './content/policies';
-import { CATEGORY_NAMES, categoryContentFor, categorySlugFor } from './content/categoryContent';
+import { CATEGORY_NAMES, CATEGORY_CONTENT, categoryContentFor, categorySlugFor } from './content/categoryContent';
+import { FASHION_SAMPLE_PRODUCTS, type FashionSampleProduct } from './content/fashionSampleProducts';
 import { NAV_PATHS, UTILITY_NAV, STRIP_NAV, MEGA_MENU, DRAWER_NAV, FOOTER_COLUMNS } from './content/navigation';
 import { productContentFor } from './content/productContent';
 import ProductGallery from './components/ProductGallery';
@@ -81,6 +82,8 @@ export interface Product {
   supplierSource?: string;
   supplierProductRef?: string;
   supplierUrl?: string | null;
+  /** Static demonstration concept (never purchasable, never in the database). */
+  isSample?: boolean;
   safetyClass?: import('./features/catalog/productSafety').ProductSafetyClass | null;
   safetyReviewStatus?: import('./features/catalog/productSafety').ProductSafetyReviewStatus | null;
   intendedSpecies?: string | null;
@@ -214,6 +217,50 @@ function mapCatalogProduct(p: CatalogProduct): Product {
 
 function mapCatalogCategory(c: CatalogCategory): AdminCategory {
   return { id: c.id, name: c.name, slug: c.slug, isActive: c.isActive, subs: [] };
+}
+
+// Fashion sample catalog — OFF unless VITE_FASHION_SAMPLE_CATALOG=true is set
+// at build/dev time (dev/staging only). Production never sets it, so Pet
+// production keeps loading only the Supabase catalog.
+const FASHION_SAMPLE_CATALOG = import.meta.env.VITE_FASHION_SAMPLE_CATALOG === 'true';
+
+function mapSampleProduct(s: FashionSampleProduct): Product {
+  return {
+    id: s.id,
+    name: s.name,
+    shortDesc: s.description,
+    description: s.description,
+    price: s.priceUsd,
+    originalPrice: s.priceUsd,
+    category: CATEGORY_CONTENT[s.categorySlug]?.name ?? s.categorySlug,
+    // Sample concepts have no inventory; stock 0 makes the detail page show
+    // them as unavailable, and addToCart refuses them outright.
+    stock: 0,
+    images: s.image ? [s.image] : [],
+    imageAlts: [s.name],
+    rating: 0,
+    reviews: 0,
+    isActive: true,
+    brand: '',
+    condition: 'New',
+    tags: [s.subcategory],
+    weight: '',
+    dimensions: '',
+    origin: '',
+    freeShipping: false,
+    shippingCost: '',
+    slug: s.slug,
+    isSample: true,
+    variants: s.variants.map((v) => ({
+      id: v.sku,
+      color: v.color ?? '',
+      size: v.size ?? 'One Size',
+      price: s.priceUsd,
+      salePrice: s.priceUsd,
+      stock: 0,
+      sku: v.sku,
+    })),
+  };
 }
 // Demo buyer rows for the admin Users panel — no credentials (Phase 3A: real
 // users come from Supabase Auth and are never represented with passwords).
@@ -481,6 +528,13 @@ function AppProvider({ children }: { children: ReactNode }) {
   // the homepage (their Best Seller slots fell back to whatever was loaded —
   // which is how one card ended up shown twice).
   useEffect(() => {
+    if (FASHION_SAMPLE_CATALOG) {
+      // Dev/staging only: static sample concepts replace the database catalog.
+      setProducts(FASHION_SAMPLE_PRODUCTS.map(mapSampleProduct));
+      setCategories(Object.entries(CATEGORY_CONTENT).map(([slug, c]) => ({ id: slug, name: c.name, slug, isActive: true, subs: [] })));
+      setCatalogLoaded(true);
+      return;
+    }
     let cancelled = false;
     void loadStorefrontCatalog({ limit: 60 }).then((cat) => {
       if (cancelled) return;
@@ -650,7 +704,7 @@ function AppProvider({ children }: { children: ReactNode }) {
       }
     }
   };
-  const addToCart = (p: Product) => { setCart(prev => { const ex = prev.find(i => i.product.id === p.id); return ex ? prev.map(i => i.product.id === p.id ? { ...i, quantity: i.quantity + 1 } : i) : [...prev, { product: p, quantity: 1 }]; }); setCartOpen(true); trackEvent('add_to_cart', { currency: 'USD', value: p.price, items: [{ item_id: p.id, item_name: p.name, price: p.price, quantity: 1 }], ...utmParams() }); notify(`Added to cart!`); };
+  const addToCart = (p: Product) => { if (p.isSample) { notify('Sample preview only — not available for purchase.'); return; } setCart(prev => { const ex = prev.find(i => i.product.id === p.id); return ex ? prev.map(i => i.product.id === p.id ? { ...i, quantity: i.quantity + 1 } : i) : [...prev, { product: p, quantity: 1 }]; }); setCartOpen(true); trackEvent('add_to_cart', { currency: 'USD', value: p.price, items: [{ item_id: p.id, item_name: p.name, price: p.price, quantity: 1 }], ...utmParams() }); notify(`Added to cart!`); };
   const removeFromCart = (id: string) => {
     const removed = cart.find(i => i.product.id === id);
     if (removed) trackEvent('remove_from_cart', { currency: 'USD', value: removed.product.price * removed.quantity, items: [{ item_id: removed.product.id, item_name: removed.product.name, price: removed.product.price, quantity: removed.quantity }], ...utmParams() });

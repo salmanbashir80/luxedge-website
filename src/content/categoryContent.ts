@@ -25,7 +25,7 @@ export interface CategoryContent {
   guides: { label: string; href: string }[];
 }
 
-/** The ten USA Fashion categories, in storefront order. */
+/** The eleven USA Fashion categories, in storefront order. */
 export const CATEGORY_CONTENT: Record<string, CategoryContent> = {
   'womens-clothing': {
     name: "Women's Clothing",
@@ -147,6 +147,18 @@ export const CATEGORY_CONTENT: Record<string, CategoryContent> = {
     ],
     guides: [],
   },
+  'makeup-and-beauty': {
+    name: 'Makeup and Beauty',
+    desc: 'Lips, face, eyes and makeup tools for everyday routines',
+    considerations: [
+      'Read the shade names on the listing and compare them with a product you already know, since shade names are not standardised between brands.',
+      'Check the full ingredient list and the product label on the supplier listing before ordering, and keep the labelling you receive with the product.',
+      'For foundation and concealer, consider the finish described on the listing, such as matte, satin or dewy, and choose the one that suits your skin type.',
+      'Look at the size and format of the product, and compare the quantity with how often you expect to use it.',
+      'Store cosmetics closed and away from heat and direct sunlight, and stop using any product that changes colour, smell or texture.',
+    ],
+    guides: [],
+  },
 };
 
 /** Ordered display names: the single list the navigation, admin and filters use. */
@@ -156,6 +168,13 @@ export const CATEGORY_NAMES: string[] = Object.values(CATEGORY_CONTENT).map((c) 
 export function categorySlugFor(name: string): string | null {
   return Object.keys(CATEGORY_CONTENT).find((slug) => CATEGORY_CONTENT[slug].name === name) ?? null;
 }
+
+/**
+ * Storefront allowlist: only these category slugs may appear on the public
+ * catalog. Pet-store categories are not in CATEGORY_CONTENT, so products that
+ * still carry them (historical Pet rows) stay in the database but are hidden.
+ */
+export const FASHION_CATEGORY_SLUGS: ReadonlySet<string> = new Set(Object.keys(CATEGORY_CONTENT));
 
 /** Lookup by slug, tolerant of a display name ("Women's Clothing"). */
 export function categoryContentFor(slugOrName: string): CategoryContent | null {

@@ -43,7 +43,7 @@ import {
 import { SEO_PRODUCTS_SELECT, SEO_CATEGORIES_SELECT, SEO_BLOG_POSTS_SELECT, SEO_MEDIA_SELECT } from './selects';
 import { buildSitemapGroups, renderHtmlSitemapBody } from './sitemap';
 import { merchantOfferExtras } from '../src/features/catalog/seo';
-import { categoryContentFor } from '../src/content/categoryContent';
+import { categoryContentFor, FASHION_CATEGORY_SLUGS } from '../src/content/categoryContent';
 import { authorFor } from '../src/content/authors';
 import { SSR_FOOTER_NAV } from '../src/content/navigation';
 import { productContentFor } from '../src/content/productContent';
@@ -115,6 +115,8 @@ function supabaseAnon(): string {
 }
 
 export interface ProductRow {
+  /** Fashion-only storefront gate: matched against the Fashion category ids. */
+  category_id?: string | null;
   id: string;
   slug?: string | null;
   name: string;
@@ -212,7 +214,7 @@ async function getProducts(): Promise<ProductRow[] | null> {
   // URLs — excluding the inline base64 blobs that made the embedded products
   // payload ~9 MB and every cache-expiry page load 1-2s slower.
   return cachedFetch('seo:products', TTL_DB, async () => {
-    const [products, images] = await Promise.all([
+    const [rawProducts, images] = await Promise.all([
       fetchJson<ProductRow[]>(
         base,
         key,
@@ -220,7 +222,13 @@ async function getProducts(): Promise<ProductRow[] | null> {
       ),
       getProductImages(),
     ]);
-    if (!products) return null;
+    if (!rawProducts) return null;
+    // Fashion-only storefront: Pet products never get a pre-rendered page or SEO
+    // metadata. Unknown categories fail closed (the whole list is withheld).
+    const cats = await getCategories();
+    if (!cats) return null;
+    const fashionCategoryIds = new Set(cats.filter((c) => c.id && FASHION_CATEGORY_SLUGS.has(c.slug)).map((c) => c.id as string));
+    const products = rawProducts.filter((p) => !!p.category_id && fashionCategoryIds.has(p.category_id));
     if (images && images.length) {
       const byProduct = new Map<string, ProductImageRow[]>();
       for (const img of images) {
@@ -264,6 +272,7 @@ async function getProductImages(): Promise<ProductImageRow[] | null> {
 }
 
 export interface CategoryRow {
+  id?: string;
   slug: string;
   name: string;
 }

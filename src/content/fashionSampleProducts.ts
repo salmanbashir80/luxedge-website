@@ -2,24 +2,40 @@
 //
 // These are NOT supplier records and are NOT written to any database. Every
 // entry is `sample: true` and `purchasable: false`, so nothing here can reach
-// checkout. Prices are illustrative placeholders, not supplier quotes. Images
-// are the category photographs in public/images/fashion (see SOURCES.md).
+// checkout. Prices are illustrative USD demonstration prices, not supplier
+// quotes or approved retail prices. Descriptions make no material, brand,
+// certification, review or delivery claims. Images are the category photographs
+// in public/images/fashion (see SOURCES.md); Makeup & Beauty has no photograph
+// yet, so its samples carry `image: null` and render the storefront placeholder.
 //
 // Category slugs match CATEGORY_CONTENT keys in ./categoryContent.ts.
+// Subcategory names must exist in FASHION_SUBCATEGORY_TREE (./fashionSubcategories.ts).
+
+export interface FashionSampleVariant {
+  sku: string;
+  color: string | null;
+  size: string | null;
+}
 
 export interface FashionSampleProduct {
   id: string;
   slug: string;
   name: string;
+  description: string;
   categorySlug: string;
+  /** Leaf subcategory name, as listed in FASHION_SUBCATEGORY_TREE. */
+  subcategory: string;
   /** Illustrative display price in USD. Not a supplier quote. */
   priceUsd: number;
-  image: string;
+  image: string | null;
+  colors: string[];
+  sizes: string[];
+  variants: FashionSampleVariant[];
   sample: true;
   purchasable: false;
 }
 
-const CATEGORY_IMAGES: Record<string, string> = {
+const CATEGORY_IMAGES: Record<string, string | null> = {
   'womens-clothing': '/images/fashion/women-clothing.jpg',
   'mens-clothing': '/images/fashion/men-clothing.jpg',
   'dresses-and-tops': '/images/fashion/dresses-tops.jpg',
@@ -30,91 +46,139 @@ const CATEGORY_IMAGES: Record<string, string> = {
   jewelry: '/images/fashion/jewelry.jpg',
   watches: '/images/fashion/watches.jpg',
   'sunglasses-and-accessories': '/images/fashion/sunglasses-accessories.jpg',
+  'makeup-and-beauty': null,
 };
 
-const SAMPLE_NAMES: Record<string, Array<[string, number]>> = {
-  'womens-clothing': [
-    ['Everyday Knit Cardigan', 38],
-    ['Relaxed Linen Blouse', 34],
-    ['Ribbed Lounge Set', 46],
-    ['Wrap Midi Skirt', 42],
-  ],
-  'mens-clothing': [
-    ['Classic Oxford Shirt', 36],
-    ['Lightweight Chino Shorts', 32],
-    ['Crew-Neck Essential Tee', 18],
-    ['Relaxed Denim Shirt', 44],
-  ],
-  'dresses-and-tops': [
-    ['A-Line Midi Dress', 52],
-    ['Satin Slip Dress', 48],
-    ['Puff-Sleeve Top', 29],
-    ['Wrap Maxi Dress', 58],
-  ],
-  'jeans-and-pants': [
-    ['High-Rise Straight Jeans', 49],
-    ['Wide-Leg Trousers', 54],
-    ['Slim Stretch Jeans', 46],
-    ['Tailored Jogger Pants', 39],
-  ],
-  'jackets-and-outerwear': [
-    ['Faux-Leather Moto Jacket', 88],
-    ['Quilted Puffer Vest', 62],
-    ['Denim Trucker Jacket', 68],
-    ['Lightweight Trench Coat', 96],
-  ],
-  'sneakers-and-shoes': [
-    ['White Everyday Sneakers', 64],
-    ['Suede Chelsea Boots', 92],
-    ['Leather Loafers', 78],
-    ['Canvas Slip-On Shoes', 42],
-  ],
-  'handbags-and-wallets': [
-    ['Structured Tote Bag', 84],
-    ['Quilted Crossbody Bag', 58],
-    ['Bifold Leather Wallet', 46],
-    ['Mini Shoulder Bag', 52],
-  ],
-  jewelry: [
-    ['Gold-Tone Hoop Earrings', 24],
-    ['Layered Chain Necklace', 32],
-    ['Minimal Stacking Rings Set', 28],
-    ['Pearl Drop Earrings', 36],
-  ],
-  watches: [
-    ['Minimalist Quartz Watch', 72],
-    ['Mesh-Band Analog Watch', 58],
-    ['Leather-Strap Dress Watch', 84],
-    ['Chronograph Sport Watch', 98],
-  ],
-  'sunglasses-and-accessories': [
-    ['Polarized Aviator Sunglasses', 46],
-    ['Oversized Square Sunglasses', 38],
-    ['Silk Scarf', 26],
-    ['Wide-Brim Sun Hat', 32],
-  ],
-};
+const APPAREL_SIZES = ['XS', 'S', 'M', 'L', 'XL'];
+const WOMENS_SHOE_SIZES = ['6', '7', '8', '9', '10'];
+const MENS_SHOE_SIZES = ['8', '9', '10', '11', '12'];
+const NONE: string[] = [];
+
+interface SampleSpec {
+  name: string;
+  categorySlug: string;
+  subcategory: string;
+  priceUsd: number;
+  colors: string[];
+  sizes: string[];
+}
+
+function spec(
+  name: string,
+  categorySlug: string,
+  subcategory: string,
+  priceUsd: number,
+  colors: string[] = NONE,
+  sizes: string[] = NONE,
+): SampleSpec {
+  return { name, categorySlug, subcategory, priceUsd, colors, sizes };
+}
+
+// The owner's assortment of exactly 40 sample concepts, in brief order.
+const SAMPLE_SPECS: SampleSpec[] = [
+  // Women's Dresses & Tops (5)
+  spec('Floral Midi Dress', 'dresses-and-tops', 'Midi', 58, ['Blue Floral', 'Pink Floral'], APPAREL_SIZES),
+  spec('Ribbed Knit Bodycon Mini Dress', 'dresses-and-tops', 'Bodycon', 34, ['Black', 'Cream'], APPAREL_SIZES),
+  spec('Satin Evening Maxi Dress', 'dresses-and-tops', 'Maxi', 78, ['Emerald', 'Champagne'], APPAREL_SIZES),
+  spec("Women's Classic Button-Up Blouse", 'dresses-and-tops', 'Blouses', 36, ['White', 'Sky Blue'], APPAREL_SIZES),
+  spec("Women's Basic Cotton Crop Top", 'dresses-and-tops', 'Crop Tops', 16, ['White', 'Black', 'Sage'], APPAREL_SIZES),
+
+  // Lingerie & Intimates (3)
+  spec('Lace Bralette and Brief Set', 'womens-clothing', 'Bralettes', 28, ['Black', 'Nude'], APPAREL_SIZES),
+  spec('Seamless High-Waist Shapewear', 'womens-clothing', 'Shapewear', 32, ['Black', 'Nude'], APPAREL_SIZES),
+  spec('Satin Camisole Sleep Set', 'womens-clothing', 'Satin Sleepwear', 42, ['Champagne', 'Black'], APPAREL_SIZES),
+
+  // Swimwear (3)
+  spec('Two-Piece Bikini Set', 'womens-clothing', 'Bikinis', 38, ['Black', 'Terracotta'], APPAREL_SIZES),
+  spec('One-Piece Ruched Swimsuit', 'womens-clothing', 'One-Piece Swimsuits', 46, ['Navy', 'Olive'], APPAREL_SIZES),
+  spec('Lightweight Beach Cover-Up', 'womens-clothing', 'Cover-Ups', 40, ['White', 'Sand'], ['One Size']),
+
+  // Women's Suits (2)
+  spec("Women's Tailored Blazer & Trouser Set", 'womens-clothing', 'Business Suits', 98, ['Black', 'Navy'], APPAREL_SIZES),
+  spec("Women's Casual Two-Piece Co-ord Set", 'womens-clothing', 'Two-Piece Sets', 56, ['Oatmeal', 'Olive'], APPAREL_SIZES),
+
+  // Women's Outerwear (2)
+  spec("Women's Cropped Denim Jacket", 'jackets-and-outerwear', 'Jackets', 64, ['Light Wash', 'Dark Wash'], APPAREL_SIZES),
+  spec("Women's Long Trench Coat", 'jackets-and-outerwear', 'Trench Coats', 124, ['Camel', 'Black'], APPAREL_SIZES),
+
+  // Men's Clothing (4)
+  spec("Men's Casual Oxford Shirt", 'mens-clothing', 'Shirts', 44, ['White', 'Light Blue'], APPAREL_SIZES),
+  spec("Men's Essential Crew Neck T-Shirt", 'mens-clothing', 'T-Shirts', 18, ['White', 'Black', 'Heather Grey'], APPAREL_SIZES),
+  spec("Men's Slim-Fit Chino Pants", 'mens-clothing', 'Pants', 52, ['Khaki', 'Navy', 'Stone'], ['28', '30', '32', '34', '36']),
+  spec("Men's Zip-Up Hoodie", 'mens-clothing', 'Hoodies', 48, ['Charcoal', 'Black'], APPAREL_SIZES),
+
+  // Shoes (4)
+  spec("Women's Classic White Sneakers", 'sneakers-and-shoes', "Women's Sneakers", 66, ['White'], WOMENS_SHOE_SIZES),
+  spec("Women's Block-Heel Sandals", 'sneakers-and-shoes', 'Sandals', 54, ['Tan', 'Black'], WOMENS_SHOE_SIZES),
+  spec("Men's Casual Lace-Up Sneakers", 'sneakers-and-shoes', "Men's Sneakers", 72, ['Black', 'Brown'], MENS_SHOE_SIZES),
+  spec("Women's Ankle Boots", 'sneakers-and-shoes', 'Boots', 88, ['Black', 'Tan'], WOMENS_SHOE_SIZES),
+
+  // Handbags & Wallets (3)
+  spec('Structured Tote Handbag', 'handbags-and-wallets', 'Tote Bags', 84, ['Black', 'Tan']),
+  spec('Mini Crossbody Bag', 'handbags-and-wallets', 'Crossbody Bags', 52, ['Black', 'Burgundy', 'Cream']),
+  spec("Women's Zip Wallet", 'handbags-and-wallets', 'Wallets', 34, ['Black', 'Navy']),
+
+  // Jewelry (5)
+  spec('Gold-Tone Layered Necklace', 'jewelry', 'Necklaces', 32, ['Gold-Tone']),
+  spec('Pearl Drop Earrings', 'jewelry', 'Earrings', 26, ['Ivory Pearl', 'Silver-Tone Pearl']),
+  spec('Stainless Steel Minimalist Ring', 'jewelry', 'Rings', 22, ['Silver-Tone', 'Gold-Tone'], ['5', '6', '7', '8', '9']),
+  spec('Adjustable Tennis Bracelet', 'jewelry', 'Bracelets', 28, ['Silver-Tone', 'Gold-Tone']),
+  spec('Minimalist Pendant Jewelry Set', 'jewelry', 'Jewelry Sets', 36, ['Gold-Tone', 'Silver-Tone']),
+
+  // Makeup & Beauty (5)
+  spec('Velvet Matte Lipstick', 'makeup-and-beauty', 'Lipstick', 18, ['Rose', 'Brick Red', 'Nude']),
+  spec('Liquid Foundation', 'makeup-and-beauty', 'Foundation', 24, ['Light', 'Medium', 'Deep']),
+  spec('Eyeshadow Palette', 'makeup-and-beauty', 'Eyeshadow', 30, ['Neutral', 'Warm']),
+  spec('Waterproof Mascara', 'makeup-and-beauty', 'Mascara', 16),
+  spec('Makeup Brush Set', 'makeup-and-beauty', 'Brushes', 26),
+
+  // Watches (2)
+  spec("Women's Minimalist Watch", 'watches', "Women's Watches", 68, ['Silver', 'Rose Gold']),
+  spec("Men's Classic Analog Watch", 'watches', "Men's Watches", 84, ['Silver', 'Black']),
+
+  // Sunglasses & Accessories (2)
+  spec("Women's Cat-Eye Sunglasses", 'sunglasses-and-accessories', 'Sunglasses', 42, ['Black', 'Tortoise']),
+  spec("Women's Fashion Belt", 'sunglasses-and-accessories', 'Belts', 30, ['Black', 'Brown'], ['S', 'M', 'L']),
+];
 
 function slugify(text: string): string {
   return text
     .toLowerCase()
+    .replace(/&/g, ' and ')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 }
 
-export const FASHION_SAMPLE_PRODUCTS: FashionSampleProduct[] = Object.entries(SAMPLE_NAMES).flatMap(
-  ([categorySlug, items]) =>
-    items.map(([name, priceUsd]) => {
-      const slug = `sample-${slugify(name)}`;
-      return {
-        id: slug,
-        slug,
-        name,
-        categorySlug,
-        priceUsd,
-        image: CATEGORY_IMAGES[categorySlug],
-        sample: true as const,
-        purchasable: false as const,
-      };
-    }),
-);
+function buildVariants(slug: string, colors: string[], sizes: string[]): FashionSampleVariant[] {
+  const colorChoices: Array<string | null> = colors.length > 0 ? colors : [null];
+  const sizeChoices: Array<string | null> = sizes.length > 0 ? sizes : [null];
+  const variants: FashionSampleVariant[] = [];
+  for (const color of colorChoices) {
+    for (const size of sizeChoices) {
+      const parts = [slug, color, size].filter((part): part is string => Boolean(part));
+      variants.push({ sku: slugify(parts.join('-')), color, size });
+    }
+  }
+  return variants;
+}
+
+export const FASHION_SAMPLE_PRODUCTS: FashionSampleProduct[] = SAMPLE_SPECS.map((s) => {
+  const slug = `sample-${slugify(s.name)}`;
+  return {
+    id: slug,
+    slug,
+    name: s.name,
+    description:
+      `Sample catalog concept in ${s.subcategory}. Materials, sizing, supplier and delivery details ` +
+      'are pending verification and not yet confirmed.',
+    categorySlug: s.categorySlug,
+    subcategory: s.subcategory,
+    priceUsd: s.priceUsd,
+    image: CATEGORY_IMAGES[s.categorySlug] ?? null,
+    colors: s.colors,
+    sizes: s.sizes,
+    variants: buildVariants(slug, s.colors, s.sizes),
+    sample: true as const,
+    purchasable: false as const,
+  };
+});

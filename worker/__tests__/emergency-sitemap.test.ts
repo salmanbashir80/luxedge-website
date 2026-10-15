@@ -20,9 +20,9 @@ function locPaths(xml: string): string[] {
 }
 
 const PRODUCT = {
-  id: 'p1', slug: 'dog-bed', name: 'Verified Dog Bed', status: 'active', price: 49.99,
+  id: 'p1', slug: 'everyday-knit-cardigan', name: 'Everyday Knit Cardigan', status: 'active', price: 49.99, category_id: 'cat-w',
   description: 'A verified catalog description with enough factual detail for a customer to understand this product before purchasing.',
-  image_url: 'https://example.test/dog-bed.jpg', commerce_readiness: 'COMMERCE_READY',
+  image_url: 'https://example.test/cardigan.jpg', commerce_readiness: 'COMMERCE_READY',
 };
 
 describe('sitemap.xml — dynamic vs emergency mode', () => {
@@ -31,7 +31,7 @@ describe('sitemap.xml — dynamic vs emergency mode', () => {
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon');
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
       if (url.includes('/rest/v1/products?')) return new Response(JSON.stringify([PRODUCT]));
-      if (url.includes('/rest/v1/categories?')) return new Response(JSON.stringify([{ slug: 'dog-supplies', name: 'Dog supplies' }]));
+      if (url.includes('/rest/v1/categories?')) return new Response(JSON.stringify([{ id: 'cat-w', slug: 'womens-clothing', name: "Women's Clothing" }]));
       if (url.includes('/rest/v1/blog_posts?')) return new Response(JSON.stringify([]));
       return new Response(JSON.stringify([]));
     }));
@@ -41,8 +41,8 @@ describe('sitemap.xml — dynamic vs emergency mode', () => {
     expect(res.headers.get('x-luxedge-sitemap-mode')).toBe('dynamic');
     const paths = locPaths(await res.text());
     expect(paths).toContain('/');
-    expect(paths).toContain('/product/dog-bed');
-    expect(paths).toContain('/category/dog-supplies');
+    expect(paths).toContain('/product/everyday-knit-cardigan');
+    expect(paths).toContain('/category/womens-clothing');
   });
 
   it('serves a valid HTTP 200 emergency sitemap when the database is unavailable (empty config)', async () => {

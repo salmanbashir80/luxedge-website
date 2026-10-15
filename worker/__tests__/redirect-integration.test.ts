@@ -53,7 +53,7 @@ describe('worker fetch — legacy UUID product URL redirect', () => {
   it('known UUID param → 301 with slug Location', async () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'https://test.supabase.co');
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon');
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify([{
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(String(url).includes('/categories') ? [{ id: 'cat-fashion', slug: 'womens-clothing', name: "Women's Clothing" }] : [{ category_id: 'cat-fashion',
       id: '9e1927f7-cde7-46bc-9e14-662dca6c6b3a',
       slug: 'horse-grooming-kit-12-piece', name: 'Horse Grooming Kit',
     }]))));

@@ -460,7 +460,7 @@ const err = (k: string) => (errors[k] ? <p className="text-red-500 text-xs mt-1"
 
             {/* STEP 2 — DELIVERY (address + method) */}
             <section className="bg-white rounded-2xl border border-luxe-silver/70 p-4 sm:p-6 shadow-sm">
-              <StepTitle n={2} title="Delivery" hint="We verify your address against USPS when available for accurate shipping." />
+              <StepTitle n={2} title="Delivery" hint="We ship to United States addresses only. We verify your address against USPS when available." />
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label htmlFor="checkout-name" className={labelCls}>Full name *</label>

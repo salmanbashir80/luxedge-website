@@ -13,6 +13,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import { readPostgrestPath } from '../worker/d1/read';
+import { FASHION_CATEGORY_SLUGS } from '../src/content/categoryContent';
 import { getDataRuntime, isD1Backend } from '../worker/d1/runtime';
 
 interface FeedProductRow {
@@ -80,11 +81,13 @@ export default async function handler(_req: IncomingMessage, res: ServerResponse
     readPostgrestPath<FeedImageRow>(
       'product_images?select=product_id,url,public_url,sort_order,is_primary&url=not.like.data:*&limit=5000',
     ),
-    readPostgrestPath<{ id: string; name: string }>('categories?select=id,name&limit=500'),
+    readPostgrestPath<{ id: string; name: string; slug: string }>('categories?select=id,name,slug&limit=500'),
   ]);
 
   const catName = new Map<string, string>();
   for (const c of catRows || []) catName.set(c.id, c.name);
+  // Fashion-only feed: products outside the ten Fashion categories are never submitted.
+  const fashionCategoryIds = new Set((catRows || []).filter((c) => FASHION_CATEGORY_SLUGS.has(c.slug)).map((c) => c.id));
 
   if (!prodRows) {
     res.statusCode = 502;
@@ -108,7 +111,7 @@ export default async function handler(_req: IncomingMessage, res: ServerResponse
   const products = prodRows.map((p) => ({ ...p, category: p.category_id ? catName.get(p.category_id) || null : null, images: [] as string[] })).filter((p) => {
     const price = Number(p.price);
     const imgs = (imgsByP.get(p.id) || []).sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0) || a.sort_order - b.sort_order);
-    return price > 0 && imgs.length > 0;
+    return price > 0 && imgs.length > 0 && !!p.category_id && fashionCategoryIds.has(p.category_id);
   });
 
   const items = products.map((p) => {
@@ -145,7 +148,7 @@ export default async function handler(_req: IncomingMessage, res: ServerResponse
     `  <channel>\n` +
     `    <title>Luxedge</title>\n` +
     `    <link>https://luxedge.us</link>\n` +
-    `    <description>Luxedge pet essentials — live product feed</description>\n` +
+    `    <description>Luxedge fashion — live product feed</description>\n` +
     items +
     `\n  </channel>\n</rss>`;
 

@@ -1,6 +1,7 @@
 import { SITEMAP_PRODUCTS_SELECT, SITEMAP_CATEGORIES_SELECT, SITEMAP_BLOG_POSTS_SELECT } from './selects';
 import { isHeldBlog, isHeldProduct, isBlogPublic } from '../src/content/reviewHolds';
 import { isPubliclyListableProduct } from '../src/content/productEligibility';
+import { FASHION_CATEGORY_SLUGS } from '../src/content/categoryContent';
 import { readPostgrestPath } from './d1/read';
 
 // Dynamic sitemap source. Media routes are noindexed and deliberately excluded.
@@ -46,8 +47,8 @@ async function fetchRows<T>(path: string): Promise<T | null> {
   // exactly as the previous `JSON.parse(text) as T` cast asserted it.
   return (await readPostgrestPath(path)) as unknown as T | null;
 }
-interface ProductRow { id: string; slug?: string | null; name?: string | null; status?: string | null; description?: string | null; short_description?: string | null; price?: number | null; image_url?: string | null; supplier_source?: string | null; cost_price?: number | null; us_inventory?: boolean | null; stock_status?: string | null; inventory_qty?: number | null; commerce_readiness?: string | null; }
-interface CategoryRow { slug: string; name?: string | null; }
+interface ProductRow { id: string; category_id?: string | null; slug?: string | null; name?: string | null; status?: string | null; description?: string | null; short_description?: string | null; price?: number | null; image_url?: string | null; supplier_source?: string | null; cost_price?: number | null; us_inventory?: boolean | null; stock_status?: string | null; inventory_qty?: number | null; commerce_readiness?: string | null; }
+interface CategoryRow { id: string; slug: string; name?: string | null; }
 interface BlogRow { slug: string; title?: string | null; }
 
 const xmlEscape = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
@@ -92,6 +93,9 @@ export async function buildSitemapGroups(): Promise<SitemapGroups | null> {
     fetchRows<BlogRow[]>(`blog_posts?select=${SITEMAP_BLOG_POSTS_SELECT}&status=eq.published&order=slug.asc&limit=500`),
   ]);
   if (!prods || !cats || !blogs) return null;
+  // Fashion-only storewide: Pet categories and their products never enter the URL set.
+  const fashionCats = cats.filter((c) => FASHION_CATEGORY_SLUGS.has(c.slug));
+  const fashionCategoryIds = new Set(fashionCats.map((c) => c.id));
   const guides = isBlogPublic()
     // Held posts keep returning 404, so they must never be advertised here.
     ? blogs.filter((b) => !isHeldBlog(b.slug))
@@ -100,12 +104,12 @@ export async function buildSitemapGroups(): Promise<SitemapGroups | null> {
     // The blog is noindexed while isBlogPublic() is false, so its index page is
     // not published URL inventory either.
     pages: STATIC_ROUTES.filter((r) => isBlogPublic() || r.href !== '/blog').map((r) => ({ ...r })),
-    categories: cats.map((c) => ({ href: `/category/${c.slug}`, label: c.name?.trim() || fromSlug(c.slug) })),
+    categories: fashionCats.map((c) => ({ href: `/category/${c.slug}`, label: c.name?.trim() || fromSlug(c.slug) })),
     guides: guides.map((b) => ({ href: `/blog/${b.slug}`, label: b.title?.trim() || fromSlug(b.slug) })),
     // Mirrors the storefront visibility gate: held + not-publicly-listable
     // products are excluded exactly as they are from the XML feed.
     products: prods
-      .filter((p) => !isHeldProduct(p.slug) && isPubliclyListableProduct(p))
+      .filter((p) => !!p.category_id && fashionCategoryIds.has(p.category_id) && !isHeldProduct(p.slug) && isPubliclyListableProduct(p))
       .map((p) => ({ href: `/product/${p.slug || p.id}`, label: p.name?.trim() || fromSlug(p.slug || p.id) })),
   };
 }
