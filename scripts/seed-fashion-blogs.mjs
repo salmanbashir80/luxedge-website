@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { LINGERIE_BLOGS } from './lingerie-blogs-data.mjs';
 
 const envText = fs.readFileSync('.env', 'utf8');
 const getEnv = (k) => {
@@ -94,7 +95,7 @@ True style comes from knowing how pieces interact. Focus on precise fit, complem
     slug: 'lingerie-sizing-and-fit-guide',
     title: 'Lingerie Sizing and Fit Guide: Finding Your Perfect Silhouette',
     excerpt: 'A definitive guide to taking accurate bust, underbust, and hip measurements, choosing the right support style, and selecting flattering silhouettes for everyday comfort and special occasions.',
-    image: '/images/fashion/samples/sample-lace-bralette-and-brief-set.svg',
+    image: '/images/fashion/lingerie-bralette.jpg',
     tags: ['lingerie', 'sizing-guide', 'intimates', 'fit-advice'],
     author_name: 'Luxedge Editorial Team',
     author_id: 'editorial',
@@ -530,7 +531,7 @@ Master the fundamentals of skin prep and precise color placement to highlight yo
     slug: 'delicate-fabric-care-satin-lace-silk',
     title: 'Caring for Delicate Fabrics: How to Wash, Dry, and Store Silk, Satin, and Lace',
     excerpt: 'Preserve the luster of silk charmeuse, the shape of sheer lace, and the structure of satin evening wear with professional gentle care methods.',
-    image: '/images/fashion/samples/sample-silk-satin-robe-and-babydoll-set.svg',
+    image: '/images/fashion/lingerie-robe.jpg',
     tags: ['fabric-care', 'silk', 'satin', 'lace', 'garment-care'],
     author_name: 'Luxedge Editorial Team',
     author_id: 'editorial',
@@ -727,7 +728,8 @@ Apply a quality leather conditioner once or twice a year to keep the leather sup
 ## The Bottom Line
 
 Keep leather away from excessive heat and standing water, condition it lightly every season, and hang it on sturdy contoured hangers to enjoy it for decades.`
-  }
+  },
+  ...LINGERIE_BLOGS
 ];
 
 async function seedFashionBlogs() {

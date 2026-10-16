@@ -548,6 +548,9 @@ function AppProvider({ children }: { children: ReactNode }) {
   }, [cart]);
   const closeCart = useCallback(() => setCartOpen(false), []);
 
+  // Global Adsterra monetization (Social Bar & Popunder across storefront)
+  useAdsterraPop();
+
   // Phase 3B: load the real storefront catalog from Supabase when it is
   // configured and populated. On any failure (unconfigured, unreachable,
   // empty DB) the catalog stays EMPTY — never demo/fallback products.
@@ -3235,6 +3238,7 @@ function ShopPage() {
             )}
             {/* Ad: After Product Row */}
             <AdSenseAd placement="shop_after_row" />
+            <AdsterraBanner className="mt-8 mb-4" />
           </div>
         </div>
       </div>
