@@ -78,13 +78,12 @@ describe('loadAIProviders', () => {
     expect(providers.length).toBe(DEFAULT_AI_PROVIDERS.length);
   });
 
-  it('defaults to OpenRouter as the default provider (owner chain: openrouter only, no paid fallbacks)', () => {
-    expect(DEFAULT_AI_PROVIDERS.find((p) => p.isDefault)?.id).toBe('openrouter');
-    const or = DEFAULT_AI_PROVIDERS.find((p) => p.id === 'openrouter');
-    expect(or?.defaultModel).toBe(OPENROUTER_DEFAULT_MODEL);
-    expect(or?.enabled).toBe(true);
-    // DeepSeek enabled by default (server-side key is commonly configured);
-    // Codex is available on demand (still never the default).
+  it('defaults to Gemini as the default provider (owner chain: gemini primary, openrouter fallback)', () => {
+    expect(DEFAULT_AI_PROVIDERS.find((p) => p.isDefault)?.id).toBe('gemini');
+    const gem = DEFAULT_AI_PROVIDERS.find((p) => p.id === 'gemini');
+    expect(gem?.defaultModel).toBe('gemini-2.5-flash');
+    expect(gem?.enabled).toBe(true);
+    expect(DEFAULT_AI_PROVIDERS.find((p) => p.id === 'openrouter')?.enabled).toBe(true);
     expect(DEFAULT_AI_PROVIDERS.find((p) => p.id === 'deepseek')?.enabled).toBe(true);
     expect(DEFAULT_AI_PROVIDERS.find((p) => p.id === 'codex')?.enabled).toBe(true);
     expect(DEFAULT_AI_PROVIDERS.find((p) => p.id === 'codex')?.isDefault).toBe(false);
@@ -97,8 +96,8 @@ describe('loadAIProviders', () => {
     expect(ids).toContain('openai');
     expect(ids).toContain('anthropic');
     expect(ids).not.toContain('qwen');
-    // OpenRouter is the default; every provider has at least one model
-    expect(DEFAULT_AI_PROVIDERS.find((p) => p.id === 'openrouter')?.isDefault).toBe(true);
+    // Gemini is the default; every provider has at least one model
+    expect(DEFAULT_AI_PROVIDERS.find((p) => p.id === 'gemini')?.isDefault).toBe(true);
     expect(DEFAULT_AI_PROVIDERS.every((p) => p.models.length > 0 && p.defaultModel)).toBe(true);
   });
 
@@ -165,8 +164,8 @@ describe('loadAIProviders', () => {
     const allDisabled = DEFAULT_AI_PROVIDERS.map((p) => ({ ...p, enabled: false }));
     const providers = loadAIProviders(memoryStorage({ luxedge_ai_providers: JSON.stringify(allDisabled) }));
     expect(providers.some((p) => p.enabled)).toBe(true);
-    expect(providers.find((p) => p.id === 'openrouter')?.enabled).toBe(true);
-    expect(providers.find((p) => p.isDefault)?.id).toBe('openrouter');
+    expect(providers.find((p) => p.id === 'gemini')?.enabled).toBe(true);
+    expect(providers.find((p) => p.isDefault)?.id).toBe('gemini');
   });
 });
 
@@ -236,15 +235,17 @@ describe('resolveActiveProvider', () => {
 });
 
 describe('provider routing settings', () => {
-  it('defaults to OpenRouter primary + no paid fallback', () => {
-    expect(DEFAULT_PROVIDER_SETTINGS.defaultProviderId).toBe('openrouter');
-    expect(DEFAULT_PROVIDER_SETTINGS.fallbackProviderId).toBeNull();
+  it('defaults to Gemini primary + OpenRouter fallback', () => {
+    expect(DEFAULT_PROVIDER_SETTINGS.defaultProviderId).toBe('gemini');
+    expect(DEFAULT_PROVIDER_SETTINGS.fallbackProviderId).toBe('openrouter');
     expect(loadProviderSettings(memoryStorage({}))).toEqual(DEFAULT_PROVIDER_SETTINGS);
   });
 
-  it('migrates the old shipped default chain (deepseek → codex) to openrouter → null', () => {
-    const s = memoryStorage({ luxedge_ai_provider_settings: JSON.stringify({ defaultProviderId: 'deepseek', fallbackProviderId: 'codex' }) });
-    expect(loadProviderSettings(s)).toEqual({ defaultProviderId: 'openrouter', fallbackProviderId: null });
+  it('migrates the old shipped default chains to gemini → openrouter', () => {
+    const s1 = memoryStorage({ luxedge_ai_provider_settings: JSON.stringify({ defaultProviderId: 'deepseek', fallbackProviderId: 'codex' }) });
+    expect(loadProviderSettings(s1)).toEqual({ defaultProviderId: 'gemini', fallbackProviderId: 'openrouter' });
+    const s2 = memoryStorage({ luxedge_ai_provider_settings: JSON.stringify({ defaultProviderId: 'openrouter', fallbackProviderId: null }) });
+    expect(loadProviderSettings(s2)).toEqual({ defaultProviderId: 'gemini', fallbackProviderId: 'openrouter' });
   });
 
   it('preserves an explicit owner customization that is not the old shipped default', () => {

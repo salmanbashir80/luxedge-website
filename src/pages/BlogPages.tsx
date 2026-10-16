@@ -12,6 +12,7 @@ import { useApp } from '../App';
 import { loadPublishedBlogBySlug } from '../services/blog';
 import { isHeldProduct, isLinkablePublicPath } from '../content/reviewHolds';
 import AdSenseAd from '../components/AdSenseAd';
+import AdsterraBanner from '../components/AdsterraBanner';
 import { BookOpen01, PencilLine, Calendar, ArrowRight, Send01, Eye, ChevronRight, ArrowLeft, Upload01, Tag01 } from '@untitledui/icons';
 
 const blogSlug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -257,6 +258,7 @@ export function BlogDetailPage() {
 
           {/* Ad: End of Article */}
           <AdSenseAd placement="blog_after_article" />
+          <AdsterraBanner />
 
           {/* Related Posts */}
           {relatedPosts.length > 0 && (

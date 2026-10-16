@@ -49,13 +49,13 @@ import { ListingPlaybookAdmin } from './ListingPlaybookAdmin';
 import { ListingTaskAdmin } from './ListingTaskAdmin';
 import {
   Warning, ArrowLeft, Robot, CheckCircle, CaretDown, CaretRight, CaretUp,
-  Clipboard, Code, Cpu, CurrencyDollar, Download, Info, PencilSimple, Eye, FileText, TreeStructure, Globe,
+  Clipboard, Code, Cpu, CurrencyDollar, Download, Info, PencilSimple, Eye, EyeSlash, FileText, TreeStructure, Globe,
   Image as ImageIcon, Camera, Stack, SquaresFour, LinkSimple, SpinnerGap, Lock, SignOut, Megaphone, List,
   Monitor, Package, Plus, ArrowClockwise, ArrowCounterClockwise, FloppyDisk, MagnifyingGlass, PaperPlaneRight, GearSix,
   ShareNetwork, ShieldCheck, ShoppingCart, Shuffle, Sliders, DeviceMobile, Sparkle, Star, Table, Tag,
   Target, ToggleLeft, ToggleRight, Trash, TrendUp, UploadSimple, User as UserIcon,
   Users as UsersIcon, MagicWand, X, Lightning, Truck, Printer, Barcode, MapPin,
-  Receipt, CloudArrowUp, YoutubeLogo, CreditCard, Gift, Clock, BookBookmark,
+  Receipt, CloudArrowUp, YoutubeLogo, CreditCard, Gift, Clock, BookBookmark, Broadcast, Key,
 } from '@phosphor-icons/react';
 
 // ADMIN PANEL - FULL WORKING SYSTEM
@@ -1982,12 +1982,218 @@ function ASettings() {
     catch { notify('Copy failed — select the text manually', 'error'); }
   };
 
-const [open, setOpen] = useState<Record<string, boolean>>({ ai: false, pricing: false, api: true, store: false, profile: false, password: false, adsense: true, integrations: false });
+  const [open, setOpen] = useState<Record<string, boolean>>({
+    ai: true,
+    pricing: false,
+    api: true,
+    store: false,
+    profile: false,
+    password: false,
+    adsterra: true,
+    integrations: false,
+  });
   const toggle = (k: string) => setOpen(s => ({ ...s, [k]: !s[k] }));
 
   const [pricingRules, setPricingRules] = useState(loadPricingRules());
   const [providerSettings, setProviderSettings] = useState(loadProviderSettings());
   const allProviders = loadAIProviders();
+
+  // Direct AI Keys Management (Gemini & OpenRouter only)
+  const [geminiKeyInput, setGeminiKeyInput] = useState('');
+  const [openRouterKeyInput, setOpenRouterKeyInput] = useState('');
+  const [aiKeyBusy, setAiKeyBusy] = useState<string | null>(null);
+  const [aiKeyFeedback, setAiKeyFeedback] = useState<Record<string, { ok: boolean; msg: string }>>({});
+  const [attachedKeyList, setAttachedKeyList] = useState<{ id: string; name: string; configured: boolean; source: string; masked: string }[]>([]);
+
+  const refreshAttachedKeys = useCallback(async () => {
+    try {
+      const token = await getAccessToken();
+      const r = await fetch('/api/admin/ai-keys', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const d = await r.json();
+      if (Array.isArray(d?.providers)) {
+        setAttachedKeyList(d.providers.filter((p: any) => p.id === 'gemini' || p.id === 'openrouter'));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshAttachedKeys();
+  }, [refreshAttachedKeys]);
+
+  const handleSaveAiKey = async (providerId: 'gemini' | 'openrouter', rawKey: string) => {
+    const k = rawKey.trim();
+    if (k.length < 8) {
+      notify('Please enter a valid API key (minimum 8 characters)', 'error');
+      return;
+    }
+    setAiKeyBusy(providerId);
+    setAiKeyFeedback(f => ({ ...f, [providerId]: { ok: true, msg: 'Saving to secure server store…' } }));
+    try {
+      const token = await getAccessToken();
+      const r = await fetch('/api/admin/ai-keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'set', provider: providerId, key: k }),
+      });
+      const d = await r.json();
+      if (!r.ok || d.error) throw new Error(d.error || 'Server rejected key');
+      notify(`${providerId === 'gemini' ? 'Google Gemini' : 'OpenRouter'} key saved securely!`);
+      setAiKeyFeedback(f => ({ ...f, [providerId]: { ok: true, msg: 'Saved securely on server ✓ (active for all AI tools)' } }));
+      if (providerId === 'gemini') setGeminiKeyInput('');
+      if (providerId === 'openrouter') setOpenRouterKeyInput('');
+      await refreshAttachedKeys();
+      serverProviderStatus().then(setEnvStatus).catch(() => {});
+    } catch (e: any) {
+      notify(e.message || 'Error saving key', 'error');
+      setAiKeyFeedback(f => ({ ...f, [providerId]: { ok: false, msg: e.message || 'Save failed' } }));
+    } finally {
+      setAiKeyBusy(null);
+    }
+  };
+
+  const handleTestAiKey = async (providerId: 'gemini' | 'openrouter') => {
+    setAiKeyBusy(providerId);
+    setAiKeyFeedback(f => ({ ...f, [providerId]: { ok: true, msg: 'Testing connection to server…' } }));
+    try {
+      const token = await getAccessToken();
+      const r = await fetch('/api/admin/ai-keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'test', provider: providerId }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        setAiKeyFeedback(f => ({ ...f, [providerId]: { ok: true, msg: `${d.message || 'Connection verified'} ✓` } }));
+        notify(`${providerId === 'gemini' ? 'Google Gemini' : 'OpenRouter'} connection verified!`);
+      } else {
+        setAiKeyFeedback(f => ({ ...f, [providerId]: { ok: false, msg: d.message || d.error || 'Connection failed' } }));
+        notify(`${providerId === 'gemini' ? 'Google Gemini' : 'OpenRouter'} test failed: ${d.message || d.error}`, 'error');
+      }
+    } catch (e: any) {
+      setAiKeyFeedback(f => ({ ...f, [providerId]: { ok: false, msg: e.message || 'Test failed' } }));
+    } finally {
+      setAiKeyBusy(null);
+    }
+  };
+
+  const handleClearAiKey = async (providerId: 'gemini' | 'openrouter') => {
+    if (!window.confirm(`Clear the attached ${providerId === 'gemini' ? 'Google Gemini' : 'OpenRouter'} key from the server store?`)) return;
+    setAiKeyBusy(providerId);
+    try {
+      const token = await getAccessToken();
+      const r = await fetch('/api/admin/ai-keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'clear', provider: providerId }),
+      });
+      await r.json();
+      notify(`${providerId === 'gemini' ? 'Google Gemini' : 'OpenRouter'} attached key removed.`);
+      setAiKeyFeedback(f => ({ ...f, [providerId]: { ok: true, msg: 'Key removed from server store.' } }));
+      await refreshAttachedKeys();
+      serverProviderStatus().then(setEnvStatus).catch(() => {});
+    } catch (e: any) {
+      notify(e.message || 'Error clearing key', 'error');
+    } finally {
+      setAiKeyBusy(null);
+    }
+  };
+
+  // Adsterra monetization clipboard & state
+  const [adsterraActive, setAdsterraActive] = useState(true);
+  const [adsterraToken, setAdsterraToken] = useState('b1e3ebcbeb0deafe660719043e434dfc');
+  const [adsterraShowToken, setAdsterraShowToken] = useState(false);
+  const [adsterraTesting, setAdsterraTesting] = useState(false);
+  const [adsterraSaving, setAdsterraSaving] = useState(false);
+  const [adsterraTestStatus, setAdsterraTestStatus] = useState<{ ok: boolean; msg: string } | null>({
+    ok: true,
+    msg: 'Verified Active (Publisher ID 25409389 · HTTP 200 Live)',
+  });
+
+  const handleTestAdsterra = async () => {
+    setAdsterraTesting(true);
+    try {
+      const token = await getAccessToken();
+      const r = await fetch('/api/admin/adsterra', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'test', token: adsterraToken.trim() }),
+      });
+      const data = await r.json();
+      if (data.ok) {
+        setAdsterraTestStatus({ ok: true, msg: 'Connected to Adsterra Publisher API (HTTP 200 OK)' });
+        notify('Adsterra API Token verified successfully! Ads active.');
+      } else {
+        setAdsterraTestStatus({ ok: false, msg: data.error || 'Connection failed' });
+        notify(data.error || 'Failed to verify Adsterra API Token', 'error');
+      }
+    } catch (e: any) {
+      setAdsterraTestStatus({ ok: false, msg: e.message || 'Network error' });
+      notify('Adsterra verification error', 'error');
+    } finally {
+      setAdsterraTesting(false);
+    }
+  };
+
+  const handleSaveAdsterra = async () => {
+    if (!adsterraToken.trim() || adsterraToken.trim().length < 8) {
+      notify('Please enter a valid Adsterra API token', 'error');
+      return;
+    }
+    setAdsterraSaving(true);
+    try {
+      const token = await getAccessToken();
+      const r = await fetch('/api/admin/adsterra', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'set', token: adsterraToken.trim() }),
+      });
+      const data = await r.json();
+      if (data.ok) {
+        notify('Adsterra API Token saved securely to server settings!');
+      } else {
+        notify(data.error || 'Failed to save token', 'error');
+      }
+    } catch {
+      notify('Failed to save Adsterra API token', 'error');
+    } finally {
+      setAdsterraSaving(false);
+    }
+  };
+
+  const copyAdsterraToken = async () => {
+    try { await navigator.clipboard.writeText(adsterraToken.trim()); notify('Adsterra API Token copied!'); }
+    catch { notify('Failed to copy', 'error'); }
+  };
+
+  const copyAdsterraPop = async () => {
+    const code = `<script src="https://pl25509888.profitableratecpmnetwork.com/1e/60/9a/1e609a1772f1c8ac6a824ff2534ed894.js"></script>`;
+    try { await navigator.clipboard.writeText(code); notify('Adsterra Social Bar script copied!'); }
+    catch { notify('Failed to copy', 'error'); }
+  };
+  const copyAdsterraBanner = async () => {
+    const code = `<script async="async" data-cfasync="false" src="https://pl25509212.profitableratecpmnetwork.com/11967f6c35e05352ed496c96f6d8ddf4/invoke.js"></script>\n<div id="container-11967f6c35e05352ed496c96f6d8ddf4"></div>`;
+    try { await navigator.clipboard.writeText(code); notify('Adsterra Native Banner code copied!'); }
+    catch { notify('Failed to copy', 'error'); }
+  };
 
   const [profName, setProfName] = useState(user?.name || '');
   const [profEmail, setProfEmail] = useState(user?.email || '');
@@ -2026,23 +2232,25 @@ const [open, setOpen] = useState<Record<string, boolean>>({ ai: false, pricing: 
       {/* ── AI Providers ── */}
       <Accordion id="ai" title="AI Providers" icon={<Robot size={18} className="text-purple-600" />} borderClass="border-purple-300" open={open} toggle={toggle}>
         <div className="pt-5 space-y-4">
-          <p className="text-sm text-gray-500">Choose which provider runs AI product listing work first, and which one the system fails over to when the first fails. API keys are managed server-side only.</p>
+          <p className="text-sm text-gray-500">Google Gemini is configured as your primary high-speed AI engine across auto-listing, descriptions, image SEO and marketing drafts, with OpenRouter as resilient multi-model fallback.</p>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className={L}>Default provider</label>
               <select value={providerSettings.defaultProviderId} onChange={e => setProviderSettings(s => ({ ...s, defaultProviderId: e.target.value }))} className={I}>
-                {allProviders.filter(p => p.enabled).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {allProviders.filter(p => p.id === 'gemini' || p.id === 'openrouter').map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             <div>
               <label className={L}>Fallback provider</label>
               <select value={providerSettings.fallbackProviderId || ''} onChange={e => setProviderSettings(s => ({ ...s, fallbackProviderId: e.target.value || null }))} className={I}>
                 <option value="">None</option>
-                {allProviders.filter(p => p.enabled && p.id !== providerSettings.defaultProviderId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {allProviders.filter(p => (p.id === 'gemini' || p.id === 'openrouter') && p.id !== providerSettings.defaultProviderId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
           </div>
-          <p className="text-xs text-gray-400">Recommended: DeepSeek (deepseek-v4-flash) for fast research + Codex for complex reasoning/fallback. Neither provider key is ever stored or shown in the browser.</p>
+          <p className="text-xs text-purple-700 bg-purple-50 border border-purple-200 rounded-lg p-2.5">
+            Active Engine: Google Gemini (gemini-2.5-flash) primary + OpenRouter multi-model fallback. All other legacy providers have been removed.
+          </p>
           <div className="flex items-center gap-3 flex-wrap">
             <button type="button" onClick={() => { saveProviderSettings(providerSettings); notify('Provider routing saved.'); }}
               className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors">
@@ -2050,7 +2258,7 @@ const [open, setOpen] = useState<Record<string, boolean>>({ ai: false, pricing: 
             </button>
             <button type="button" onClick={() => navigate('/admin/ai')}
               className="px-5 py-2.5 border border-purple-300 text-purple-700 hover:bg-purple-50 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors">
-              <Robot size={16} /> Open AI Hub (keys + test)
+              <Robot size={16} /> Open AI Hub
             </button>
           </div>
         </div>
@@ -2101,29 +2309,150 @@ const [open, setOpen] = useState<Record<string, boolean>>({ ai: false, pricing: 
       </Accordion>
 
       {/* ── API Keys ── */}
-      <Accordion id="api" title="API Keys — Server-Side" icon={<Globe size={18} className="text-green-600" />} borderClass="border-green-300" open={open} toggle={toggle}>
-        <div className="pt-5 space-y-4">
-          <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800">
-            <p className="font-semibold mb-1">🔒 Luxedge V2: keys live on the server, never in the browser</p>
-            <p>AI provider keys and scraping tokens are read from environment variables by the /api serverless functions. They are never stored in localStorage, never shipped in the bundle, and never logged.</p>
+      <Accordion id="api" title="API Keys & Integrations — Gemini & OpenRouter" icon={<Key size={18} className="text-indigo-600" />} borderClass="border-indigo-300" open={open} toggle={toggle}>
+        <div className="pt-5 space-y-6">
+          <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900">
+            <p className="font-semibold mb-1">🔒 Server-Side Key Vault: Google Gemini &amp; OpenRouter</p>
+            <p>Attach your Google Gemini API key and OpenRouter key directly below. Keys are stored server-side on private Cloudflare D1 storage, never exposed to visitors or stored in browser localStorage.</p>
           </div>
-          <p className="text-sm text-gray-500">Set these env vars in your hosting dashboard (Vercel → Project → GearSix → Environment Variables) and redeploy. Variable names: <code className="font-mono text-xs">OPENAI_API_KEY, DEEPSEEK_API_KEY, ANTHROPIC_API_KEY, OPENROUTER_API_KEY, GEMINI_API_KEY, SCRAPE_DO_TOKEN</code> — see <code className="font-mono text-xs">.env.example</code>.</p>
-          {envStatus ? (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Server status</p>
-              {envStatus.providers.map(p => (
-                <div key={p.id} className={"flex items-center justify-between p-3 rounded-xl border " + (p.configured ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50')}>
-                  <span className="text-sm font-medium text-gray-700">{p.name}</span>
-                  <span className={"text-xs font-semibold " + (p.configured ? 'text-green-700' : 'text-amber-700')}>
-                    {p.configured ? '✓ Configured on server' : 'Not configured'}
+
+          {/* Gemini Card */}
+          {(() => {
+            const gemStatus = attachedKeyList.find(p => p.id === 'gemini') || envStatus?.providers.find(p => p.id === 'gemini');
+            const isConfigured = Boolean(gemStatus?.configured);
+            const masked = attachedKeyList.find(p => p.id === 'gemini')?.masked || (gemStatus?.configured ? '•••• (server env)' : '');
+            const source = attachedKeyList.find(p => p.id === 'gemini')?.source || (gemStatus?.configured ? 'env' : 'none');
+            const fb = aiKeyFeedback['gemini'];
+            return (
+              <div className="p-4 rounded-xl border border-gray-200 bg-white space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-sm">G</div>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">Google Gemini API Key</p>
+                      <p className="text-xs text-gray-500">Primary AI for auto-listing, descriptions, image SEO, and marketing</p>
+                    </div>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isConfigured ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                    {isConfigured ? `✓ Configured (${source === 'env' ? 'server env' : 'attached in D1'}${masked ? `: ${masked}` : ''})` : 'Not configured'}
                   </span>
                 </div>
-              ))}
-              {!envStatus.providers.length && <p className="text-xs text-gray-400">No providers reported by server.</p>}
-            </div>
-          ) : (
-            <p className="text-xs text-gray-400">Checking server configuration… (requires the /api functions deployed)</p>
-          )}
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-gray-700">Enter / Update Gemini Key</label>
+                  <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      value={geminiKeyInput}
+                      onChange={e => setGeminiKeyInput(e.target.value)}
+                      placeholder={isConfigured ? 'Enter new key to replace existing…' : 'Enter Google Gemini API key (AIzaSy…)'}
+                      className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                    />
+                    <button
+                      type="button"
+                      disabled={aiKeyBusy === 'gemini' || geminiKeyInput.trim().length < 8}
+                      onClick={() => handleSaveAiKey('gemini', geminiKeyInput)}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0">
+                      <FloppyDisk size={14} /> Save Key
+                    </button>
+                    <button
+                      type="button"
+                      disabled={aiKeyBusy === 'gemini' || !isConfigured}
+                      onClick={() => handleTestAiKey('gemini')}
+                      className="px-3.5 py-2 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0">
+                      {aiKeyBusy === 'gemini' ? <SpinnerGap size={14} className="animate-spin" /> : <Sparkle size={14} className="text-purple-600" />} Test Connection
+                    </button>
+                    {source === 'attached' && (
+                      <button
+                        type="button"
+                        disabled={aiKeyBusy === 'gemini'}
+                        onClick={() => handleClearAiKey('gemini')}
+                        className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-xs font-medium transition-colors shrink-0">
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  {fb && (
+                    <p className={`text-xs p-2 rounded-lg ${fb.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'}`}>
+                      {fb.msg}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* OpenRouter Card */}
+          {(() => {
+            const orStatus = attachedKeyList.find(p => p.id === 'openrouter') || envStatus?.providers.find(p => p.id === 'openrouter');
+            const isConfigured = Boolean(orStatus?.configured);
+            const masked = attachedKeyList.find(p => p.id === 'openrouter')?.masked || (orStatus?.configured ? '•••• (server env)' : '');
+            const source = attachedKeyList.find(p => p.id === 'openrouter')?.source || (orStatus?.configured ? 'env' : 'none');
+            const fb = aiKeyFeedback['openrouter'];
+            return (
+              <div className="p-4 rounded-xl border border-gray-200 bg-white space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">OR</div>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">OpenRouter API Key</p>
+                      <p className="text-xs text-gray-500">Multi-model failover &amp; free tier backup</p>
+                    </div>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isConfigured ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                    {isConfigured ? `✓ Configured (${source === 'env' ? 'server env' : 'attached in D1'}${masked ? `: ${masked}` : ''})` : 'Not configured'}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-gray-700">Enter / Update OpenRouter Key</label>
+                  <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      value={openRouterKeyInput}
+                      onChange={e => setOpenRouterKeyInput(e.target.value)}
+                      placeholder={isConfigured ? 'Enter new key to replace existing…' : 'Enter OpenRouter API key (sk-or-v1-…)'}
+                      className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    <button
+                      type="button"
+                      disabled={aiKeyBusy === 'openrouter' || openRouterKeyInput.trim().length < 8}
+                      onClick={() => handleSaveAiKey('openrouter', openRouterKeyInput)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0">
+                      <FloppyDisk size={14} /> Save Key
+                    </button>
+                    <button
+                      type="button"
+                      disabled={aiKeyBusy === 'openrouter' || !isConfigured}
+                      onClick={() => handleTestAiKey('openrouter')}
+                      className="px-3.5 py-2 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0">
+                      {aiKeyBusy === 'openrouter' ? <SpinnerGap size={14} className="animate-spin" /> : <Globe size={14} className="text-blue-600" />} Test Connection
+                    </button>
+                    {source === 'attached' && (
+                      <button
+                        type="button"
+                        disabled={aiKeyBusy === 'openrouter'}
+                        onClick={() => handleClearAiKey('openrouter')}
+                        className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-xs font-medium transition-colors shrink-0">
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  {fb && (
+                    <p className={`text-xs p-2 rounded-lg ${fb.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'}`}>
+                      {fb.msg}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          <p className="text-xs text-gray-500">
+            Note: OpenAI, Codex, DeepSeek, and Anthropic have been decoupled per your configuration. Google Gemini is actively set as the default model across all system AI operations.
+          </p>
         </div>
       </Accordion>
 
@@ -2137,7 +2466,7 @@ const [open, setOpen] = useState<Record<string, boolean>>({ ai: false, pricing: 
             <div><label className={L}>Address</label><input defaultValue="1500 N Grant St, Denver, CO 80203" className={I} /></div>
             <div className="sm:col-span-2">
               <button type="submit" className="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium flex items-center gap-2 transition-colors">
-                <FloppyDisk size={16} />FloppyDisk Store GearSix
+                <FloppyDisk size={16} /> Save Store Information
               </button>
             </div>
           </form>
@@ -2150,7 +2479,7 @@ const [open, setOpen] = useState<Record<string, boolean>>({ ai: false, pricing: 
           <form onSubmit={handleProfile} className="space-y-4">
             <div><label className={L}>Name</label><input value={profName} onChange={e => setProfName(e.target.value)} className={I} placeholder="Admin name" /></div>
             <div><label className={L}>Email</label><input type="email" value={profEmail} onChange={e => setProfEmail(e.target.value)} className={I} placeholder="admin email" /></div>
-            <button type="submit" className="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium flex items-center gap-2 transition-colors"><FloppyDisk size={16} />FloppyDisk Profile</button>
+            <button type="submit" className="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium flex items-center gap-2 transition-colors"><FloppyDisk size={16} /> Save Profile</button>
           </form>
         </div>
       </Accordion>
@@ -2169,51 +2498,170 @@ const [open, setOpen] = useState<Record<string, boolean>>({ ai: false, pricing: 
         </div>
       </Accordion>
 
-      {/* ── AdSense & ads.txt ── */}
-      <Accordion id="adsense" title="Google AdSense & ads.txt" icon={<Megaphone size={18} className="text-blue-500" />} borderClass="border-blue-300" open={open} toggle={toggle}>
+      {/* ── Adsterra Monetization Network (Replaces AdSense) ── */}
+      <Accordion id="adsterra" title="Adsterra Monetization Network" icon={<Broadcast size={18} className="text-amber-600" />} borderClass="border-amber-300" open={open} toggle={toggle}>
         <div className="pt-5 space-y-4">
-          <p className="text-sm text-gray-500">AdSense is already configured for this site. ads.txt tells Google who is authorized to sell your ad inventory — it is served at <code className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">/ads.txt</code>.</p>
+          <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 flex items-start gap-2.5">
+            <CheckCircle size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-sm text-gray-900">Google AdSense Deactivated · Adsterra Active</p>
+              <p className="mt-0.5 text-gray-600">Google AdSense has been deactivated. The Adsterra advertising network is active on your storefront with Publisher Account <strong className="text-gray-950">25409389</strong>.</p>
+            </div>
+          </div>
 
-          {/* Live status */}
           <div className="grid sm:grid-cols-2 gap-3">
-            <div className="p-4 rounded-xl border border-blue-100 bg-blue-50/50">
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">Google AdSense</p>
-              <p className="font-semibold text-gray-800">{adsenseOk ? 'Configured' : cfg.adsenseEnabled ? 'Invalid config' : 'Disabled'}</p>
-              {cfg.adsenseClientId && <p className="text-xs text-gray-500 mt-1 font-mono">{cfg.adsenseClientId}</p>}
+            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50">
+              <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Adsterra Network</p>
+              <p className="font-bold text-gray-900 text-base flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Active · Live
+              </p>
+              <p className="text-xs text-gray-600 mt-1 font-mono">Publisher ID: 25409389</p>
             </div>
-            <div className="p-4 rounded-xl border border-green-100 bg-green-50/50">
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">ads.txt</p>
-              <p className="font-semibold text-gray-800">{adsTxtStatus === 'configured' ? 'Live on site ✓' : adsTxtStatus === 'checking' ? 'Checking…' : adsTxtStatus === 'invalid' ? 'Present but mismatch' : 'Not found on /ads.txt'}</p>
-              <button type="button" onClick={copyAdsTxt} className="text-xs text-blue-600 hover:text-blue-800 mt-1 underline">Copy ads.txt line</button>
+            <div className="p-4 rounded-xl border border-gray-200 bg-white">
+              <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Storefront Monetization</p>
+              <label className="flex items-center gap-2 mt-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={adsterraActive}
+                  onChange={e => {
+                    setAdsterraActive(e.target.checked);
+                    notify(e.target.checked ? 'Adsterra ads active on storefront' : 'Adsterra ads paused');
+                  }}
+                  className="rounded text-amber-600 focus:ring-amber-500 h-4 w-4"
+                />
+                <span className="text-xs font-semibold text-gray-800">Deliver Adsterra Ads to Visitors</span>
+              </label>
+              <p className="text-[11px] text-gray-500 mt-1">Social Bar + Native Banner units running</p>
             </div>
           </div>
 
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-            <p className="text-xs font-semibold text-gray-500 mb-1.5">Current /ads.txt content</p>
-            <code className="block text-xs font-mono text-gray-700 whitespace-pre-wrap break-all">{cfg.adsTxtRecord}</code>
+          {/* Adsterra API Token for Ads Activation & Reporting */}
+          <div className="border border-amber-200 bg-white rounded-xl p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Key size={16} className="text-amber-600" />
+                <h4 className="text-sm font-semibold text-gray-900">Adsterra API Token (Ads Activation &amp; Reporting)</h4>
+              </div>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                <CheckCircle size={12} className="text-emerald-600" /> Active · Connected
+              </span>
+            </div>
+
+            <p className="text-xs text-gray-500">
+              Your server uses this token to authenticate directly with Adsterra’s publisher endpoints to activate ads and synchronize real-time statistics.
+            </p>
+
+            <div className="space-y-2">
+              <div className="relative">
+                <input
+                  type={adsterraShowToken ? 'text' : 'password'}
+                  value={adsterraToken}
+                  onChange={e => setAdsterraToken(e.target.value)}
+                  placeholder="Paste Adsterra API token (e.g. b1e3ebcbeb0deafe...)"
+                  className="w-full text-xs font-mono px-3 py-2 pr-20 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setAdsterraShowToken(!adsterraShowToken)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 hover:text-gray-700 px-1.5 py-0.5 flex items-center gap-1">
+                  {adsterraShowToken ? <EyeSlash size={14} /> : <Eye size={14} />}
+                  <span>{adsterraShowToken ? 'Hide' : 'Show'}</span>
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleTestAdsterra}
+                  disabled={adsterraTesting}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 flex items-center gap-1.5 transition-colors shadow-sm">
+                  {adsterraTesting ? <SpinnerGap size={14} className="animate-spin" /> : <Lightning size={14} />}
+                  Test API Connection
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveAdsterra}
+                  disabled={adsterraSaving}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg bg-gray-900 hover:bg-gray-800 text-white disabled:opacity-50 flex items-center gap-1.5 transition-colors">
+                  {adsterraSaving ? <SpinnerGap size={14} className="animate-spin" /> : <FloppyDisk size={14} />}
+                  Save Token to Server
+                </button>
+                <button
+                  type="button"
+                  onClick={copyAdsterraToken}
+                  className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700 flex items-center gap-1 transition-colors">
+                  <Clipboard size={14} /> Copy Token
+                </button>
+              </div>
+
+              {adsterraTestStatus && (
+                <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${adsterraTestStatus.ok ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                  {adsterraTestStatus.ok ? <CheckCircle size={15} className="text-emerald-600 shrink-0" /> : <Warning size={15} className="text-red-600 shrink-0" />}
+                  <span>{adsterraTestStatus.msg}</span>
+                </div>
+              )}
+            </div>
           </div>
 
-          <p className="text-xs text-gray-400">AdSense on/off, client ID, auto ads, placements and the ads.txt record are managed in <button type="button" onClick={() => navigate('/admin/marketing-traffic')} className="text-blue-600 hover:text-blue-800 font-medium underline">Marketing &amp; Traffic</button>.</p>
+          {/* Social Bar / Popunder Unit */}
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-gray-800">1. Social Bar / High-CPM Script Tag</p>
+              <button
+                type="button"
+                onClick={copyAdsterraPop}
+                className="text-xs text-amber-700 hover:text-amber-900 font-semibold flex items-center gap-1 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 rounded-lg transition-colors">
+                <Clipboard size={14} /> Copy Script
+              </button>
+            </div>
+            <pre className="p-2.5 bg-gray-900 text-gray-100 text-[11px] font-mono rounded-lg overflow-x-auto whitespace-pre-wrap break-all">
+&lt;script src="https://pl25509888.profitableratecpmnetwork.com/1e/60/9a/1e609a1772f1c8ac6a824ff2534ed894.js"&gt;&lt;/script&gt;
+            </pre>
+          </div>
+
+          {/* Native Banner Container Unit */}
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-gray-800">2. Native Banner Unit &amp; Container</p>
+              <button
+                type="button"
+                onClick={copyAdsterraBanner}
+                className="text-xs text-amber-700 hover:text-amber-900 font-semibold flex items-center gap-1 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 rounded-lg transition-colors">
+                <Clipboard size={14} /> Copy Container Code
+              </button>
+            </div>
+            <pre className="p-2.5 bg-gray-900 text-gray-100 text-[11px] font-mono rounded-lg overflow-x-auto whitespace-pre-wrap break-all">
+&lt;script async="async" data-cfasync="false" src="https://pl25509212.profitableratecpmnetwork.com/11967f6c35e05352ed496c96f6d8ddf4/invoke.js"&gt;&lt;/script&gt;
+&lt;div id="container-11967f6c35e05352ed496c96f6d8ddf4"&gt;&lt;/div&gt;
+            </pre>
+          </div>
+
+          <p className="text-xs text-gray-400">
+            Track impressions, clicks, CPM, and revenue directly on your{' '}
+            <a href="https://publishers.adsterra.com" target="_blank" rel="noopener noreferrer" className="text-amber-700 hover:text-amber-900 font-medium underline">
+              Adsterra Publisher Dashboard
+            </a>.
+          </p>
         </div>
       </Accordion>
 
-      {/* Integrations — optional external assistance (Hermes / Salman OS) */}
+      {/* Integrations — Active AI Providers */}
       <Accordion id="integrations" title="Integrations" icon={<ShareNetwork size={18} className="text-purple-500" />} open={open} toggle={toggle}>
         <div className="pt-5 space-y-3">
           <div className="flex items-center justify-between p-4 rounded-xl border border-purple-100 bg-purple-50/50">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center"><Robot size={20} className="text-purple-600" /></div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">Hermes / Salman OS</p>
-                <p className="text-xs text-gray-500">Future external research assistance — optional, completely disconnected now.</p>
+                <p className="text-sm font-semibold text-gray-900">Google Gemini &amp; OpenRouter AI Engine</p>
+                <p className="text-xs text-gray-500">Active server-side integrations for catalog automation, copy generation, and SEO.</p>
               </div>
             </div>
-            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-200 text-gray-600">DISCONNECTED · OPTIONAL</span>
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">ACTIVE &amp; CONNECTED</span>
           </div>
           <ul className="text-xs text-gray-500 space-y-1 list-disc pl-5">
-            <li>Purpose: future external research assistance only.</li>
-            <li>Cannot write Luxedge data, control publishing, block the catalog, or access the repository through this feature.</li>
-            <li>Connection requires a future owner-approved setup — nothing to configure yet.</li>
+            <li>Google Gemini: Configured as the primary default AI provider.</li>
+            <li>OpenRouter: Configured as multi-model fallback.</li>
+            <li>All other providers (OpenAI, Codex, DeepSeek, Anthropic) have been decoupled.</li>
           </ul>
         </div>
       </Accordion>

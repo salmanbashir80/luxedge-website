@@ -355,10 +355,17 @@ export async function generate(providerId: string, opts: GenerateOptions): Promi
     }
     case 'gemini': {
       const effectiveModel = !model || model === 'gemini-3.5-flash' ? 'gemini-2.5-flash' : model;
+      const bodyPayload: Record<string, unknown> = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 4096 },
+      };
+      if (system && system.trim()) {
+        bodyPayload.systemInstruction = { parts: [{ text: system.trim() }] };
+      }
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${effectiveModel}:generateContent?key=${key}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 4096 } }),
+        body: JSON.stringify(bodyPayload),
         signal,
       });
       const d = await r.json().catch(() => ({}));

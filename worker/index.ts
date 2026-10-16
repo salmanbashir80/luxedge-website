@@ -72,6 +72,7 @@ import {
 } from '../api/campaigns';
 import merchStatsHandler, { recomputeMerchStats } from '../api/merch-stats';
 import aiKeysHandler from '../api/admin/ai-keys';
+import adsterraHandler from '../api/admin/adsterra';
 import googleFeedHandler from '../api/google-feed';
 import imgProxyHandler from '../api/img-proxy';
 import { maybeInjectSeo } from './seo-meta';
@@ -139,6 +140,7 @@ const ROUTES: Route[] = [
   { path: '/api/admin/payments', handler: paymentsHandler },
   { path: '/api/admin/product-stats', handler: productStatsHandler },
   { path: '/api/admin/ai-keys', handler: aiKeysHandler },
+  { path: '/api/admin/adsterra', handler: adsterraHandler },
   { path: '/api/admin/blog-stats', handler: blogStatsHandler },
   { path: '/api/admin/media-stats', handler: mediaStatsHandler },
   { path: '/api/admin/auto-list', handler: autoListHandler },

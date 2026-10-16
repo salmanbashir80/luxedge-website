@@ -51,9 +51,9 @@ export function liveModelFor(model: string): string {
 }
 
 export const DEFAULT_AI_PROVIDERS: AIProvider[] = [
-  { id: 'openrouter', name: 'OpenRouter (Multi-Model)', models: [OPENROUTER_DEFAULT_MODEL, 'nvidia/nemotron-3.5-lightning:free', 'google/gemma-4-31b-it:free', 'cohere/north-mini-code:free', 'openrouter/free'], defaultModel: OPENROUTER_DEFAULT_MODEL, enabled: true, isDefault: true },
+  { id: 'gemini', name: 'Google Gemini (Flash)', models: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'], defaultModel: 'gemini-2.5-flash', enabled: true, isDefault: true },
+  { id: 'openrouter', name: 'OpenRouter (Multi-Model)', models: [OPENROUTER_DEFAULT_MODEL, 'nvidia/nemotron-3.5-lightning:free', 'google/gemma-4-31b-it:free', 'cohere/north-mini-code:free', 'openrouter/free'], defaultModel: OPENROUTER_DEFAULT_MODEL, enabled: true, isDefault: false },
   { id: 'deepseek', name: 'DeepSeek (Fast & Smart)', models: ['deepseek-chat', 'deepseek-reasoner'], defaultModel: 'deepseek-chat', enabled: true, isDefault: false },
-  { id: 'gemini', name: 'Google Gemini (Flash)', models: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'], defaultModel: 'gemini-2.5-flash', enabled: true, isDefault: false },
   { id: 'openai', name: 'OpenAI', models: ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'], defaultModel: 'gpt-4o-mini', enabled: false, isDefault: false },
   { id: 'anthropic', name: 'Anthropic Claude', models: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-6'], defaultModel: 'claude-haiku-4-5-20251001', enabled: false, isDefault: false },
   { id: 'codex', name: 'OpenAI Codex', models: ['gpt-5-codex', 'codex-mini-latest'], defaultModel: 'gpt-5-codex', enabled: true, isDefault: false },
@@ -137,8 +137,8 @@ export interface AIProviderSettings {
 }
 
 export const DEFAULT_PROVIDER_SETTINGS: AIProviderSettings = {
-  defaultProviderId: 'openrouter',
-  fallbackProviderId: null,
+  defaultProviderId: 'gemini',
+  fallbackProviderId: 'openrouter',
 };
 
 const PROVIDER_SETTINGS_KEY = 'luxedge_ai_provider_settings';
@@ -149,10 +149,11 @@ export function loadProviderSettings(storage?: Pick<Storage, 'getItem'>): AIProv
     const raw = (storage || (typeof window !== 'undefined' ? window.localStorage : null))?.getItem(PROVIDER_SETTINGS_KEY);
     if (!raw) return { ...DEFAULT_PROVIDER_SETTINGS };
     const parsed = JSON.parse(raw) as Partial<AIProviderSettings>;
-    // Migrate the previous shipped default chain (deepseek → codex) to the new
-    // default chain (openrouter → deepseek). Explicit owner customizations are
-    // preserved — only the exact old shipped default is rewritten.
-    const isOldShippedDefault = parsed.defaultProviderId === 'deepseek' && parsed.fallbackProviderId === 'codex';
+    // Migrate the previous shipped default chains (deepseek → codex, openrouter → null)
+    // to the new default chain (gemini → openrouter). Explicit owner customizations are preserved.
+    const isOldShippedDefault =
+      (parsed.defaultProviderId === 'deepseek' && parsed.fallbackProviderId === 'codex') ||
+      (parsed.defaultProviderId === 'openrouter' && (parsed.fallbackProviderId === null || parsed.fallbackProviderId === 'deepseek'));
     return {
       defaultProviderId: isOldShippedDefault
         ? DEFAULT_PROVIDER_SETTINGS.defaultProviderId
