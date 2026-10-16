@@ -2347,7 +2347,7 @@ function HomePage() {
       {/* ══════════════════════════════════════════════════════════
           2. FEATURED HOT SPOTLIGHT: THE INTIMATES & LINGERIE SALON
       ══════════════════════════════════════════════════════════ */}
-      <section className="py-10 sm:py-12 bg-neutral-950 text-white relative overflow-hidden">
+      <section id="lingerie-salon" className="py-10 sm:py-12 bg-neutral-950 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(217,119,6,0.12),transparent_50%)] pointer-events-none" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           
@@ -2501,7 +2501,7 @@ function HomePage() {
       </section>
 
       {/* ── Search & Style Discovery Strip (Replaces Buyer Guidance) ── */}
-      <section className="bg-[#FAF8F5] py-8 sm:py-10 border-b border-gray-150">
+      <section id="instant-catalog-search" className="bg-[#FAF8F5] py-8 sm:py-10 border-b border-gray-150">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <span className="text-[10px] sm:text-xs font-bold tracking-[0.25em] text-[#C5A880] uppercase">Instant Catalog Search</span>
           <h2 className="font-serif text-xl sm:text-2xl font-bold text-gray-950 mt-1 mb-4">Find Your Signature Piece</h2>
@@ -2604,7 +2604,7 @@ function HomePage() {
       {/* ══════════════════════════════════════════════════════════
           5. BEST SELLERS (Curated Luxury Products)
       ══════════════════════════════════════════════════════════ */}
-      <section className="py-10 sm:py-12 bg-white border-b border-gray-150">
+      <section id="bestsellers-section" className="py-10 sm:py-12 bg-white border-b border-gray-150">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Header */}
