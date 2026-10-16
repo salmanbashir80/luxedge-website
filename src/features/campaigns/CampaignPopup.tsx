@@ -25,7 +25,8 @@ interface PopupCampaign {
   popup?: { headline?: string; subtext?: string } | null;
 }
 
-// Fashion build (VITE_FASHION_SAMPLE_CATALOG=true): the Pet gift-drop campaign popup is hidden.
+// Fashion build: the Pet gift-drop campaign popup is disabled.
+const FASHION_SAMPLE_CATALOG = true;
 const NEWS_LABEL = 'Luxedge style news';
 
 const seen = (slug: string) => {
