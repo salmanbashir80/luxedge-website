@@ -74,14 +74,14 @@ export default function CampaignLanding() {
   }, [slug]);
 
   const st = (phase as { state: Partial<CampaignState> }).state || {};
-  const petTypes: string[] = st.petTypes?.length ? st.petTypes : ['dog', 'cat'];
+  const petTypes: string[] = st.petTypes?.length ? st.petTypes : ['women', 'men', 'accessories'];
   const eligible = (st.eligible || []).filter((p) => p.tier === 'free' || p.tier === 'premium');
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     const g = st as Partial<CampaignState>;
-    if (!petType) { setError('Please choose your pet type.'); return; }
+    if (!petType) { setError('Please choose your style preference.'); return; }
     if (!form.firstName.trim() || !form.email.trim()) { setError('Please enter your name and email.'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { setError('That email address does not look valid.'); return; }
     setBusy(true);
@@ -168,7 +168,7 @@ export default function CampaignLanding() {
             </p>
             {st.referralEnabled && (
               <div className="mx-auto mt-5 max-w-md">
-                <p className="text-sm font-bold text-white">Share Luxedge with a pet-loving friend</p>
+                <p className="text-sm font-bold text-white">Share Luxedge with a stylish friend</p>
                 <button
                   onClick={() => {
                     const url = `${window.location.origin}/campaigns/${slug}?ref=${encodeURIComponent(success.claimCode)}`;
@@ -194,12 +194,12 @@ export default function CampaignLanding() {
               </p>
               <form onSubmit={submit} className="mt-4 space-y-3">
                 <div>
-                  <span className={labelCls}>Your pet</span>
+                  <span className={labelCls}>Style preference</span>
                   <div className="flex flex-wrap gap-2">
                     {petTypes.map((p) => (
                       <button key={p} type="button" onClick={() => setPetType(p)}
                         className={`rounded-full px-4 py-2 text-xs font-bold capitalize transition ${petType === p ? 'bg-[#1E4636] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                        {p === 'other' ? 'Other' : p}
+                        {p === 'women' ? "Women's" : p === 'men' ? "Men's" : p === 'accessories' ? 'Accessories' : p}
                       </button>
                     ))}
                   </div>

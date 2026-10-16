@@ -34,7 +34,6 @@ import OnsitePaymentForm from './OnsitePaymentForm';
 import { checkUsShippingEligibility } from '../../services/supplier/usShipping';
 import { Lock01, ChevronDown } from '@untitledui/icons';
 
-const FREE_SHIPPING_FALLBACK = 4.99;
 const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
 
 interface FieldState {
@@ -193,13 +192,16 @@ export default function CheckoutOnsitePage() {
   const discountedSubtotal = Math.max(0, subtotal - couponDiscount);
   const freeShippingNow = freeShippingEnabled && discountedSubtotal >= freeShippingThreshold;
   const selectedRate = rates.find((r) => r.objectId === selectedRateId) || null;
-  const shipping = freeShippingNow ? 0 : selectedRate ? selectedRate.amount : FREE_SHIPPING_FALLBACK;
+  const ratesFailed = ratesAttempted && rates.length === 0 && !freeShippingNow;
+  const shipping = freeShippingNow ? 0 : selectedRate ? selectedRate.amount : 0;
   const total = +(discountedSubtotal + shipping).toFixed(2);
   const shippingLabel = freeShippingNow
     ? 'FREE'
     : selectedRate
       ? `$${selectedRate.amount.toFixed(2)}`
-      : `$${FREE_SHIPPING_FALLBACK.toFixed(2)} (store rate)`;
+      : ratesFailed
+        ? 'Unavailable'
+        : 'Calculated from address';
 
   const applyCouponLocal = () => {
     const code = couponInput.trim().toUpperCase();
@@ -226,6 +228,18 @@ export default function CheckoutOnsitePage() {
       if (!billing.city.trim()) e.billingCity = 'Please enter the billing city';
       if (!billing.state.trim()) e.billingState = 'Please select the billing state';
       if (!/^\d{5}(-\d{4})?$/.test(billing.postalCode.trim())) e.billingZip = 'Please enter a valid billing ZIP code';
+    }
+    if (!freeShippingNow && !selectedRate) {
+      if (ratesFailed) {
+        setStartError('Live carrier shipping rates are currently unavailable for this address. Please contact support.');
+        return false;
+      }
+      if (!addressComplete) {
+        setStartError('Please complete your delivery address to calculate shipping rates.');
+        return false;
+      }
+      setStartError('Please select a shipping method before continuing.');
+      return false;
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -310,20 +324,24 @@ const err = (k: string) => (errors[k] ? <p className="text-red-500 text-xs mt-1"
   const paymentFailed = configFailed;
   const paymentUnavailable = Boolean(config) && !config!.anyProviderReady && !config!.stripeConfigured;
   const paymentReady = Boolean(config) && (config!.anyProviderReady || config!.stripeConfigured);
+  const shippingUnavailable = ratesFailed;
   // The primary CTA is DISABLED only while actually working (reserving or
-  // loading config). When payment is unavailable the CTA turns into an
-  // ENABLED contact-support action — never a dead button.
-  const ctaDisabled = starting || paymentLoading || Boolean(paymentSession);
+  // loading config), or when carrier rates could not be retrieved. When
+  // payment or shipping is unavailable the CTA turns into an ENABLED contact-support
+  // action — never a dead button.
+  const ctaDisabled = starting || paymentLoading || Boolean(paymentSession) || shippingUnavailable;
   const ctaLabel = starting
     ? 'Reserving your items…'
     : paymentSession
       ? 'Complete card payment above'
       : paymentLoading
         ? 'Checking secure payment…'
-        : paymentUnavailable
-          ? 'Contact Support'
-          : `Pay securely — $${total.toFixed(2)}`;
-  const onPrimaryClick = paymentUnavailable || paymentFailed
+        : shippingUnavailable
+          ? 'Contact Support (Shipping Rates Unavailable)'
+          : paymentUnavailable
+            ? 'Contact Support'
+            : `Pay securely — $${total.toFixed(2)}`;
+  const onPrimaryClick = shippingUnavailable || paymentUnavailable || paymentFailed
     ? () => nav('/contact')
     : () => { void startPayment(); };
 
@@ -558,13 +576,16 @@ const err = (k: string) => (errors[k] ? <p className="text-red-500 text-xs mt-1"
                       </div>
                     )}
                     {!ratesLoading && ratesAttempted && rates.length === 0 && (
-                      <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                        {ratesError ? <><b>{ratesError}</b> Store flat shipping applies.</> : 'Live carrier rates are not available for this order — store flat shipping applies.'}
-                        <div className="mt-2"><p className="text-xs text-gray-500">Standard shipping · ${FREE_SHIPPING_FALLBACK.toFixed(2)}</p></div>
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        <p className="font-semibold">Live carrier rates are currently unavailable</p>
+                        <p className="text-xs mt-0.5">{ratesError || 'We could not calculate real-time carrier shipping rates for this address. Please verify your address or contact support to complete your order.'}</p>
+                        <Link to="/contact" className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 bg-luxe-charcoal text-white rounded-lg text-xs font-bold hover:bg-luxe-black transition-colors">
+                          Contact Support
+                        </Link>
                       </div>
                     )}
-                    {!ratesLoading && !ratesAttempted && addressComplete && <p className="text-xs text-gray-400 mt-1">Enter a complete delivery address to see carrier options.</p>}
-                    {!ratesLoading && !ratesAttempted && !addressComplete && <p className="text-xs text-gray-400 mt-1">Complete your address above — standard ${FREE_SHIPPING_FALLBACK.toFixed(2)} shipping applies.</p>}
+                    {!ratesLoading && !ratesAttempted && addressComplete && <p className="text-xs text-gray-400 mt-1">Calculating carrier shipping options…</p>}
+                    {!ratesLoading && !ratesAttempted && !addressComplete && <p className="text-xs text-gray-400 mt-1">Complete your delivery address above to calculate shipping rates.</p>}
                   </>
                 )}
               </div>

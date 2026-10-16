@@ -40,7 +40,7 @@ export const YOUTUBE_CHANNEL_ID = 'UCPvPDstYz61AebGhKzKS1lw';
 
 export const MEDIA_CATEGORIES = [
   { id: 'product-education', label: 'Product Education', blurb: 'How our products are made, what they do, and why they earn their place.' },
-  { id: 'pet-animal-care', label: 'Pet & Animal Care', blurb: 'Practical care guidance for dogs, cats, horses and more.' },
+  { id: 'fashion-styling', label: 'Fashion & Styling', blurb: 'Practical styling guidance, capsule wardrobes, and luxury fit advice.' },
   { id: 'himalayan-salt', label: 'Himalayan Salt & Natural Products', blurb: 'Salt licks, blocks and natural essentials — sourcing, science and use.' },
   { id: 'how-to-guides', label: 'How-To Guides', blurb: 'Step-by-step video guides with real demonstrations.' },
   { id: 'buying-guides', label: 'Buying Guides', blurb: 'What to look for, what to avoid, and how to choose well.' },
