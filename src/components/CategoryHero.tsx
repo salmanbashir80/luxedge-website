@@ -58,16 +58,16 @@ const toHeroSlug = (name: string) => name.toLowerCase().replace(/['’]/g, '').r
 // Served from this app's public folder; owner-supplied images can replace these files in place.
 const FASHION_IMAGE_ORIGIN = '/images/fashion';
 const FASHION_HERO_IMAGES: Record<string, { file: string; alt: string }> = {
-  "Women's Clothing": { file: 'women-clothing.jpg', alt: 'Model walking the runway in a fashion show' },
+  "Women's Clothing": { file: 'tailored-blazer-suit.jpg', alt: 'Tailored luxury blazer suit and fine women apparel' },
   "Men's Clothing": { file: 'men-clothing.jpg', alt: 'Man in a green shirt-jacket, blue jeans and desert boots' },
-  'Dresses and Tops': { file: 'dresses-tops.jpg', alt: 'Woman in a red gown at a fashion show' },
+  'Dresses and Tops': { file: 'floral-midi-dress.jpg', alt: 'Elegant silk floral midi dress collection' },
   'Jeans and Pants': { file: 'jeans-pants.jpg', alt: 'Pairs of blue jeans displayed together' },
   'Jackets and Outerwear': { file: 'jackets-outerwear.jpg', alt: 'Leather jacket on display' },
   'Sneakers and Shoes': { file: 'sneakers-shoes.jpg', alt: 'Pair of white sneakers' },
-  'Handbags and Wallets': { file: 'handbags-wallets.jpg', alt: 'Black mini handbag styled with a minidress' },
+  'Handbags and Wallets': { file: 'structured-tote-bag.jpg', alt: 'Luxury structured leather tote handbag and accessories' },
   Jewelry: { file: 'jewelry-gold-necklace.jpg', alt: 'Fine artisan jewelry, layered gold necklaces and gemstones' },
-  Watches: { file: 'watches.jpg', alt: 'Wristwatch close-up' },
-  'Sunglasses and Accessories': { file: 'sunglasses-accessories.jpg', alt: 'Pair of sunglasses for summer' },
+  Watches: { file: 'watches.jpg', alt: 'Luxury Swiss chronometer wristwatch with sapphire crystal' },
+  'Sunglasses and Accessories': { file: 'sunglasses-accessories.jpg', alt: 'Designer sunglasses and luxury accessories styling' },
   'Lingerie and Intimates': { file: 'lingerie-red-lace-set.jpg', alt: 'Delicate lace lingerie and intimates collection' },
   'Makeup and Beauty': { file: 'jewelry.jpg', alt: 'Everyday beauty, cosmetics and accessories collection' },
 };

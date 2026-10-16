@@ -179,6 +179,21 @@ const LINGERIE_IMAGE_OVERRIDES: Record<string, string> = {
   'sparkling-tennis-bracelet-in-white-gold-tone': '/images/fashion/jewelry-tennis-bracelet.jpg',
   'adjustable-tennis-bracelet': '/images/fashion/jewelry-tennis-bracelet.jpg',
   'minimalist-pendant-jewelry-set': '/images/fashion/jewelry-pendant-set.jpg',
+  'sample-women-s-cat-eye-sunglasses': '/images/fashion/sunglasses-cat-eye.jpg',
+  'women-s-cat-eye-sunglasses': '/images/fashion/sunglasses-cat-eye.jpg',
+  'womens-cat-eye-sunglasses': '/images/fashion/sunglasses-vintage.jpg',
+  'sample-women-s-fashion-belt': '/images/fashion/belt-leather-gold.jpg',
+  'women-s-fashion-belt': '/images/fashion/belt-leather-gold.jpg',
+  'sample-women-s-minimalist-watch': '/images/fashion/watch-gold-mesh.jpg',
+  'women-s-minimalist-watch': '/images/fashion/watch-gold-mesh.jpg',
+  'women-s-emerald-dial-minimalist-watch': '/images/fashion/watch-emerald-dial.jpg',
+  'sample-men-s-classic-analog-watch': '/images/fashion/watches.jpg',
+  'men-s-classic-analog-watch': '/images/fashion/watches.jpg',
+  'sample-mini-crossbody-bag': '/images/fashion/bag-quilted-crossbody.jpg',
+  'mini-crossbody-bag': '/images/fashion/bag-quilted-crossbody.jpg',
+  'mini-quilted-crossbody-bag-with-chain-strap': '/images/fashion/bag-quilted-crossbody.jpg',
+  'sample-women-s-zip-wallet': '/images/fashion/handbags-wallets.jpg',
+  'women-s-zip-wallet': '/images/fashion/handbags-wallets.jpg',
 };
 
 // Map a Supabase catalog row to the storefront Product shape WITHOUT
