@@ -13,20 +13,20 @@ const imageMapping = {
   'lace-bralette-and-brief-set': '/images/fashion/lingerie-bralette.jpg',
   'sample-lace-bralette-and-brief-set': '/images/fashion/lingerie-bralette.jpg',
 
-  // Corsets & Bodysuits
-  'floral-lace-corset-bodysuit': '/images/fashion/lingerie-corset.jpg',
-  'sample-sheer-floral-lace-plunge-bodysuit': '/images/fashion/lingerie-corset.jpg',
-  'sample-plunge-push-up-lace-corset-top': '/images/fashion/lingerie-corset.jpg',
-  'sample-strappy-cutout-lace-teddy': '/images/fashion/lingerie-corset.jpg',
-  'sample-underwire-embroidered-lace-bra-and-panty-set': '/images/fashion/lingerie-corset.jpg',
+  // Corsets, Teddies & Bodysuits
+  'floral-lace-corset-bodysuit': '/images/fashion/lingerie-plunge-corset.jpg',
+  'sample-plunge-push-up-lace-corset-top': '/images/fashion/lingerie-plunge-corset.jpg',
+  'sample-strappy-cutout-lace-teddy': '/images/fashion/lingerie-strappy-teddy.jpg',
+  'sample-underwire-embroidered-lace-bra-and-panty-set': '/images/fashion/lingerie-red-lace-set.jpg',
+  'sample-sheer-floral-lace-plunge-bodysuit': '/images/fashion/lingerie-sheer-bodysuit.jpg',
 
   // Chemise & Slips & Sleepwear
   'silk-charmeuse-chemise-nightdress': '/images/fashion/lingerie-chemise.jpg',
-  'sample-seductive-backless-satin-slip-dress': '/images/fashion/lingerie-chemise.jpg',
+  'sample-seductive-backless-satin-slip-dress': '/images/fashion/lingerie-satin-slip.jpg',
   'satin-camisole-sleep-set': '/images/fashion/lingerie-chemise.jpg',
   'sample-satin-camisole-sleep-set': '/images/fashion/lingerie-chemise.jpg',
-  'seamless-high-waist-shapewear': '/images/fashion/lingerie-chemise.jpg',
-  'sample-seamless-high-waist-shapewear': '/images/fashion/lingerie-chemise.jpg',
+  'seamless-high-waist-shapewear': '/images/fashion/lingerie-sheer-bodysuit.jpg',
+  'sample-seamless-high-waist-shapewear': '/images/fashion/lingerie-sheer-bodysuit.jpg',
 
   // Robes
   'luxury-satin-kimono-robe': '/images/fashion/lingerie-robe.jpg',

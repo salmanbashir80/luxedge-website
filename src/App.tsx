@@ -148,10 +148,37 @@ import { productPath } from './features/catalog/seo';
 
 // (demo admin credentials removed in Phase 3A — admin auth is Supabase-only)
 
+const LINGERIE_IMAGE_OVERRIDES: Record<string, string> = {
+  'sample-underwire-embroidered-lace-bra-and-panty-set': '/images/fashion/lingerie-red-lace-set.jpg',
+  'sample-plunge-push-up-lace-corset-top': '/images/fashion/lingerie-plunge-corset.jpg',
+  'sample-strappy-cutout-lace-teddy': '/images/fashion/lingerie-strappy-teddy.jpg',
+  'sample-seductive-backless-satin-slip-dress': '/images/fashion/lingerie-satin-slip.jpg',
+  'sample-sheer-floral-lace-plunge-bodysuit': '/images/fashion/lingerie-sheer-bodysuit.jpg',
+  'sample-lace-bralette-and-brief-set': '/images/fashion/lingerie-bralette.jpg',
+  'sample-silk-satin-robe-and-babydoll-set': '/images/fashion/lingerie-robe.jpg',
+  'sample-satin-camisole-sleep-set': '/images/fashion/lingerie-chemise.jpg',
+  'sample-seamless-high-waist-shapewear': '/images/fashion/lingerie-sheer-bodysuit.jpg',
+  'floral-lace-corset-bodysuit': '/images/fashion/lingerie-plunge-corset.jpg',
+  'silk-charmeuse-chemise-nightdress': '/images/fashion/lingerie-chemise.jpg',
+  'lace-bralette-and-brief-set': '/images/fashion/lingerie-bralette.jpg',
+  'seamless-high-waist-shapewear': '/images/fashion/lingerie-sheer-bodysuit.jpg',
+  'sample-floral-midi-dress': '/images/fashion/floral-midi-dress.jpg',
+  'sample-satin-evening-maxi-dress': '/images/fashion/satin-maxi-dress.jpg',
+  'sample-structured-tote-handbag': '/images/fashion/structured-tote-bag.jpg',
+  'sample-women-s-tailored-blazer-and-trouser-set': '/images/fashion/tailored-blazer-suit.jpg',
+};
+
 // Map a Supabase catalog row to the storefront Product shape WITHOUT
 // fabricating anything: ratings stay 0 (the UI shows stars only for verified
 // user reviews), dimensions/origin stay empty, no shipping promises.
 function mapCatalogProduct(p: CatalogProduct): Product {
+  const resolvedImages = p.images.length ? p.images.map(src => {
+    for (const [key, realJpg] of Object.entries(LINGERIE_IMAGE_OVERRIDES)) {
+      if (src.includes(key)) return realJpg;
+    }
+    return proxiedImage(src);
+  }) : (LINGERIE_IMAGE_OVERRIDES[p.slug || ''] ? [LINGERIE_IMAGE_OVERRIDES[p.slug || '']] : []);
+
   return {
     id: p.id,
     name: p.name,
@@ -161,7 +188,7 @@ function mapCatalogProduct(p: CatalogProduct): Product {
     originalPrice: p.originalPrice,
     category: p.category || 'Fashion',
     stock: p.stock,
-    images: p.images.length ? p.images.map(src => proxiedImage(src)) : [],
+    images: resolvedImages,
     // Ensure primary (hero) image is always first
     // (catalog may return images in insertion order, not primary-first)
     imageAlts: p.imageAlts || [],
@@ -237,7 +264,7 @@ function mapSampleProduct(s: FashionSampleProduct): Product {
     // Sample concepts have no inventory; stock 0 makes the detail page show
     // them as unavailable, and addToCart refuses them outright.
     stock: 0,
-    images: s.image ? [s.image] : [],
+    images: LINGERIE_IMAGE_OVERRIDES[s.slug] ? [LINGERIE_IMAGE_OVERRIDES[s.slug]] : (s.image ? [s.image] : []),
     imageAlts: [s.name],
     rating: 0,
     reviews: 0,
@@ -539,7 +566,7 @@ function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     let cancelled = false;
-    void loadStorefrontCatalog({ limit: 60 }).then((cat) => {
+    void loadStorefrontCatalog({ limit: 120 }).then((cat) => {
       if (cancelled) return;
       if (cat) {
         setCatalogLoaded(true);
