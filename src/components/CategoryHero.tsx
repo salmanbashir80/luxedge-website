@@ -173,39 +173,38 @@ export default function CategoryHero({ config }: Props): JSX.Element {
           <p className="category-hero__eyebrow">{label}{badge && <span>{badge}</span>}</p>
           <h1>{headline}</h1>
           <p className="category-hero__description">{desc}</p>
-          <a href={ctaHref} className="category-hero__cta">{ctaLabel}<ArrowDown size={16} aria-hidden="true" /></a>
+          <div className="category-hero__actions">
+            <a href={ctaHref} className="category-hero__cta">{ctaLabel}<ArrowDown size={14} aria-hidden="true" /></a>
+            <form
+              role="search"
+              aria-label={`Search ${label}`}
+              onSubmit={handleCategorySearch}
+              className="category-hero__search"
+            >
+              <MagnifyingGlass size={15} className="text-stone-400 shrink-0 mr-1.5" />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={`Search ${label.toLowerCase()}...`}
+                aria-label={`Search in ${label}`}
+                className="category-hero__search-input"
+              />
+              <button
+                type="submit"
+                aria-label={`Search ${label}`}
+                className="category-hero__search-btn"
+              >
+                <span>Search</span>
+                <ArrowRight size={11} />
+              </button>
+            </form>
+          </div>
         </div>
       </div>
-      {/* Category Search Bar replacing legacy buyer guidance text */}
-      <div className="px-5 pb-5 sm:px-7">
-        <form
-          role="search"
-          aria-label={`Search ${label}`}
-          onSubmit={handleCategorySearch}
-          className="relative flex items-center w-full max-w-2xl bg-white/95 border border-stone-300/80 rounded-full px-4 py-2.5 sm:py-3 shadow-xs hover:border-stone-400 focus-within:border-stone-900 focus-within:ring-2 focus-within:ring-stone-900/10 transition-all"
-        >
-          <MagnifyingGlass size={18} className="text-stone-400 shrink-0 mr-3" />
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={`Search ${label.toLowerCase()} (e.g. styles, cuts, colors)...`}
-            aria-label={`Search in ${label}`}
-            className="flex-1 min-w-0 bg-transparent text-xs sm:text-sm text-stone-900 placeholder-stone-400 focus:outline-none pr-24"
-          />
-          <button
-            type="submit"
-            aria-label={`Search ${label}`}
-            className="absolute right-1.5 px-4 py-1.5 sm:py-2 rounded-full bg-stone-900 hover:bg-black text-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
-          >
-            <span>Search</span>
-            <ArrowRight size={13} />
-          </button>
-        </form>
-      </div>
       {chips.length > 0 && <nav aria-label={`Explore related ${label.toLowerCase()} collections`} className="category-hero__browse">
-        <p>Explore more</p>
-        <ul>{chips.map(chip => <li key={chip.href}><Link to={chip.href}>{chip.label}<ArrowUpRight size={13} aria-hidden="true" /></Link></li>)}</ul>
+        <p>Explore</p>
+        <ul>{chips.map(chip => <li key={chip.href}><Link to={chip.href}>{chip.label}<ArrowUpRight size={11} aria-hidden="true" /></Link></li>)}</ul>
       </nav>}
     </div>
   );

@@ -3047,7 +3047,7 @@ function ShopPage() {
           keep the simpler branded header. */}
       <section className="bg-gradient-to-b from-luxe-cream to-white border-b border-luxe-silver/60">
         {!isDeals && cat !== 'All' ? (
-          <div className="max-w-[1440px] mx-auto px-4 py-8 sm:py-10">
+          <div className="max-w-[1440px] mx-auto px-4 py-3 sm:py-4">
             <CategoryHero config={categoryHeroConfig(cat, pageDesc)} />
             {subNodes.length > 0 && (
               <nav aria-label={`${cat} subcategories`} className="category-hero__browse">
@@ -3061,7 +3061,7 @@ function ShopPage() {
             )}
           </div>
         ) : (
-          <div className="max-w-[1440px] mx-auto px-4 py-10 sm:py-12">
+          <div className="max-w-[1440px] mx-auto px-4 py-4 sm:py-5">
             <div className="max-w-xl">
               <p className="eyebrow mb-2">{isDeals ? 'Savings' : 'Our Collection'}</p>
               <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-extrabold text-luxe-black tracking-tight leading-[1.05]">{pageTitle}</h1>
