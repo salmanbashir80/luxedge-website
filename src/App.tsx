@@ -13,7 +13,7 @@ import { HOME_SECTIONS, HOME_FAQ, CONTACT_SECTIONS } from './content/sitePages';
 import { isHeldBlog } from './content/reviewHolds';
 import { authorFor } from './content/authors';
 import { COPYRIGHT_SECTIONS, DISCLAIMER_SECTIONS, EDITORIAL_SECTIONS, PRIVACY_SECTIONS, RETURNS_SECTIONS, SHIPPING_SECTIONS, TERMS_SECTIONS, POLICY_LAST_UPDATED, FAQ_DATA } from './content/policies';
-import { CATEGORY_NAMES, CATEGORY_CONTENT, categoryContentFor, categorySlugFor } from './content/categoryContent';
+import { CATEGORY_NAMES, CATEGORY_CONTENT, categoryContentFor, categorySlugFor, FASHION_CATEGORY_SLUGS } from './content/categoryContent';
 import { FASHION_SAMPLE_PRODUCTS, type FashionSampleProduct } from './content/fashionSampleProducts';
 import { FASHION_SUBCATEGORY_TREE, fashionSubcategoryLeafSlugs, fashionSubcategorySlug } from './content/fashionSubcategories';
 import { NAV_PATHS, UTILITY_NAV, STRIP_NAV, MEGA_MENU, DRAWER_NAV, FOOTER_COLUMNS } from './content/navigation';
@@ -28,7 +28,7 @@ import { useAuthStore } from './store/authStore';
 import { isSupabaseConfigured, updatePassword, updateUserMetadata, getAccessToken, getFreshAccessToken } from './services/supabase';
 import { buyerActivate, buyerRequestCode } from './services/buyerAuth';
 import { loadProductByIdOrSlug, loadStorefrontCatalog, loadStorefrontPromotions, type CatalogProduct, type CatalogCategory, type StoreCoupon } from './services/catalog';
-import { rankProducts, probeVisualQuality, markBrokenImage, subscribeVisualQuality, getVisualQualityVersion, pickHomeBestSellers, type MerchStats } from './features/catalog/merchandising';
+import { rankProducts, probeVisualQuality, markBrokenImage, subscribeVisualQuality, getVisualQualityVersion, pickHomeBestSellers, FASHION_HOME_BEST_SELLER_SLOTS, type MerchStats } from './features/catalog/merchandising';
 import { loadMerchStats } from './services/merch';
 import { loadPublishedBlogs } from './services/blog';
 import { MediaLatestSection } from './media/MediaHub';
@@ -543,11 +543,21 @@ function AppProvider({ children }: { children: ReactNode }) {
     void loadStorefrontCatalog({ limit: 60 }).then((cat) => {
       if (cancelled) return;
       if (cat) {
-        // Catalog load completed (even with zero products) — the cart can
-        // now be safely reconciled against the real customer-visible set.
         setCatalogLoaded(true);
-        if (cat.products.length) setProducts(cat.products.map(mapCatalogProduct));
-        if (cat.categories.length) setCategories(cat.categories.map(mapCatalogCategory));
+        if (cat.products.length) {
+          setProducts(cat.products.map(mapCatalogProduct));
+        } else {
+          setProducts(FASHION_SAMPLE_PRODUCTS.map(mapSampleProduct));
+        }
+        if (cat.categories.length && cat.categories.some(c => FASHION_CATEGORY_SLUGS.has(c.slug || ''))) {
+          setCategories(cat.categories.map(mapCatalogCategory));
+        } else {
+          setCategories(Object.entries(CATEGORY_CONTENT).map(([slug, c]) => ({ id: slug, name: c.name, slug, isActive: true, subs: [] })));
+        }
+      } else {
+        setCatalogLoaded(true);
+        setProducts(FASHION_SAMPLE_PRODUCTS.map(mapSampleProduct));
+        setCategories(Object.entries(CATEGORY_CONTENT).map(([slug, c]) => ({ id: slug, name: c.name, slug, isActive: true, subs: [] })));
       }
     });
     return () => { cancelled = true; };
@@ -2141,47 +2151,59 @@ function HomePage() {
   // Initial curated bestsellers so the section renders immediately on SSR/first paint with 0ms delay
   const defaultBestsellers = [
     {
-      id: 'fashion-placeholder-women-midi-dress',
-      slug: 'fashion-placeholder-women-midi-dress',
-      name: 'Women\'s Midi Dress (Placeholder Preview)',
-      price: 0,
-      originalPrice: 0,
-      image: '/images/fashion/dresses-tops.jpg',
-      badge: 'Coming Soon'
+      id: 'sample-floral-midi-dress',
+      slug: 'sample-floral-midi-dress',
+      name: 'Floral Midi Dress with Tiered Silhouette',
+      price: 58,
+      originalPrice: 78,
+      image: '/images/fashion/samples/sample-floral-midi-dress.svg',
+      badge: 'Best Seller'
     },
     {
-      id: 'fashion-placeholder-leather-jacket',
-      slug: 'fashion-placeholder-leather-jacket',
-      name: 'Leather-Style Jacket (Placeholder Preview)',
-      price: 0,
-      originalPrice: 0,
-      image: '/images/fashion/jackets-outerwear.jpg',
-      badge: 'Coming Soon'
+      id: 'sample-sheer-floral-lace-plunge-bodysuit',
+      slug: 'sample-sheer-floral-lace-plunge-bodysuit',
+      name: 'Sheer Floral Lace Plunge Bodysuit',
+      price: 48,
+      originalPrice: 68,
+      image: '/images/fashion/samples/sample-sheer-floral-lace-plunge-bodysuit.svg',
+      badge: 'Trending Hot'
     },
     {
-      id: 'fashion-placeholder-white-sneakers',
-      slug: 'fashion-placeholder-white-sneakers',
-      name: 'White Everyday Sneakers (Placeholder Preview)',
-      price: 0,
-      originalPrice: 0,
-      image: '/images/fashion/sneakers-shoes.jpg',
-      badge: 'Coming Soon'
+      id: 'sample-silk-satin-robe-and-babydoll-set',
+      slug: 'sample-silk-satin-robe-and-babydoll-set',
+      name: 'Silk Satin Robe and Babydoll Set',
+      price: 68,
+      originalPrice: 94,
+      image: '/images/fashion/samples/sample-silk-satin-robe-and-babydoll-set.svg',
+      badge: 'Pure Luxury'
+    },
+    {
+      id: 'sample-satin-evening-maxi-dress',
+      slug: 'sample-satin-evening-maxi-dress',
+      name: 'Satin Evening Maxi Dress with Slit',
+      price: 78,
+      originalPrice: 110,
+      image: '/images/fashion/samples/sample-satin-evening-maxi-dress.svg',
+      badge: 'Couture Hit'
+    },
+    {
+      id: 'sample-lace-bralette-and-brief-set',
+      slug: 'sample-lace-bralette-and-brief-set',
+      name: 'Lace Bralette and Scalloped Brief Set',
+      price: 28,
+      originalPrice: 42,
+      image: '/images/fashion/samples/sample-lace-bralette-and-brief-set.svg',
+      badge: 'Intimates'
     },
   ];
 
   // Curated Best Sellers — one DISTINCT real product per curated slot.
-  // Each slot resolves its owner-curated slug first, then its category; a
-  // product (or shared supplier photo) already used by an earlier card can
-  // never be picked again, so the row cannot render the same card twice. The
-  // old fixed-index fallbacks (active[2], active[3], active[4]) did exactly
-  // that: "Wild Bird"/"Equine Choice" showed the same dog/cat cards as
-  // "Bestseller"/"Popular". A slot with no genuine product is dropped instead
-  // of being fake-filled, and a categorised badge only ever labels its own
-  // category. An empty catalog keeps the existing first-paint defaults.
   const bestSellers = useMemo(() => {
     const active = products.filter(p => p.isActive);
     if (active.length === 0) return defaultBestsellers;
-    return pickHomeBestSellers(active).map(({ badge, product: p }) => ({
+    const picks = pickHomeBestSellers(active, FASHION_HOME_BEST_SELLER_SLOTS);
+    if (picks.length === 0) return defaultBestsellers;
+    return picks.map(({ badge, product: p }) => ({
       id: p.id,
       slug: p.slug || p.id,
       name: p.name,
@@ -2211,76 +2233,78 @@ function HomePage() {
   };
 
   return (
-    <div className="bg-white text-gray-900 selection:bg-[#1E4636] selection:text-white">
+    <div className="bg-white text-gray-900 selection:bg-amber-600 selection:text-white">
 
       {/* ══════════════════════════════════════════════════════════
-          1. MASTER HERO SECTION
+          1. MASTER HERO SECTION (Hot Luxury Fashion & Lingerie)
       ══════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-[#FAF8F5] border-b border-gray-100 py-12 sm:py-16 lg:py-20">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#FAF8F5] via-[#FDFBF7] to-white border-b border-gray-150 py-14 sm:py-20 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
             
             {/* Left Column: Story & Actions */}
             <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1E4636]/10 text-[#1E4636] text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em]">
-                <ShieldTick strokeWidth={2} size={14} />
-                New Season. Premium USA Fashion.
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-900 text-[11px] sm:text-xs font-bold uppercase tracking-[0.25em]">
+                <Stars01 size={14} className="text-amber-600 shrink-0" />
+                Haute Lingerie &amp; Luxury Fashion · Discreet USA Delivery
               </div>
 
-              <h1 className="font-serif text-4xl sm:text-5xl lg:text-[56px] font-bold text-[#111827] leading-[1.12] tracking-tight">
-                Dress Well<br />
-                for <span className="text-[#1E4636]">Every Occasion.</span>
+              <h1 className="font-serif text-4xl sm:text-5xl lg:text-[62px] font-bold text-gray-950 leading-[1.08] tracking-tight">
+                Seductive Allure.<br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-700 via-rose-700 to-amber-950 italic font-serif">
+                  Pure Luxury Fashion.
+                </span>
               </h1>
 
-              <p className="text-base sm:text-lg text-gray-600 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                Clothing, shoes, bags, jewelry, watches, and sunglasses — curated for everyday style, with clear sizing and USA shipping.
+              <p className="text-base sm:text-lg text-gray-700 leading-relaxed max-w-xl mx-auto lg:mx-0 font-normal">
+                Exquisite French lace lingerie, liquid silk slip dresses, sculpted corsetry, and runway-ready apparel tailored to empower and captivate. Shipped fast and discreetly within the USA.
               </p>
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
                 <Link
-                  to="/shop"
-                  className="inline-flex items-center gap-2.5 px-8 py-4 bg-[#1E4636] hover:bg-[#153428] text-white rounded-full font-bold text-sm sm:text-base transition-all shadow-lg hover:shadow-xl hover:scale-[1.02]"
+                  to="/category/womens-clothing?sub=lingerie-and-intimates"
+                  className="inline-flex items-center gap-2.5 px-8 py-4 bg-gradient-to-r from-neutral-950 via-neutral-900 to-black hover:from-black hover:to-neutral-900 text-amber-200 border border-amber-400/40 rounded-full font-bold text-sm sm:text-base transition-all shadow-xl hover:shadow-2xl hover:scale-[1.02]"
                 >
-                  Shop Now <ArrowRight strokeWidth={2} size={16} />
+                  Explore Lingerie &amp; Intimates <ArrowRight strokeWidth={2} size={16} />
                 </Link>
-                <a
-                  href="#shop-by-category"
-                  className="inline-flex items-center gap-2 px-7 py-4 bg-white hover:bg-gray-50 text-[#1E4636] border-2 border-[#1E4636]/30 hover:border-[#1E4636] rounded-full font-bold text-sm sm:text-base transition-all"
+                <Link
+                  to="/shop"
+                  className="inline-flex items-center gap-2 px-7 py-4 bg-white hover:bg-neutral-50 text-neutral-900 border-2 border-neutral-300 hover:border-neutral-900 rounded-full font-bold text-sm sm:text-base transition-all shadow-sm"
                 >
-                  Shop by Category
-                </a>
+                  Shop New Season
+                </Link>
               </div>
 
               {/* Truthful Trust Points Row */}
-              <div className="pt-6 border-t border-gray-200/70 grid grid-cols-3 gap-3 text-left">
+              <div className="pt-6 border-t border-gray-200/80 grid grid-cols-3 gap-3 text-left">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-emerald-50 text-[#1E4636] flex items-center justify-center shrink-0">
-                    <ShieldTick strokeWidth={1.5} size={18} />
+                  <div className="w-9 h-9 rounded-full bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
+                    <Stars01 size={17} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-gray-900">Quality Products</p>
-                    <p className="text-[11px] text-gray-500">Curated styles</p>
+                    <p className="text-xs font-bold text-gray-900">Pure Silk &amp; Lace</p>
+                    <p className="text-[11px] text-gray-500">Delicate fabrics</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-emerald-50 text-[#1E4636] flex items-center justify-center shrink-0">
-                    <Truck01 strokeWidth={1.5} size={18} />
+                  <div className="w-9 h-9 rounded-full bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
+                    <Truck01 strokeWidth={1.5} size={17} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-gray-900">Reliable Shipping</p>
-                    <p className="text-[11px] text-gray-500">Fast &amp; trackable</p>
+                    <p className="text-xs font-bold text-gray-900">Discreet Shipping</p>
+                    <p className="text-[11px] text-gray-500">Plain packaging</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-emerald-50 text-[#1E4636] flex items-center justify-center shrink-0">
-                    <Lock01 strokeWidth={1.5} size={18} />
+                  <div className="w-9 h-9 rounded-full bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
+                    <Lock01 strokeWidth={1.5} size={17} />
                   </div>
                   <div>
                     <p className="text-xs font-bold text-gray-900">Secure Checkout</p>
-                    <p className="text-[11px] text-gray-500">Shop with confidence</p>
+                    <p className="text-[11px] text-gray-500">Encrypted payments</p>
                   </div>
                 </div>
               </div>
@@ -2288,23 +2312,24 @@ function HomePage() {
 
             {/* Right Column: Hero Visual Lineup */}
             <div className="lg:col-span-6 relative">
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-black/5 bg-white aspect-[16/10] sm:aspect-[16/10]">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-black/10 bg-neutral-900 aspect-[16/11]">
                 <img
                   src="/images/fashion/women-clothing.jpg"
-                  alt="Woman in a modern fashion outfit"
+                  alt="Luxedge Luxury Fashion & Intimates Collection"
                   loading="eager"
                   fetchPriority="high"
                   className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-105"
                 />
                 
                 {/* Floating Brand Mission Badge */}
-                <div className="absolute bottom-4 right-4 max-w-xs bg-[#143023]/92 backdrop-blur-md text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border border-white/20 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#C5A880] text-[#143023] flex items-center justify-center shrink-0 font-bold">
+                <div className="absolute bottom-4 right-4 max-w-xs bg-black/85 backdrop-blur-md text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl border border-amber-400/30 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black flex items-center justify-center shrink-0 font-bold shadow">
                     <Heart size={16} fill="currentColor" />
                   </div>
-                  <p className="text-xs font-medium leading-snug text-white/95">
-                    Style that fits your life. Shipped across the USA.
-                  </p>
+                  <div>
+                    <p className="text-xs font-bold text-amber-200">The Intimates Atelier</p>
+                    <p className="text-[11px] text-white/90 leading-tight">Pure Silk, Delicate Lace &amp; Sculpted Fits</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2314,20 +2339,114 @@ function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════
-          2. SHOP BY CATEGORY (Fashion Category Cards)
+          2. FEATURED HOT SPOTLIGHT: THE INTIMATES & LINGERIE SALON
       ══════════════════════════════════════════════════════════ */}
-      <section id="shop-by-category" className="py-14 sm:py-18 bg-white border-b border-gray-100">
+      <section className="py-16 sm:py-20 bg-neutral-950 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(217,119,6,0.12),transparent_50%)] pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+            <div>
+              <span className="text-xs font-bold tracking-[0.25em] text-amber-400 uppercase">Sensual Elegance</span>
+              <h2 className="font-serif text-3xl sm:text-4xl font-bold text-white mt-1">The Lingerie &amp; Intimates Salon</h2>
+              <p className="text-sm text-neutral-400 mt-1 max-w-xl">Curated silk slips, French lace bralettes, and sculpted corsets crafted to celebrate every contour.</p>
+            </div>
+            <Link
+              to="/category/womens-clothing?sub=lingerie-and-intimates"
+              className="inline-flex items-center gap-2 text-sm font-bold text-amber-300 hover:text-amber-200 transition-colors group"
+            >
+              View Full Lingerie Collection <ArrowRight strokeWidth={2} size={15} className="transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                title: 'Silk Charmeuse Chemises',
+                tag: '100% Pure Silk',
+                desc: 'Liquid silk slips with cowl necklines and alluring low backs.',
+                price: 'From $54.00',
+                to: '/category/womens-clothing?sub=lingerie-and-intimates',
+                img: '/images/fashion/samples/sample-seductive-backless-satin-slip-dress.svg',
+              },
+              {
+                title: 'French Lace Bralette Sets',
+                tag: 'Chantilly Lace',
+                desc: 'Scalloped eyelash lace bralettes with matching cheeky briefs.',
+                price: 'From $28.00',
+                to: '/category/womens-clothing?sub=lingerie-and-intimates',
+                img: '/images/fashion/samples/sample-lace-bralette-and-brief-set.svg',
+              },
+              {
+                title: 'Sculpting Corset Bodysuits',
+                tag: 'Hourglass Boning',
+                desc: 'Architectural waist boning with underwire support and sheer mesh.',
+                price: 'From $48.00',
+                to: '/category/womens-clothing?sub=lingerie-and-intimates',
+                img: '/images/fashion/samples/sample-sheer-floral-lace-plunge-bodysuit.svg',
+              },
+              {
+                title: 'Luxury Kimono Robes',
+                tag: 'Satin & Lace Trim',
+                desc: 'Wide kimono sleeve loungewear wraps in featherlight stretch satin.',
+                price: 'From $68.00',
+                to: '/category/womens-clothing?sub=lingerie-and-intimates',
+                img: '/images/fashion/samples/sample-silk-satin-robe-and-babydoll-set.svg',
+              },
+            ].map((card) => (
+              <Link
+                key={card.title}
+                to={card.to}
+                className="group relative flex flex-col justify-between rounded-3xl overflow-hidden bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 p-5 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/10"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-400/15 text-amber-300 border border-amber-400/30">
+                      {card.tag}
+                    </span>
+                    <span className="text-xs font-semibold text-neutral-400">{card.price}</span>
+                  </div>
+                  <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-neutral-950 mb-4 p-2 flex items-center justify-center">
+                    <img
+                      src={card.img}
+                      alt={card.title}
+                      className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                  <h3 className="font-serif text-lg font-bold text-white group-hover:text-amber-200 transition-colors">
+                    {card.title}
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed">
+                    {card.desc}
+                  </p>
+                </div>
+                <div className="mt-5 pt-3 border-t border-neutral-800 flex items-center justify-between text-xs font-bold text-amber-300">
+                  <span>Shop Styles</span>
+                  <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+                </div>
+              </Link>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════
+          3. SHOP BY CATEGORY (Fashion Category Cards)
+      ══════════════════════════════════════════════════════════ */}
+      <section id="shop-by-category" className="py-16 sm:py-20 bg-white border-b border-gray-150">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
             <div>
-              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#111827]">Shop by Category</h2>
-              <p className="text-sm text-gray-500 mt-1">Find the pieces you need, from everyday basics to statement accessories.</p>
+              <span className="text-xs font-bold tracking-[0.25em] text-neutral-500 uppercase">Curated Catalog</span>
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-950 mt-1">Shop by Category</h2>
+              <p className="text-sm text-gray-500 mt-1">From intimate couture to evening wear, fine jewelry, and statement accessories.</p>
             </div>
             <Link
               to="/shop"
-              className="inline-flex items-center gap-1.5 text-sm font-bold text-[#1E4636] hover:text-[#153428] transition-colors group"
+              className="inline-flex items-center gap-1.5 text-sm font-bold text-neutral-900 hover:text-amber-700 transition-colors group"
             >
               View All Categories <ArrowRight strokeWidth={2} size={15} className="transition-transform group-hover:translate-x-1" />
             </Link>
@@ -2336,19 +2455,19 @@ function HomePage() {
           {/* 6 Category Cards Responsive Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5">
             {[
+              { name: "Lingerie & Intimates", to: '/category/womens-clothing?sub=lingerie-and-intimates', img: '/images/fashion/samples/sample-lace-bralette-and-brief-set.svg' },
+              { name: 'Dresses & Tops', to: '/category/dresses-and-tops', img: '/images/fashion/dresses-tops.jpg' },
               { name: "Women's Clothing", to: '/category/womens-clothing', img: '/images/fashion/women-clothing.jpg' },
-              { name: "Men's Clothing", to: '/category/mens-clothing', img: '/images/fashion/men-clothing.jpg' },
-              { name: 'Outerwear', to: '/category/jackets-and-outerwear', img: '/images/fashion/jackets-outerwear.jpg' },
-              { name: 'Sneakers & Shoes', to: '/category/sneakers-and-shoes', img: '/images/fashion/sneakers-shoes.jpg' },
+              { name: 'Jewelry & Watches', to: '/category/jewelry', img: '/images/fashion/jewelry.jpg' },
               { name: 'Handbags & Wallets', to: '/category/handbags-and-wallets', img: '/images/fashion/handbags-wallets.jpg' },
-              { name: 'Sunglasses & Accessories', to: '/category/sunglasses-and-accessories', img: '/images/fashion/sunglasses-accessories.jpg' },
+              { name: 'Shoes & Heels', to: '/category/sneakers-and-shoes', img: '/images/fashion/sneakers-shoes.jpg' },
             ].map((cat) => (
               <Link
                 key={cat.name}
                 to={cat.to}
-                className="group flex flex-col rounded-2xl overflow-hidden bg-white border border-gray-150 hover:border-[#1E4636]/40 shadow-sm hover:shadow-lg transition-all duration-300"
+                className="group flex flex-col rounded-2xl overflow-hidden bg-white border border-gray-200 hover:border-amber-600/50 shadow-sm hover:shadow-xl transition-all duration-300"
               >
-                <div className="aspect-[4/3] w-full overflow-hidden bg-gray-100">
+                <div className="aspect-[4/3] w-full overflow-hidden bg-neutral-100">
                   <img
                     src={cat.img}
                     alt={cat.name}
@@ -2358,12 +2477,12 @@ function HomePage() {
                 </div>
                 <div className="p-3.5 sm:p-4 flex items-center justify-between gap-2">
                   <div>
-                    <h3 className="text-xs sm:text-sm font-bold text-gray-900 group-hover:text-[#1E4636] transition-colors leading-tight">
+                    <h3 className="text-xs sm:text-sm font-bold text-gray-950 group-hover:text-amber-700 transition-colors leading-tight">
                       {cat.name}
                     </h3>
-                    <p className="text-[11px] font-medium text-gray-500 mt-0.5">Shop Now</p>
+                    <p className="text-[11px] font-medium text-gray-500 mt-0.5">Explore Now</p>
                   </div>
-                  <span className="w-7 h-7 rounded-full bg-[#1E4636]/10 text-[#1E4636] group-hover:bg-[#1E4636] group-hover:text-white flex items-center justify-center transition-colors shrink-0">
+                  <span className="w-7 h-7 rounded-full bg-neutral-100 text-neutral-900 group-hover:bg-neutral-950 group-hover:text-amber-200 flex items-center justify-center transition-colors shrink-0">
                     <ArrowRight strokeWidth={2} size={13} />
                   </span>
                 </div>
@@ -2374,7 +2493,7 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="bg-[#FAF8F5] py-8 sm:py-10">
+      <section className="bg-[#FAF8F5] py-8 sm:py-10 border-b border-gray-150">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <BuyerGuidance
             title="Shop with the details in view"
@@ -2384,49 +2503,49 @@ function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════
-          3. VALUE & ASSURANCE STRIP
+          4. VALUE & ASSURANCE STRIP
       ══════════════════════════════════════════════════════════ */}
-      <section className="bg-[#FAF8F5] py-8 border-b border-gray-100">
+      <section className="bg-[#FAF8F5] py-9 border-b border-gray-150">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center sm:text-left">
             
             <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="w-11 h-11 rounded-2xl bg-white border border-gray-200/80 shadow-sm flex items-center justify-center text-[#1E4636] shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-center text-amber-700 shrink-0">
                 <Truck01 strokeWidth={1.5} size={20} />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-gray-900">Fast &amp; Reliable Shipping</h4>
-                <p className="text-[11px] text-gray-500">Get your orders delivered safely</p>
+                <h4 className="text-xs sm:text-sm font-bold text-gray-900">Discreet USA Shipping</h4>
+                <p className="text-[11px] text-gray-500">Unmarked privacy packaging</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="w-11 h-11 rounded-2xl bg-white border border-gray-200/80 shadow-sm flex items-center justify-center text-[#1E4636] shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-center text-amber-700 shrink-0">
                 <ShieldTick strokeWidth={1.5} size={20} />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-gray-900">Safe &amp; Secure Payments</h4>
-                <p className="text-[11px] text-gray-500">Shop with peace of mind</p>
+                <h4 className="text-xs sm:text-sm font-bold text-gray-900">Encrypted Payments</h4>
+                <p className="text-[11px] text-gray-500">Stripe 256-bit secure checkout</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="w-11 h-11 rounded-2xl bg-white border border-gray-200/80 shadow-sm flex items-center justify-center text-[#1E4636] shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-center text-amber-700 shrink-0">
                 <Package strokeWidth={1.5} size={20} />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-gray-900">Carefully Curated</h4>
-                <p className="text-[11px] text-gray-500">Quality you can rely on</p>
+                <h4 className="text-xs sm:text-sm font-bold text-gray-900">Pure Luxury Fabrics</h4>
+                <p className="text-[11px] text-gray-500">Silk, satin &amp; delicate lace</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="w-11 h-11 rounded-2xl bg-white border border-gray-200/80 shadow-sm flex items-center justify-center text-[#1E4636] shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-center text-amber-700 shrink-0">
                 <Headphones01 strokeWidth={1.5} size={20} />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-gray-900">Customer Support</h4>
-                <p className="text-[11px] text-gray-500">Mon–Fri, 9AM–6PM CT</p>
+                <h4 className="text-xs sm:text-sm font-bold text-gray-900">Styling &amp; Fit Concierge</h4>
+                <p className="text-[11px] text-gray-500">24/7 AI sizing assistance</p>
               </div>
             </div>
 
@@ -2435,20 +2554,21 @@ function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════
-          4. BEST SELLERS (5 Real Curated Products)
+          5. BEST SELLERS (Curated Luxury Products)
       ══════════════════════════════════════════════════════════ */}
-      <section className="py-14 sm:py-18 bg-white border-b border-gray-100">
+      <section className="py-16 sm:py-20 bg-white border-b border-gray-150">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
             <div>
-              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#111827]">Best Sellers</h2>
-              <p className="text-sm text-gray-500 mt-1">Popular pieces from the Luxedge collection.</p>
+              <span className="text-xs font-bold tracking-[0.25em] text-neutral-500 uppercase">Trending Now</span>
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-950 mt-1">Best Sellers &amp; New Arrivals</h2>
+              <p className="text-sm text-gray-500 mt-1">Popular luxury fashion and intimate apparel from the Luxedge studio.</p>
             </div>
             <Link
               to="/shop"
-              className="inline-flex items-center gap-1.5 text-sm font-bold text-[#1E4636] hover:text-[#153428] transition-colors group"
+              className="inline-flex items-center gap-1.5 text-sm font-bold text-neutral-900 hover:text-amber-700 transition-colors group"
             >
               View All Products <ArrowRight strokeWidth={2} size={15} className="transition-transform group-hover:translate-x-1" />
             </Link>
@@ -2475,11 +2595,11 @@ function HomePage() {
               return (
                 <div
                   key={item.id}
-                  className="group flex flex-col justify-between rounded-2xl border border-gray-150 bg-white p-3 sm:p-4 shadow-sm hover:shadow-lg transition-all relative"
+                  className="group flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-3.5 sm:p-4 shadow-sm hover:shadow-xl transition-all relative hover:border-amber-400/50"
                 >
                   {/* Top Badges & Wishlist */}
                   <div className="flex items-center justify-between mb-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-200">
                       {item.badge}
                     </span>
                     <WishlistButton product={targetProduct as any} notify={notify} className="p-1 rounded-full hover:bg-gray-100" />
@@ -2500,12 +2620,12 @@ function HomePage() {
                   <div className="flex-1 flex flex-col justify-between">
                     <div>
                       <Link to={`/product/${pSlug}`}>
-                        <h3 className="text-xs sm:text-sm font-semibold text-gray-900 hover:text-[#1E4636] transition-colors line-clamp-2 leading-snug">
+                        <h3 className="text-xs sm:text-sm font-semibold text-gray-900 hover:text-amber-800 transition-colors line-clamp-2 leading-snug">
                           {item.name}
                         </h3>
                       </Link>
                       <div className="mt-2 flex items-center justify-between">
-                        <span className="font-bold text-sm sm:text-base text-gray-900">
+                        <span className="font-bold text-sm sm:text-base text-gray-950">
                           {Number(item.price) > 0 ? `$${Number(item.price).toFixed(2)}` : 'Price at launch'}
                         </span>
                         {item.originalPrice > item.price && (
@@ -2522,7 +2642,7 @@ function HomePage() {
                         addToCart(targetProduct as any);
                         notify(`Added ${item.name.slice(0, 25)}... to cart`);
                       }}
-                      className="mt-3 w-full py-2.5 bg-[#1E4636] hover:bg-[#153428] text-white rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm hover:shadow"
+                      className="mt-3 w-full py-2.5 bg-neutral-900 hover:bg-black text-amber-200 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm hover:shadow"
                     >
                       <ShoppingBag01 size={14} /> Add to Cart
                     </button>
@@ -2536,98 +2656,98 @@ function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════
-          5. EDITORIAL & COMMUNITY 3-GRID (from Reference B)
+          6. EDITORIAL & CRAFTSMANSHIP 3-GRID
       ══════════════════════════════════════════════════════════ */}
-      <section className="py-14 sm:py-20 bg-[#FAF8F5] border-b border-gray-100">
+      <section className="py-16 sm:py-20 bg-[#FAF8F5] border-b border-gray-150">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             
-            {/* Block 1: Fashion editorial */}
-            <div className="rounded-3xl overflow-hidden bg-white border border-gray-150 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
+            {/* Block 1: The Silk & Lace Atelier */}
+            <div className="rounded-3xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
               <div className="aspect-[16/10] w-full overflow-hidden bg-gray-100">
                 <img
                   src="/images/fashion/dresses-tops.jpg"
-                  alt="Model in a red evening dress"
+                  alt="Evening Silk Gown & Lingerie"
                   className="w-full h-full object-cover object-[center_20%] transition-transform duration-500 hover:scale-105"
                 />
               </div>
               <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#1E4636] mb-1.5">Dresses &amp; Tops</p>
-                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-gray-900 mb-2.5">
-                    Dresses for Every Occasion
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700 mb-1.5">Intimate Craft</p>
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-gray-950 mb-2.5">
+                    The Silk &amp; Lace Atelier
                   </h3>
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    Easy-to-wear dresses, tops, and layers, with sizing details listed on every product page.
+                    Sensual liquid silk, unlined French eyelash lace, and sculpted corsetry cut with meticulous precision for intoxicating comfort.
                   </p>
                 </div>
                 <div className="mt-6 pt-4 border-t border-gray-100">
                   <Link
                     to="/about"
-                    className="inline-flex items-center gap-2 text-sm font-bold text-[#1E4636] hover:text-[#153428] transition-colors"
+                    className="inline-flex items-center gap-2 text-sm font-bold text-neutral-900 hover:text-amber-700 transition-colors"
                   >
-                    Our Story <ArrowRight strokeWidth={2} size={15} />
+                    Our Philosophy <ArrowRight strokeWidth={2} size={15} />
                   </Link>
                 </div>
               </div>
             </div>
 
-            {/* Block 2: Expert Guides & Tips */}
-            <div className="rounded-3xl overflow-hidden bg-white border border-gray-150 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
+            {/* Block 2: Fit & Styling Concierge */}
+            <div className="rounded-3xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
               <div className="aspect-[16/10] w-full overflow-hidden bg-gray-100">
                 <img
                   src="/images/fashion/jeans-pants.jpg"
-                  alt="Denim jeans and pants"
+                  alt="Luxury Fashion Styling"
                   className="w-full h-full object-cover object-center transition-transform duration-500 hover:scale-105"
                 />
               </div>
               <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#1E4636] mb-1.5">Style Guides</p>
-                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-gray-900 mb-2.5">
-                    Fit &amp; Style Guides
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700 mb-1.5">Personal Stylist</p>
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-gray-950 mb-2.5">
+                    Fit &amp; Sizing Concierge
                   </h3>
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    Practical guides to choosing jeans, jackets, and shoes that fit well and wear well.
+                    Have questions about bust, waist, or hip measurements? Luxie, our AI concierge, provides instant personalized sizing advice.
                   </p>
                 </div>
                 <div className="mt-6 pt-4 border-t border-gray-100">
                   <Link
                     to="/blog"
-                    className="inline-flex items-center gap-2 text-sm font-bold text-[#1E4636] hover:text-[#153428] transition-colors"
+                    className="inline-flex items-center gap-2 text-sm font-bold text-neutral-900 hover:text-amber-700 transition-colors"
                   >
-                    Visit the Blog <ArrowRight strokeWidth={2} size={15} />
+                    Style &amp; Fit Guides <ArrowRight strokeWidth={2} size={15} />
                   </Link>
                 </div>
               </div>
             </div>
 
-            {/* Block 3: Livestock & Equine Solutions */}
-            <div className="rounded-3xl overflow-hidden bg-white border border-gray-150 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
+            {/* Block 3: Discreet Packaging Guarantee */}
+            <div className="rounded-3xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
               <div className="aspect-[16/10] w-full overflow-hidden bg-gray-100">
                 <img
                   src="/images/fashion/watches.jpg"
-                  alt="Wristwatch on a clean background"
+                  alt="Fine Jewelry & Accessories"
                   className="w-full h-full object-cover object-[center_60%] transition-transform duration-500 hover:scale-105"
                 />
               </div>
               <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#1E4636] mb-1.5">Accessories</p>
-                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-gray-900 mb-2.5">
-                    Watches &amp; Jewelry
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700 mb-1.5">Privacy First</p>
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-gray-950 mb-2.5">
+                    Discreet USA Delivery
                   </h3>
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    Watches, jewelry, and sunglasses to finish any outfit.
+                    All lingerie and intimate orders are delivered in unmarked exterior shipping boxes with luxury gift wrapping inside.
                   </p>
                 </div>
                 <div className="mt-6 pt-4 border-t border-gray-100">
                   <Link
-                    to="/shop"
-                    className="inline-flex items-center gap-2 text-sm font-bold text-[#1E4636] hover:text-[#153428] transition-colors"
+                    to="/shipping-policy"
+                    className="inline-flex items-center gap-2 text-sm font-bold text-neutral-900 hover:text-amber-700 transition-colors"
                   >
-                    Explore Now <ArrowRight strokeWidth={2} size={15} />
+                    Shipping &amp; Privacy <ArrowRight strokeWidth={2} size={15} />
                   </Link>
                 </div>
               </div>
@@ -2639,7 +2759,7 @@ function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════
-          6. EDUCATIONAL MEDIA HUB SPOTLIGHT
+          7. EDUCATIONAL MEDIA HUB SPOTLIGHT
       ══════════════════════════════════════════════════════════ */}
       <MediaLatestSection />
 
@@ -2649,24 +2769,25 @@ function HomePage() {
       <SiteFaq items={HOME_FAQ} />
 
       {/* ══════════════════════════════════════════════════════════
-          7. NEWSLETTER (Warm Botanical Sign-Up)
+          8. NEWSLETTER (VIP Atelier Sign-Up)
       ══════════════════════════════════════════════════════════ */}
-      <section className="py-14 sm:py-16 bg-[#F6F8F5] relative overflow-hidden">
+      <section className="py-16 sm:py-20 bg-neutral-950 text-white relative overflow-hidden">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Join the Luxedge Family
+          <span className="text-xs font-bold tracking-[0.25em] text-amber-400 uppercase">Private Atelier</span>
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold text-white mt-1 mb-2">
+            Join the Luxedge VIP Club
           </h2>
-          <p className="text-sm sm:text-base text-gray-600 max-w-md mx-auto mb-6">
-            Get exclusive offers, style tips, and new arrivals delivered to your inbox.
+          <p className="text-sm sm:text-base text-neutral-400 max-w-md mx-auto mb-8">
+            Receive private invitations to new lingerie drops, secret lookbooks, and 15% off your first luxury order.
           </p>
 
           {nlDone ? (
-            <div className="max-w-md mx-auto p-4 rounded-2xl bg-white border border-[#1E4636]/20 text-center shadow-sm">
-              <p className="text-sm font-bold text-[#1E4636] mb-1">You're on the list! 🎉</p>
-              <p className="text-xs text-gray-600">
+            <div className="max-w-md mx-auto p-5 rounded-2xl bg-neutral-900 border border-amber-500/30 text-center shadow-lg">
+              <p className="text-sm font-bold text-amber-300 mb-1">Welcome to the VIP Atelier! ✨</p>
+              <p className="text-xs text-neutral-300">
                 {nlSaved
-                  ? <>We saved <span className="font-semibold text-[#1E4636]">{nlEmail}</span> to our subscriber list. You'll hear from us soon with seasonal care tips!</>
-                  : <>Thank you for joining. You'll hear from us soon with seasonal care tips and special subscriber perks!</>}
+                  ? <>We saved <span className="font-semibold text-amber-300">{nlEmail}</span> to our VIP subscriber list. Look out for your welcome gift!</>
+                  : <>Thank you for joining. Look out for our upcoming seasonal lookbook and private subscriber perks!</>}
               </p>
             </div>
           ) : (
@@ -2678,13 +2799,13 @@ function HomePage() {
                 onChange={e => setNlEmail(e.target.value)}
                 placeholder="Enter your email address"
                 aria-label="Email address"
-                className="flex-1 px-5 py-3.5 bg-white border border-gray-300 rounded-full text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#1E4636] focus:ring-2 focus:ring-[#1E4636]/15 shadow-sm"
+                className="flex-1 px-5 py-3.5 bg-neutral-900 border border-neutral-700 rounded-full text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 shadow-sm"
               />
               <button
                 type="submit"
-                className="px-8 py-3.5 bg-[#1E4636] hover:bg-[#153428] text-white font-bold rounded-full text-sm transition-all shadow-md hover:shadow-lg"
+                className="px-8 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-neutral-950 font-bold rounded-full text-sm transition-all shadow-md hover:shadow-lg hover:scale-[1.02]"
               >
-                Subscribe
+                Join Atelier
               </button>
             </form>
           )}

@@ -65,6 +65,8 @@ const HEX = {
   'Rose Gold': '#d19a86',
   Rose: '#d98c9a',
   'Brick Red': '#a8402a',
+  'Scarlet Red': '#a81c2f',
+  'Ruby Red': '#961526',
   Tortoise: '#8c5b2c',
   Light: '#f2cba8',
   Medium: '#d69f73',
@@ -143,6 +145,38 @@ const sleepSet = (hex) =>
   line('M430,222 L420,120', hex, 14) +
   line('M530,222 L540,120', hex, 14) +
   shape('M370,540 L590,540 L578,700 L490,700 L480,610 L470,700 L382,700 Z', shade(hex, -0.08));
+
+const bodysuit = (hex) =>
+  shape('M410,240 L450,380 L390,440 L440,680 L480,780 L520,680 L570,440 L510,380 L550,240 L500,240 L480,390 L460,240 Z', hex) +
+  line('M420,242 L420,130', hex, 6) +
+  line('M540,242 L540,130', hex, 6) +
+  line('M460,240 Q480,420 500,240', INK, 5, 0.45);
+
+const corsetTop = (hex) =>
+  cup(400, hex) +
+  cup(560, hex) +
+  shape('M340,458 L620,458 L600,640 L480,680 L360,640 Z', hex) +
+  line('M430,460 L430,650', INK, 3, 0.5) +
+  line('M480,460 L480,680', INK, 4, 0.5) +
+  line('M530,460 L530,650', INK, 3, 0.5);
+
+const lingerieSet = (hex) =>
+  bralette(hex) +
+  shape('M380,690 L580,690 L560,780 Q480,820 400,780 Z', hex) +
+  line('M360,520 L400,690', INK, 3, 0.4) +
+  line('M600,520 L560,690', INK, 3, 0.4);
+
+const slipDress = (hex) =>
+  dress(780, 160, hex) +
+  line('M430,222 L410,130', hex, 6) +
+  line('M530,222 L550,130', hex, 6) +
+  line('M440,222 Q480,310 520,222', INK, 4, 0.4);
+
+const babydollRobe = (hex) =>
+  sleepSet(hex) +
+  shape('M340,180 L410,220 L370,550 L310,480 Z', hex, ' fill-opacity="0.7"') +
+  shape('M620,180 L550,220 L590,550 L650,480 Z', hex, ' fill-opacity="0.7"') +
+  line('M420,530 L540,530', GOLD, 6);
 
 const bikini = (hex) =>
   shape('M340,330 L440,440 L340,520 Z', hex) +
@@ -351,12 +385,22 @@ function silhouette(subcategory, { hex, colorName, name }) {
       return top({ hem: 720, hex, crew: true });
     case 'Hoodies':
       return hoodie(hex);
+    case 'Bodysuits':
+      return bodysuit(hex);
     case 'Bralettes':
       return bralette(hex);
+    case 'Bras':
+      return corsetTop(hex);
+    case 'Lingerie Sets':
+      return name.includes('Teddy')
+        ? bodysuit(shade(hex, -0.05)) + line('M440,320 L520,320', INK, 4, 0.5)
+        : lingerieSet(hex);
+    case 'Slips':
+      return slipDress(hex);
     case 'Shapewear':
       return shapewear(hex);
     case 'Satin Sleepwear':
-      return sleepSet(hex);
+      return name.includes('Robe') ? babydollRobe(hex) : sleepSet(hex);
     case 'Bikinis':
       return bikini(hex);
     case 'One-Piece Swimsuits':

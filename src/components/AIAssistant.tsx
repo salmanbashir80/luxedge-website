@@ -3,7 +3,7 @@ import { X, PaperPlaneRight, SpinnerGap } from '@phosphor-icons/react';
 
 interface ChatMsg { role: 'user' | 'assistant'; content: string }
 
-const GREETING = 'Hi! I\'m Luxie — the Luxedge AI assistant. 🐾 Ask me about our pet products, shipping, returns, or anything about the store.';
+const GREETING = 'Hi! I\'m Luxie — your Luxedge fashion & style concierge. ✨ Ask me about our luxury apparel, lingerie & intimates, sizing, shipping, or styling recommendations.';
 
 // Floating AI assistant (bottom-right). Powered by DeepSeek through the
 // public /api/crm/assistant endpoint — the key never reaches the browser.
@@ -78,8 +78,8 @@ export default function AIAssistant() {
               <img src="/luxedge-mark.png" alt="Luxedge" className="w-full h-full object-contain p-1" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-[13px] font-bold leading-tight">Luxie — AI Assistant</p>
-              <p className="text-[10px] text-emerald-100 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-300" /> Online · answers instantly</p>
+              <p className="text-white text-[13px] font-bold leading-tight">Luxie — Style Concierge</p>
+              <p className="text-[10px] text-emerald-100 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-300" /> Online · fashion &amp; sizing advice</p>
             </div>
             <button onClick={() => setOpen(false)} aria-label="Close assistant" className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-colors">
               <X size={14} weight="bold" />
@@ -113,7 +113,7 @@ export default function AIAssistant() {
             <input
               value={input} onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void send(); }}
-              placeholder="Ask about products, shipping, returns…"
+              placeholder="Ask about fashion, lingerie, sizing, styling…"
               className="flex-1 px-3.5 py-2.5 border border-gray-200 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-[#1E4636] transition-all"
             />
             <button onClick={send} disabled={busy || !input.trim()} aria-label="Send"

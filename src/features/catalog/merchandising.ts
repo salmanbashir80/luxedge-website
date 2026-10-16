@@ -369,6 +369,15 @@ export const HOME_BEST_SELLER_SLOTS: readonly BestSellerSlot[] = [
   { badge: 'Farm Choice', slugs: ['heavy-duty-cattle-feed-trough'], category: 'cattle' },
 ];
 
+/** Curated homepage fashion slots, in display order. */
+export const FASHION_HOME_BEST_SELLER_SLOTS: readonly BestSellerSlot[] = [
+  { badge: 'Bestseller', slugs: ['sample-floral-midi-dress'], category: 'dress' },
+  { badge: 'Hot Arrival', slugs: ['sample-sheer-floral-lace-plunge-bodysuit', 'sample-lace-bralette-and-brief-set'], category: 'women' },
+  { badge: 'Silk & Satin', slugs: ['sample-silk-satin-robe-and-babydoll-set', 'sample-satin-evening-maxi-dress'], category: 'sleepwear' },
+  { badge: 'Couture', slugs: ['sample-women-s-long-trench-coat', 'sample-women-s-tailored-blazer-and-trouser-set'], category: 'outerwear' },
+  { badge: 'Luxury Accent', slugs: ['sample-structured-tote-handbag', 'sample-gold-tone-layered-necklace'], category: 'handbag' },
+];
+
 export interface BestSellerCandidate {
   id: string;
   slug?: string | null;

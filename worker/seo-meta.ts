@@ -43,7 +43,7 @@ import {
 import { SEO_PRODUCTS_SELECT, SEO_CATEGORIES_SELECT, SEO_BLOG_POSTS_SELECT, SEO_MEDIA_SELECT } from './selects';
 import { buildSitemapGroups, renderHtmlSitemapBody } from './sitemap';
 import { merchantOfferExtras } from '../src/features/catalog/seo';
-import { categoryContentFor, FASHION_CATEGORY_SLUGS } from '../src/content/categoryContent';
+import { CATEGORY_CONTENT, categoryContentFor, FASHION_CATEGORY_SLUGS } from '../src/content/categoryContent';
 import { authorFor } from '../src/content/authors';
 import { SSR_FOOTER_NAV } from '../src/content/navigation';
 import { productContentFor } from '../src/content/productContent';
@@ -1721,6 +1721,37 @@ export async function maybeInjectSeo(
   // /category/:slug
   if (segs.length === 2 && segs[0] === 'category') {
     const slug = decodeURIComponent(segs[1]);
+    // Check if this is a known Fashion category from CATEGORY_CONTENT first.
+    // The Supabase categories table only has historical Pet rows, so Fashion
+    // slugs would 404 if we only query the DB.
+    const fashionCat = CATEGORY_CONTENT[slug];
+    if (fashionCat) {
+      const canonical = `${root}/category/${slug}`;
+      const description = fashionCat.desc
+        ? `Shop ${fashionCat.name} at Luxedge — ${fashionCat.desc.toLowerCase()}.`
+        : `Shop ${fashionCat.name} at Luxedge — curated fashion, shipped within the USA.`;
+      const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: `${fashionCat.name} — Luxedge`,
+        url: canonical,
+      };
+      const injected = inject(html, {
+        title: `${fashionCat.name} — Fashion | Luxedge`,
+        description,
+        canonical,
+        jsonLd,
+      });
+      // Adapt CategoryContent to CategoryRow shape for injectCategoryBody.
+      const catRow: CategoryRow = { slug, name: fashionCat.name };
+      const prods = await getProducts();
+      let body = injected;
+      if (prods !== null) {
+        body = injectCategoryBody(body, catRow, prods);
+      }
+      return { html: body, status: 200 };
+    }
+    // Fall back to Supabase categories for Pet/legacy categories.
     const categories = await getCategories();
     if (categories === null) {
       return { html: injectCanonical(html, `${root}/category/${slug}`), status: 200 };

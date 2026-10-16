@@ -55,7 +55,7 @@ describe('fashion sample products', () => {
   it('lists women\'s dresses, tops and outerwear under Women\'s Clothing by membership', () => {
     const inWomens = FASHION_SAMPLE_PRODUCTS.filter((p) => p.collectionSlugs.includes('womens-clothing'));
     const groups = new Set(inWomens.map((p) => p.subcategory));
-    expect(inWomens.length).toBe(15);
+    expect(inWomens.length).toBe(21);
     for (const leaf of ['Midi', 'Bodycon', 'Maxi', 'Blouses', 'Crop Tops', 'Jackets', 'Trench Coats']) {
       expect(groups.has(leaf)).toBe(true);
     }
