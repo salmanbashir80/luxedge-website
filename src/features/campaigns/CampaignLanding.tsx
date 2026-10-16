@@ -32,6 +32,8 @@ type Phase = { phase: 'loading' } | { phase: 'open' | 'full' | 'closed' | 'error
 
 const inputCls = 'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-3 text-[15px] text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition';
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-gray-700';
+// Fashion build (VITE_FASHION_SAMPLE_CATALOG=true) drops the Pet wording.
+const NEWS_LABEL = import.meta.env.VITE_FASHION_SAMPLE_CATALOG === 'true' ? 'Luxedge news' : 'Luxedge pet news';
 
 export default function CampaignLanding() {
   const { slug = '' } = useParams();
@@ -212,7 +214,7 @@ export default function CampaignLanding() {
                 </div>
                 <label className="flex items-start gap-2 text-[11px] text-gray-500">
                   <input type="checkbox" className="mt-0.5 h-4 w-4 accent-blue-600" checked={form.marketing} onChange={(e) => setForm((f) => ({ ...f, marketing: e.target.checked }))} />
-                  Send me occasional Luxedge pet news (optional — your claim confirmation is sent regardless).
+                  Send me occasional {NEWS_LABEL} (optional — your claim confirmation is sent regardless).
                 </label>
                 {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700" role="alert">{error}</p>}
                 <button disabled={busy} className="w-full rounded-xl bg-[#1E4636] py-3.5 text-sm font-black text-white hover:bg-[#143023] disabled:opacity-50">

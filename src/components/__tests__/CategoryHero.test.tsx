@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
@@ -18,7 +20,8 @@ describe('category hero public rendering', () => {
     expect(html).toContain(config.buyerNote);
     expect(html).toContain('fetchPriority="high"');
     expect(config.imageAlt.length).toBeGreaterThan(10);
-    expect(config.image).toMatch(/^https:\/\//);
+    expect(config.image).toMatch(/^(https:\/\/|\/images\/fashion\/)/);
+    if (!config.image.startsWith('https://')) expect(existsSync(join(process.cwd(), 'public', config.image))).toBe(true);
     for (const chip of config.chips) expect(slugs).toContain(chip.href.replace('/category/', ''));
   });
 

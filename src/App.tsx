@@ -15,6 +15,7 @@ import { authorFor } from './content/authors';
 import { COPYRIGHT_SECTIONS, DISCLAIMER_SECTIONS, EDITORIAL_SECTIONS, PRIVACY_SECTIONS, RETURNS_SECTIONS, SHIPPING_SECTIONS, TERMS_SECTIONS, POLICY_LAST_UPDATED, FAQ_DATA } from './content/policies';
 import { CATEGORY_NAMES, CATEGORY_CONTENT, categoryContentFor, categorySlugFor } from './content/categoryContent';
 import { FASHION_SAMPLE_PRODUCTS, type FashionSampleProduct } from './content/fashionSampleProducts';
+import { FASHION_SUBCATEGORY_TREE, fashionSubcategoryLeafSlugs, fashionSubcategorySlug } from './content/fashionSubcategories';
 import { NAV_PATHS, UTILITY_NAV, STRIP_NAV, MEGA_MENU, DRAWER_NAV, FOOTER_COLUMNS } from './content/navigation';
 import { productContentFor } from './content/productContent';
 import ProductGallery from './components/ProductGallery';
@@ -84,6 +85,8 @@ export interface Product {
   supplierUrl?: string | null;
   /** Static demonstration concept (never purchasable, never in the database). */
   isSample?: boolean;
+  /** Extra category slugs this product is listed under (sample catalog only). */
+  collectionSlugs?: string[];
   safetyClass?: import('./features/catalog/productSafety').ProductSafetyClass | null;
   safetyReviewStatus?: import('./features/catalog/productSafety').ProductSafetyReviewStatus | null;
   intendedSpecies?: string | null;
@@ -251,6 +254,7 @@ function mapSampleProduct(s: FashionSampleProduct): Product {
     shippingCost: '',
     slug: s.slug,
     isSample: true,
+    collectionSlugs: s.collectionSlugs,
     variants: s.variants.map((v) => ({
       id: v.sku,
       color: v.color ?? '',
@@ -2734,6 +2738,13 @@ function ShopPage() {
     setLoadingMore(false);
   };
   const isDeals = q.toLowerCase() === 'deal';
+
+  // Subcategory navigation (sample catalog only): ?sub=<node slug> narrows a
+  // category page to the leaves under that node. Products carry their leaf name
+  // in tags, so the match is on tag slug, not on a separate inventory field.
+  const subSlug = FASHION_SAMPLE_CATALOG && cat !== 'All' ? (params.get('sub') || '') : '';
+  const subLeaves = subSlug ? fashionSubcategoryLeafSlugs(slugOf(cat), subSlug) : null;
+  const subNodes = FASHION_SAMPLE_CATALOG && cat !== 'All' ? (FASHION_SUBCATEGORY_TREE[slugOf(cat)] ?? []) : [];
   const hasRealDeals = products.some(p => p.isActive && (p.saleEnabled || p.originalPrice > p.price));
   const dealFallbackIds = new Set(
     hasRealDeals ? [] : products
@@ -2746,12 +2757,13 @@ function ShopPage() {
   useEffect(() => { setCat(slug ? fromSlug(slug) : 'All'); }, [slug]);
   useEffect(() => { const qp = params.get('q'); if (qp) trackEvent('search', { search_term: qp, ...utmParams() }); setQ(qp || ''); }, [params]);
   useEffect(() => { const m = params.get('max'); if (m !== null) setMaxPrice(+m); }, [params]);
-  useEffect(() => { setPage(1); }, [cat, q, sort, maxPrice, onlyInStock, onlyFreeShipping, onlyNew]);
+  useEffect(() => { setPage(1); }, [cat, q, sort, maxPrice, onlyInStock, onlyFreeShipping, onlyNew, subSlug]);
 
   const base = products.filter(p => p.isActive)
     .filter(p => {
       if (cat === 'All') return true;
       if (p.category === cat) return true;
+      if (p.collectionSlugs?.includes(slugOf(cat))) return true;
       if (cat === 'Cat Supplies') {
         const slug = (p.id || '').toLowerCase();
         const name = (p.name || '').toLowerCase();
@@ -2767,7 +2779,8 @@ function ShopPage() {
     .filter(p => maxPrice === 0 || p.price <= maxPrice)
     .filter(p => !onlyInStock || p.stock > 0)
     .filter(p => !onlyFreeShipping || p.freeShipping)
-    .filter(p => !onlyNew || p.newArrival);
+    .filter(p => !onlyNew || p.newArrival)
+    .filter(p => !subLeaves || (Array.isArray(p.tags) && p.tags.some(t => subLeaves.has(fashionSubcategorySlug(String(t))))));
   // Recommended (default) = smart adaptive merchandising — real stats when
   // available, otherwise visual/availability/freshness. Category relevance is
   // guaranteed because the category filter above runs first (a high global
@@ -2867,6 +2880,16 @@ function ShopPage() {
         {!isDeals && cat !== 'All' ? (
           <div className="max-w-[1440px] mx-auto px-4 py-8 sm:py-10">
             <CategoryHero config={categoryHeroConfig(cat, pageDesc)} />
+            {subNodes.length > 0 && (
+              <nav aria-label={`${cat} subcategories`} className="category-hero__browse">
+                <ul>
+                  <li><Link to={`/category/${slugOf(cat)}`} aria-current={subSlug ? undefined : 'page'}>All {cat}</Link></li>
+                  {subNodes.map(node => (
+                    <li key={node.slug}><Link to={`/category/${slugOf(cat)}?sub=${node.slug}`} aria-current={subSlug === node.slug ? 'page' : undefined}>{node.name}</Link></li>
+                  ))}
+                </ul>
+              </nav>
+            )}
           </div>
         ) : (
           <div className="max-w-[1440px] mx-auto px-4 py-10 sm:py-12">

@@ -459,14 +459,14 @@ async function getBlogRegistry(_origin: string, _env: SeoEnv): Promise<BlogEntry
 
 const STATIC_PAGES: Record<string, { title: string; description: string }> = {
   '/shop': {
-    title: 'Shop All Pet Essentials — Dog, Cat, Bird, Horse & More | Luxedge',
+    title: 'Shop All Fashion — Women’s, Men’s & Accessories | Luxedge',
     description:
-      'Browse the Luxedge curated collection — dog beds and leashes, cat toys and fountains, bird feeders, horse grooming and livestock essentials, all sourced and ready to ship.',
+      'Browse the Luxedge fashion collection — dresses, jeans, jackets, sneakers, handbags, jewelry, watches and sunglasses, shipped within the USA.',
   },
   '/about': {
-    title: 'About Luxedge — Premium Pet Essentials',
+    title: 'About Luxedge — Premium USA Fashion',
     description:
-      'Luxedge curates useful essentials for pets and animals — thoughtfully selected, sourced from verified suppliers, and shipped to your door.',
+      'Luxedge is a premium USA fashion store curating clothing, shoes, bags, jewelry, watches, and accessories — quality you can trust.',
   },
   '/contact': {
     title: 'Contact Luxedge — We Are Here to Help',
@@ -476,7 +476,7 @@ const STATIC_PAGES: Record<string, { title: string; description: string }> = {
   '/faq': {
     title: 'FAQ — Shipping, Returns & Product Questions | Luxedge',
     description:
-      'Answers to common questions about Luxedge — shipping times, order tracking, returns, and how our curated pet essentials are sourced.',
+      'Answers to common questions about Luxedge — shipping times, order tracking, returns, and how our curated fashion is sourced.',
   },
   '/sitemap': {
     // The visitor-facing HTML sitemap. It exists so the footer's "Sitemap" link
@@ -1019,7 +1019,7 @@ export function injectProductBody(html: string, p: ProductRow): string {
     const catSlug = (p.categories.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     links.push(`<a href="/category/${esc(catSlug)}">More in ${esc(p.categories.name)}</a>`);
   }
-  links.push('<a href="/shop">Shop all pet essentials</a>');
+  links.push('<a href="/shop">Shop all fashion</a>');
   parts.push(`<p>${links.join(' · ')}</p>`);
   return html.replace('<div id="ssr-body"></div>', `<article>${parts.join('\n')}</article>`);
 }
@@ -1136,32 +1136,32 @@ function renderSiteFaq(items: SiteFaqItem[], title = 'Common questions'): string
 
 export function injectHomeBody(html: string, products?: ProductRow[] | null): string {
   const parts: string[] = [
-    `<h1>The Best Finds for Every Pet, Thoughtfully Curated.</h1>`,
+    `<h1>Quality Fashion for Every Wardrobe.</h1>`,
     `<p>Sourced worldwide. Chosen with care.</p>`,
-    `<p>We search trusted sources around the world for well-made essentials, then choose the pieces worth bringing home.</p>`,
+    `<p>We search trusted sources around the world for well-made fashion, then choose the pieces worth bringing home.</p>`,
     `<h2>Shop with the details in view</h2>`,
-    `<p>Start with the animal and everyday task you are shopping for, then use each listing’s stated size, materials, price, and availability to narrow the options.</p>`,
-    `<p>Shop by pet</p>`,
-    `<h2>Who are you shopping for?</h2>`,
+    `<p>Start with the style and occasion you are shopping for, then use each listing’s stated size, materials, price, and availability to narrow the options.</p>`,
+    `<p>Shop by category</p>`,
+    `<h2>Shop by department</h2>`,
     `<ul>` +
-      `<li><a href="/category/dog-supplies">Dog</a></li>` +
-      `<li><a href="/category/cat-supplies">Cat</a></li>` +
-      `<li><a href="/category/bird-supplies">Birds</a></li>` +
-      `<li><a href="/category/horse">Horse</a></li>` +
-      `<li><a href="/category/cattle">Livestock</a></li>` +
+      `<li><a href="/category/womens-clothing">Women</a></li>` +
+      `<li><a href="/category/mens-clothing">Men</a></li>` +
+      `<li><a href="/category/sneakers-and-shoes">Shoes</a></li>` +
+      `<li><a href="/category/jewelry">Jewelry</a></li>` +
+      `<li><a href="/category/watches">Watches</a></li>` +
       `</ul>`,
     `<p>Browse</p>`,
     `<h2>Popular Categories</h2>`,
     `<ul>` +
       `<li><a href="/shop">Shop all products</a></li>` +
-      `<li><a href="/category/dog-supplies">Dog walking &amp; training</a></li>` +
-      `<li><a href="/category/pet-beds">Beds &amp; mats</a></li>` +
-      `<li><a href="/category/grooming">Grooming</a></li>` +
-      `<li><a href="/category/feeding-water">Feeding &amp; water</a></li>` +
-      `<li><a href="/category/pet-toys">Toys</a></li>` +
-      `<li><a href="/category/pet-accessories">Travel &amp; accessories</a></li>` +
-      `<li><a href="/category/cat-supplies">Cat essentials</a></li>` +
-      `<li><a href="/category/bird-supplies">Bird supplies</a></li>` +
+      `<li><a href="/category/dresses-and-tops">Dresses &amp; tops</a></li>` +
+      `<li><a href="/category/jeans-and-pants">Jeans &amp; pants</a></li>` +
+      `<li><a href="/category/jackets-and-outerwear">Jackets &amp; outerwear</a></li>` +
+      `<li><a href="/category/handbags-and-wallets">Handbags &amp; wallets</a></li>` +
+      `<li><a href="/category/sunglasses-and-accessories">Sunglasses &amp; accessories</a></li>` +
+      `<li><a href="/category/makeup-and-beauty">Makeup &amp; beauty</a></li>` +
+      `<li><a href="/category/womens-clothing">Women’s clothing</a></li>` +
+      `<li><a href="/category/mens-clothing">Men’s clothing</a></li>` +
       `</ul>`,
     ...renderSiteSections(HOME_SECTIONS),
     ...renderSiteFaq(HOME_FAQ),
@@ -1257,15 +1257,15 @@ async function injectSitemapBody(html: string): Promise<string> {
  * without depending on per-category JS rendering). Mirrors injectCategoryBody. */
 async function injectShopBody(html: string): Promise<string> {
   const cats = [
-    ['Dog Supplies', '/category/dog-supplies'], ['Cat Supplies', '/category/cat-supplies'],
-    ['Pet Beds', '/category/pet-beds'], ['Pet Toys', '/category/pet-toys'],
-    ['Feeding & Water', '/category/feeding-water'], ['Grooming', '/category/grooming'],
-    ['Pet Accessories', '/category/pet-accessories'], ['Bird Supplies', '/category/bird-supplies'],
-    ['Horse', '/category/horse'], ['Cattle', '/category/cattle'],
+    ['Women’s Clothing', '/category/womens-clothing'], ['Men’s Clothing', '/category/mens-clothing'],
+    ['Dresses & Tops', '/category/dresses-and-tops'], ['Jeans & Pants', '/category/jeans-and-pants'],
+    ['Jackets & Outerwear', '/category/jackets-and-outerwear'], ['Sneakers & Shoes', '/category/sneakers-and-shoes'],
+    ['Handbags & Wallets', '/category/handbags-and-wallets'], ['Jewelry', '/category/jewelry'],
+    ['Watches', '/category/watches'], ['Sunglasses & Accessories', '/category/sunglasses-and-accessories'],
   ];
   const links = cats.map(([label, to]) => `<li><a href="${esc(to)}">${esc(label)}</a></li>`).join('');
   const parts: string[] = [
-    `<h1>Shop All Pet Essentials</h1>`,
+    `<h1>Shop All Fashion</h1>`,
     `<p>Handpicked for quality, comfort, and value. Browse by category below.</p>`,
     `<h2>Categories</h2>`,
     `<ul>${links}</ul>`,
@@ -1427,9 +1427,9 @@ export async function maybeInjectSeo(
           .map((p) => productImageUrls(p)[0])[0] || null
       : null;
     let out = inject(html, {
-      title: 'Luxedge — Premium Pet & Animal Essentials',
+      title: 'Luxedge — Premium USA Fashion Store',
       description:
-        'Shop practical pet and horse essentials, read buying guides, and find clear shipping and return information at Luxedge.',
+        'Shop women’s and men’s clothing, dresses, jeans, jackets, sneakers, handbags, jewelry, watches, and sunglasses at Luxedge, shipped within the USA.',
       canonical: root,
       ogImage: homeOgImage,
       jsonLd: {
@@ -1561,9 +1561,9 @@ export async function maybeInjectSeo(
   // /shop — pre-render category navigation.
   if (segs.length === 1 && segs[0] === 'shop') {
     let out = inject(html, {
-      title: 'Shop All Pet Essentials — Dog, Cat, Bird, Horse & More | Luxedge',
+      title: 'Shop All Fashion — Women’s, Men’s & Accessories | Luxedge',
       description:
-        'Browse the Luxedge curated collection — dog beds and leashes, cat toys and fountains, bird feeders, horse grooming and livestock essentials, all sourced and ready to ship.',
+        'Browse the Luxedge fashion collection — dresses, jeans, jackets, sneakers, handbags, jewelry, watches and sunglasses, shipped within the USA.',
       canonical: `${root}/shop`,
     });
     out = await injectShopBody(out);
@@ -1739,10 +1739,10 @@ export async function maybeInjectSeo(
     }
     const canonical = `${root}/category/${slug}`;
     let out = inject(html, {
-      title: `${cat.name} — Pet Essentials | Luxedge`,
+      title: `${cat.name} — Fashion | Luxedge`,
       description: CATEGORY_DESC[slug]
         ? `Shop ${cat.name} at Luxedge — ${CATEGORY_DESC[slug].toLowerCase()}. Supplier-verified items with clear delivery estimates.`
-        : `Shop ${cat.name} at Luxedge — curated, supplier-verified essentials for you and your pets.`,
+        : `Shop ${cat.name} at Luxedge — curated fashion, shipped within the USA.`,
       canonical,
       jsonLd: {
         '@context': 'https://schema.org',

@@ -96,6 +96,9 @@ migrations_dir = "cloudflare/d1/migrations"
 
 [env.staging]
 name = "luxedge-cloudflare-staging"
+# Do not inherit the production custom domains (luxedge.us, www.luxedge.us).
+# Without this, `wrangler deploy --env staging` reassigns production's routes.
+routes = []
 
 # Staging needs the same outbound email binding as production, otherwise the
 # self-service "send me a code" flow (POST /api/auth/forgot) cannot deliver

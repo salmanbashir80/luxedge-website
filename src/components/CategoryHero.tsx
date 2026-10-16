@@ -54,8 +54,8 @@ const FASHION_HERO_COPY: { name: string; headline: string; desc: string; ctaLabe
 const toHeroSlug = (name: string) => name.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 // Temporary, replaceable sample photography (CC-licensed Wikimedia Commons files, see public/images/fashion/SOURCES.md).
-// Served from the production origin's public folder; owner-supplied images can replace these files in place.
-const FASHION_IMAGE_ORIGIN = 'https://luxedge.us/images/fashion';
+// Served from this app's public folder; owner-supplied images can replace these files in place.
+const FASHION_IMAGE_ORIGIN = '/images/fashion';
 const FASHION_HERO_IMAGES: Record<string, { file: string; alt: string }> = {
   "Women's Clothing": { file: 'women-clothing.jpg', alt: 'Model walking the runway in a fashion show' },
   "Men's Clothing": { file: 'men-clothing.jpg', alt: 'Man in a green shirt-jacket, blue jeans and desert boots' },

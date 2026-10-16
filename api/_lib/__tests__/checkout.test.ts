@@ -39,6 +39,14 @@ describe('validateCheckoutRequest', () => {
     expect(validateCheckoutRequest({ items: [] }).ok).toBe(false);
   });
 
+  it('rejects Fashion sample (non-purchasable) product ids before any catalog lookup', () => {
+    // Sample ids are `sample-<slug>` and never match the real UUID product-id shape,
+    // so a forged cart cannot reach the catalog or create an order for a sample.
+    const r = validateCheckoutRequest({ items: [{ id: 'sample-wool-blend-coat', quantity: 1 }] });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.message).toMatch(/Invalid product id/);
+  });
+
   it('rejects bad quantities and duplicate products', () => {
     expect(validateCheckoutRequest({ items: [{ id: PID, quantity: 0 }] }).ok).toBe(false);
     expect(validateCheckoutRequest({ items: [{ id: PID, quantity: 200 }] }).ok).toBe(false);

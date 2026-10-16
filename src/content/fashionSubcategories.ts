@@ -71,6 +71,28 @@ export const FASHION_SUBCATEGORY_TREE: Record<string, FashionSubcategoryNode[]> 
   ],
 };
 
+/**
+ * Leaf slugs covered by one navigation node (a group such as "Dresses", or a
+ * leaf such as "Jeans") under a main category. Empty when the node is unknown,
+ * so an unrecognised `?sub=` value filters everything out rather than nothing.
+ */
+export function fashionSubcategoryLeafSlugs(categorySlug: string, nodeSlug: string): Set<string> {
+  const found = new Set<string>();
+  const collect = (node: FashionSubcategoryNode) => {
+    if (node.children.length === 0) found.add(node.slug);
+    else node.children.forEach(collect);
+  };
+  const find = (nodes: FashionSubcategoryNode[]): boolean => {
+    for (const n of nodes) {
+      if (n.slug === nodeSlug) { collect(n); return true; }
+      if (find(n.children)) return true;
+    }
+    return false;
+  };
+  find(FASHION_SUBCATEGORY_TREE[categorySlug] ?? []);
+  return found;
+}
+
 /** Every leaf (subcategory) name under a main category, in tree order. */
 export function fashionLeafNames(categorySlug: string): string[] {
   const out: string[] = [];

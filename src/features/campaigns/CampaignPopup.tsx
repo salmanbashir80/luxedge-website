@@ -25,6 +25,10 @@ interface PopupCampaign {
   popup?: { headline?: string; subtext?: string } | null;
 }
 
+// Fashion build (VITE_FASHION_SAMPLE_CATALOG=true): the Pet gift-drop campaign popup is hidden.
+const FASHION_SAMPLE_CATALOG = import.meta.env.VITE_FASHION_SAMPLE_CATALOG === 'true';
+const NEWS_LABEL = FASHION_SAMPLE_CATALOG ? 'Luxedge news' : 'Luxedge pet news';
+
 const seen = (slug: string) => {
   try { return localStorage.getItem(`luxedge-campaign-popup-${slug}`) || ''; } catch { return ''; }
 };
@@ -44,6 +48,7 @@ export default function CampaignPopup() {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
+    if (FASHION_SAMPLE_CATALOG) return;
     let alive = true;
     fetch('/api/campaigns')
       .then((r) => (r.ok ? r.json() : Promise.reject()))
@@ -163,7 +168,7 @@ export default function CampaignPopup() {
                   </div>
                   <label className="mt-2 flex items-start gap-2 text-[11px] text-gray-500">
                     <input type="checkbox" className="mt-0.5 h-4 w-4 accent-indigo-600" checked={optedIn} onChange={(e) => setOptedIn(e.target.checked)} />
-                    Send me occasional Luxedge pet news (optional — the gift collection link works either way).
+                    Send me occasional {NEWS_LABEL} (optional — the gift collection link works either way).
                   </label>
                   {state === 'error' && <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{msg}</p>}
                   <button onClick={submit} disabled={state === 'busy'} className="mt-3 w-full rounded-xl bg-indigo-600 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-indigo-700 disabled:opacity-50">

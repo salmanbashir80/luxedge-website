@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 1200" role="img">
+<title>Women&#39;s Cropped Denim Jacket</title>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#faf7f2"/>
+<stop offset="1" stop-color="#ebe3d6"/>
+</linearGradient>
+</defs>
+<rect width="960" height="1200" fill="url(#bg)"/>
+<circle cx="480" cy="560" r="380" fill="#a9cde6" fill-opacity="0.14"/>
+<ellipse cx="480" cy="1010" rx="300" ry="26" fill="#2b2420" fill-opacity="0.12"/>
+<path d="M330,220 L420,200 L440,260 L520,260 L540,200 L630,220 L680,620 L620,640 L600,460 L600,1000 L360,1000 L360,460 L340,640 L280,620 Z" fill="#a9cde6" stroke="#2b2420" stroke-opacity="0.45" stroke-width="5" stroke-linejoin="round"/><path d="M440,260 L480,400 L520,260" fill="none" stroke="#2b2420" stroke-width="5" stroke-opacity="0.45" stroke-linecap="round" stroke-linejoin="round"/><circle cx="480" cy="430" r="9" fill="#ffffff" stroke="#2b2420" stroke-opacity="0.45" stroke-width="5"/><circle cx="480" cy="520" r="9" fill="#ffffff" stroke="#2b2420" stroke-opacity="0.45" stroke-width="5"/><circle cx="480" cy="610" r="9" fill="#ffffff" stroke="#2b2420" stroke-opacity="0.45" stroke-width="5"/>
+<text x="480" y="1150" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#6b6259" letter-spacing="3">SAMPLE ILLUSTRATION</text>
+</svg>
