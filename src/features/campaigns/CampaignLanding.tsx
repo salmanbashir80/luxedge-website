@@ -32,8 +32,7 @@ type Phase = { phase: 'loading' } | { phase: 'open' | 'full' | 'closed' | 'error
 
 const inputCls = 'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-3 text-[15px] text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition';
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-gray-700';
-// Fashion build (VITE_FASHION_SAMPLE_CATALOG=true) drops the Pet wording.
-const NEWS_LABEL = import.meta.env.VITE_FASHION_SAMPLE_CATALOG === 'true' ? 'Luxedge news' : 'Luxedge pet news';
+const NEWS_LABEL = 'Luxedge style news';
 
 export default function CampaignLanding() {
   const { slug = '' } = useParams();
@@ -235,7 +234,7 @@ export default function CampaignLanding() {
               )}
               {eligible.length === 0 && (
                 <div className="rounded-2xl bg-white/5 p-8 text-center ring-1 ring-white/10">
-                  <p className="text-sm text-blue-100/80">A complimentary {st.giftName || 'Luxedge gift'} is reserved for every eligible pet owner — tell us about your pet to claim it.</p>
+                  <p className="text-sm text-blue-100/80">A complimentary {st.giftName || 'Luxedge gift'} is reserved for every eligible customer — tell us about your style preference to claim it.</p>
                 </div>
               )}
               {eligible.length > 0 && (

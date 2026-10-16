@@ -26,8 +26,7 @@ interface PopupCampaign {
 }
 
 // Fashion build (VITE_FASHION_SAMPLE_CATALOG=true): the Pet gift-drop campaign popup is hidden.
-const FASHION_SAMPLE_CATALOG = import.meta.env.VITE_FASHION_SAMPLE_CATALOG === 'true';
-const NEWS_LABEL = FASHION_SAMPLE_CATALOG ? 'Luxedge news' : 'Luxedge pet news';
+const NEWS_LABEL = 'Luxedge style news';
 
 const seen = (slug: string) => {
   try { return localStorage.getItem(`luxedge-campaign-popup-${slug}`) || ''; } catch { return ''; }
