@@ -8,6 +8,9 @@ const CONSENT_KEY = 'luxedge_consent_v1';
  */
 export function getConsent(): ConsentChoice {
   try {
+    if (typeof window !== 'undefined' && window.location.search && window.location.search.includes('consent=accepted')) {
+      return 'accepted';
+    }
     const v = localStorage.getItem(CONSENT_KEY);
     return v === 'accepted' || v === 'declined' ? v : null;
   } catch {

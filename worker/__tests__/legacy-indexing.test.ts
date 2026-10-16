@@ -85,7 +85,7 @@ describe('the blog is withdrawn from the index', () => {
     const html = await res.text();
     // The 503 outage branch also sets noindex, so pin the real index title too:
     // otherwise this test would pass while the blog served nothing at all.
-    expect(html).toContain('Pet Care Blog');
+    expect(html).toContain('Fashion, Style &amp; Wardrobe Guides');
     expect(html).not.toContain('temporarily unavailable');
     expect(html).toContain('<meta name="robots" content="noindex, nofollow" />');
   });
@@ -108,7 +108,7 @@ describe('the blog is withdrawn from the index', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('x-robots-tag')).toBeNull();
     const html = await res.text();
-    expect(html).toContain('Pet Care Blog');
+    expect(html).toContain('Fashion, Style &amp; Wardrobe Guides');
     expect(html).not.toContain('noindex');
   });
 

@@ -20,23 +20,21 @@ function wrap(c: CategoryRow, products: ProductRow[] = []): string {
   return injectCategoryBody('<div id="root"><div id="ssr-body"></div></div>', c, products);
 }
 
-describe('injectCategoryBody — category pet hero image', () => {
-  it('emits the matching pet image for a known category (Dog Supplies)', () => {
-    const html = wrap(cat('Dog Supplies', 'dog-supplies'));
-    expect(html).toMatch(
-      /<img src="https:\/\/images\.unsplash\.com\/photo-1552053831-71594a27632d[^"]*" alt="Dog Supplies essentials" \/>/,
-    );
+describe('injectCategoryBody — category fashion hero image', () => {
+  it('emits the matching fashion image for a known category (Women\'s Clothing)', () => {
+    const html = wrap(cat("Women's Clothing", 'womens-clothing'));
+    expect(html).toContain('<img src="/images/fashion/women-clothing.jpg" alt="Women&#39;s Clothing essentials" />');
   });
 
-  it('emits the matching pet image for Cat Supplies', () => {
-    const html = wrap(cat('Cat Supplies', 'cat-supplies'));
-    expect(html).toContain('photo-1514888286974-6c03e2ca1dba');
-    expect(html).toContain('alt="Cat Supplies essentials"');
+  it('emits the matching fashion image for Men\'s Clothing', () => {
+    const html = wrap(cat("Men's Clothing", 'mens-clothing'));
+    expect(html).toContain('/images/fashion/men-clothing.jpg');
+    expect(html).toContain('alt="Men&#39;s Clothing essentials"');
   });
 
-  it('emits the matching pet image for Horse and Cattle', () => {
-    expect(wrap(cat('Horse', 'horse'))).toContain('photo-1553284965-83fd3e82fa5a');
-    expect(wrap(cat('Cattle', 'cattle'))).toContain('photo-1500595046743-cd271d694d30');
+  it('emits the matching fashion image for Dresses and Lingerie', () => {
+    expect(wrap(cat('Dresses and Tops', 'dresses-and-tops'))).toContain('/images/fashion/dresses-tops.jpg');
+    expect(wrap(cat('Lingerie & Intimates', 'lingerie-and-intimates'))).toContain('/images/fashion/samples/sample-lace-bralette-and-brief-set.svg');
   });
 
   it('emits no image for an unknown category (no invented URL)', () => {
@@ -45,26 +43,25 @@ describe('injectCategoryBody — category pet hero image', () => {
   });
 
   it('still renders the category h1 and description with the image', () => {
-    const html = wrap(cat('Dog Supplies', 'dog-supplies'));
-    expect(html).toContain('<h1>Dog Supplies</h1>');
-    // & is HTML-escaped by esc().
-    expect(html).toContain('Walking, training &amp; everyday dog essentials');
+    const html = wrap(cat("Women's Clothing", 'womens-clothing'));
+    expect(html).toContain('<h1>Women&#39;s Clothing</h1>');
+    expect(html).toContain('Everyday tops, layers and wardrobe staples for women');
     // Image appears before the heading.
     expect(html.indexOf('<img')).toBeLessThan(html.indexOf('<h1>'));
   });
 
   it('pre-renders the same concise buyer guidance as the category landing', () => {
-    const html = wrap(cat('Dog Supplies', 'dog-supplies'));
-    expect(html).toContain('Choosing dog supplies');
+    const html = wrap(cat("Women's Clothing", 'womens-clothing'));
+    expect(html).toContain('Choosing women&#39;s clothing');
     expect(html).toContain('listed dimensions, materials, availability, and delivery details');
   });
 
   it('emits the breadcrumb trail mirroring the client CategoryHero', () => {
-    const html = wrap(cat('Cat Supplies', 'cat-supplies'));
+    const html = wrap(cat("Women's Clothing", 'womens-clothing'));
     expect(html).toContain('<nav aria-label="Breadcrumb">');
     expect(html).toContain('<a href="/">Home</a>');
     expect(html).toContain('<a href="/shop">Shop</a>');
-    expect(html).toContain('<li>Cat Supplies</li>');
+    expect(html).toContain('<li>Women&#39;s Clothing</li>');
     // Breadcrumb sits before the h1.
     expect(html.indexOf('Breadcrumb')).toBeLessThan(html.indexOf('<h1>'));
   });

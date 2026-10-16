@@ -38,9 +38,7 @@ import { parseStoredCart, reconcileCart, CART_STORAGE_KEY } from './services/car
 import { fetchCheckoutSessionStatus, type CheckoutSessionStatus } from './services/checkout';
 import { verifyOnsitePayment as verifyOnsitePaymentApi } from './services/checkoutOnsite';
 import { useWishlist, WishlistButton, configureWishlistAccount } from './features/wishlist/wishlist';
-// On-site (PaymentElement) checkout — lazy so Stripe + the card form only load
-// when a shopper actually reaches /checkout (keeps the storefront bundle lean).
-const CheckoutOnsitePage = lazy(() => import('./features/checkout/CheckoutOnsitePage').then((m) => ({ default: m.default })));
+import CheckoutOnsitePage from './features/checkout/CheckoutOnsitePage';
 import {
   ShoppingBag01, Menu01, X, SearchMd, User01 as UserIcon, LogOut01, Package, Building01,
   ShieldTick, Star01, Truck01, RefreshCcw01, Zap, ArrowRight, Mail01, Phone,

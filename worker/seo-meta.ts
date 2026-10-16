@@ -925,16 +925,18 @@ function injectArticleBody(html: string, post: BlogEntry): string {
  * Used only when the live categories table has no description for the slug,
  * so the pre-render and the client category header show the same line. */
 const CATEGORY_DESC: Record<string, string> = {
-  'dog-supplies': 'Walking, training & everyday dog essentials',
-  'cat-supplies': 'Play, comfort & everyday cat essentials',
-  'pet-beds': 'Comfort-led pieces for deeper rest',
-  'pet-toys': 'Interactive play and everyday enrichment',
-  'feeding-water': 'Considered pieces for daily mealtimes',
-  grooming: 'Simple tools for everyday care',
-  'pet-accessories': 'Useful pieces for life together',
-  'bird-supplies': 'Seed, feed & care essentials for feathered friends',
-  horse: 'Practical care and stable essentials for horses',
-  cattle: 'Useful feeding and care essentials for cattle and livestock',
+  'womens-clothing': 'Everyday tops, layers and wardrobe staples for women',
+  'mens-clothing': 'Core shirts, knits and everyday layers for men',
+  'dresses-and-tops': 'Dresses, blouses and tees for work, weekends and occasions',
+  'jeans-and-pants': 'Tailored trousers, casual pants and denim for everyday wear',
+  'jackets-and-outerwear': 'Coats, jackets and transitional layers for every season',
+  'sneakers-and-shoes': 'Casual sneakers, boots and dress shoes built for all-day comfort',
+  'handbags-and-wallets': 'Totes, crossbodies and leather wallets for daily essentials',
+  jewelry: 'Everyday necklaces, rings and bracelets in gold and silver tones',
+  watches: 'Classic and modern timepieces with stainless steel and leather straps',
+  'sunglasses-and-accessories': 'UV-protective sunglasses, scarves and accessories to complete your look',
+  'lingerie-and-intimates': 'Fine lace bralettes, chemises and lingerie sets crafted for elegance and allure',
+  'makeup-and-beauty': 'Curated beauty essentials, brushes and skincare tools for daily radiance',
 };
 
 function money(value: number | null | undefined): string {
@@ -1027,35 +1029,27 @@ export function injectProductBody(html: string, p: ProductRow): string {
 /** Pre-renders the category intro into the SPA shell: the category name, the
  * same descriptive line the client header shows, and links to the real
  * products in the category (the client renders these same products as cards). */
-// Category pet hero images — mirror of CAT_HERO_IMAGES in src/App.tsx so the
-// server-rendered category header shows the same pet image the hydrated page
-// does. Keep the two maps in sync.
+// Category fashion hero images
 const CAT_HERO_IMAGES: Record<string, string> = {
-  'Dog Supplies': 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=720&h=820&fit=crop&crop=faces&auto=format&q=88',
-  'Cat Supplies': 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=720&h=820&fit=crop&crop=faces&auto=format&q=88',
-  'Bird Supplies': 'https://images.unsplash.com/photo-1552728089-57bdde30beb3?w=720&h=820&fit=crop&crop=faces&auto=format&q=88',
-  'Horse': 'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=720&h=820&fit=crop&crop=faces&auto=format&q=88',
-  'Cattle': 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=720&h=820&fit=crop&crop=faces&auto=format&q=88',
-  'Pet Beds': 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=640&h=760&fit=crop&crop=faces&auto=format&q=88',
-  'Pet Toys': 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=640&h=760&fit=crop&crop=faces&auto=format&q=88',
-  'Feeding & Water': 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=640&h=760&fit=crop&crop=faces&auto=format&q=88',
-  'Grooming': 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?w=640&h=760&fit=crop&crop=faces&auto=format&q=88',
-  'Pet Accessories': 'https://images.unsplash.com/photo-1541599540903-216a46ca1dc0?w=640&h=760&fit=crop&crop=faces&auto=format&q=88',
+  "Women's Clothing": '/images/fashion/women-clothing.jpg',
+  "Men's Clothing": '/images/fashion/men-clothing.jpg',
+  'Dresses and Tops': '/images/fashion/dresses-tops.jpg',
+  'Jeans and Pants': '/images/fashion/jeans-pants.jpg',
+  'Jackets and Outerwear': '/images/fashion/outerwear.jpg',
+  'Sneakers and Shoes': '/images/fashion/sneakers-shoes.jpg',
+  'Handbags and Wallets': '/images/fashion/handbags-wallets.jpg',
+  Jewelry: '/images/fashion/jewelry.jpg',
+  Watches: '/images/fashion/watches.jpg',
+  'Sunglasses and Accessories': '/images/fashion/accessories.jpg',
+  'Lingerie & Intimates': '/images/fashion/samples/sample-lace-bralette-and-brief-set.svg',
+  'Makeup and Beauty': '/images/fashion/beauty.jpg',
 };
 
 export function injectCategoryBody(html: string, cat: CategoryRow, products: ProductRow[]): string {
   const inCategory = products.filter((p) => {
     if (!p.slug || !isPubliclyListableProduct(p)) return false;
     const catName = p.categories?.name?.toLowerCase();
-    if (catName === cat.name.toLowerCase()) return true;
-    if (cat.slug === 'cat-supplies' || cat.name.toLowerCase() === 'cat supplies') {
-      const slug = p.slug.toLowerCase();
-      const name = (p.name || '').toLowerCase();
-      const tags = typeof p.tags === 'string' ? p.tags.toLowerCase() : Array.isArray(p.tags) ? p.tags.join(' ').toLowerCase() : '';
-      if (tags.includes('cat')) return true;
-      if (slug.includes('cat-') || slug.includes('-cat') || /\bcat\b|\bcats\b/i.test(name)) return true;
-    }
-    return false;
+    return catName === cat.name.toLowerCase();
   });
   // Mirror the client category header exactly (CAT_META in src/App.tsx or the
   // client's `Browse our {category} collection` fallback) so the pre-render and
@@ -1315,7 +1309,7 @@ async function injectBlogIndexBody(html: string, origin: string, env: SeoEnv): P
   const posts = await getBlogRegistry(origin, env);
   const parts: string[] = [
     `<h1>Blog</h1>`,
-    `<p>Practical pet care guides from Luxedge — puppy essentials, cat enrichment, bird care, horse grooming, cattle basics, and honest buying advice.</p>`,
+    `<p>Expert fashion styling guides from Luxedge — wardrobe essentials, fabric care, lingerie fit advice, luxury outfit coordination, and honest buying advice.</p>`,
   ];
   if (posts && posts.length > 0) {
     const items = posts.slice(0, 15).map((p) => `<li><a href="/blog/${esc(p.slug)}">${esc(p.title)}</a> — ${esc(p.excerpt || '').slice(0, 100)}</li>`).join('');
@@ -1467,7 +1461,7 @@ export async function maybeInjectSeo(
     let out = inject(html, {
       title: 'Luxedge Media — Videos, Guides & Stories | Luxedge',
       description:
-        'Watch Luxedge videos — product education, pet & animal care, how-to guides, buying guides and behind-the-brand stories, embedded from the official YouTube channel.',
+        'Watch Luxedge videos — styling tutorials, fashion lookbooks, fabric care guides, luxury capsule wardrobing and behind-the-brand stories.',
       canonical: `${root}/media`,
       noindex: true,
       jsonLd: {
@@ -1476,7 +1470,7 @@ export async function maybeInjectSeo(
         name: 'Luxedge Media',
         url: `${root}/media`,
         description:
-          'Films, guides and stories from the Luxedge team — product education, pet and animal care, how-to guides, buying guides and behind-the-brand stories.',
+          'Films, styling tutorials, lookbooks and stories from the Luxedge fashion team.',
       },
     });
     out = await injectMediaIndexBody(out);
@@ -1533,9 +1527,9 @@ export async function maybeInjectSeo(
   // /blog (index) — pre-render the index with recent post links from the CMS.
   if (segs.length === 1 && segs[0] === 'blog') {
     let out = inject(html, {
-      title: 'Pet Care Blog — Guides, Tips & Buying Advice | Luxedge',
+      title: 'Fashion, Style & Wardrobe Guides | Luxedge',
       description:
-        'Practical buying guides and care tips for dogs, cats, birds, horses, and cattle — sizing, placement, grooming, and product picks from the Luxedge editorial team.',
+        'Expert fashion styling guides, capsule wardrobe advice, lingerie fit guides, fabric care, and luxury apparel trends from the Luxedge editorial team.',
       canonical: `${root}/blog`,
       // Withdrawn from the index while the blog is not public (reviewHolds.ts).
       noindex: !isBlogPublic(),

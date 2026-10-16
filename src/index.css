@@ -557,7 +557,7 @@ input[type="number"] { -moz-appearance: textfield; }
 }
 
 /* Two calm solid color fields give the hero more character without competing
-   with the pet photography or making the text hard to scan. */
+   with the fashion photography or making the text hard to scan. */
 .home-hero::before,
 .home-hero::after {
   content: '';
