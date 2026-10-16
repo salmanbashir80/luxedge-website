@@ -204,7 +204,7 @@ async function fetchJson<T>(base: string, key: string, path: string): Promise<T 
 async function getProducts(): Promise<ProductRow[] | null> {
   const base = supabaseBase();
   const key = supabaseAnon();
-  if (!base || !key) return null;
+  if (!isD1Backend() && (!base || !key)) return null;
   // Page-specific fields the storefront shows: short/long description, price,
   // stock, shipping and delivery estimates, plus the embedded category name for
   // a contextual "More in {category}" link. features/specifications are mostly
@@ -261,7 +261,7 @@ async function getProducts(): Promise<ProductRow[] | null> {
 async function getProductImages(): Promise<ProductImageRow[] | null> {
   const base = supabaseBase();
   const key = supabaseAnon();
-  if (!base || !key) return null;
+  if (!isD1Backend() && (!base || !key)) return null;
   return cachedFetch('seo:product-images', TTL_DB, () =>
     fetchJson<ProductImageRow[]>(
       base,
@@ -280,7 +280,7 @@ export interface CategoryRow {
 async function getCategories(): Promise<CategoryRow[] | null> {
   const base = supabaseBase();
   const key = supabaseAnon();
-  if (!base || !key) return null;
+  if (!isD1Backend() && (!base || !key)) return null;
   return cachedFetch('seo:categories', TTL_DB, () =>
     fetchJson<CategoryRow[]>(base, key, `categories?select=${SEO_CATEGORIES_SELECT}&limit=200`),
   );
@@ -436,7 +436,7 @@ async function getMediaRegistry(): Promise<MediaEntry[] | null> {
 async function getBlogRegistry(_origin: string, _env: SeoEnv): Promise<BlogEntry[] | null> {
   const base = supabaseBase();
   const key = supabaseAnon();
-  if (base && key) {
+  if (isD1Backend() || (base && key)) {
     const cms = await cachedFetch<BlogEntry[]>('seo:blog-cms', 60_000, async () => {
       const rows = await fetchJson<BlogCmsRow[]>(
         base,
