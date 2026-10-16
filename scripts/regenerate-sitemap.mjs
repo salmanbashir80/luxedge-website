@@ -18,7 +18,7 @@
 // Requires VITE_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in .env.
 // Usage: node scripts/regenerate-sitemap.mjs
 import fs from 'fs';
-import { isHeldBlog, isHeldProduct, isBlogPublic } from '../src/content/reviewHolds.ts';
+import { isHeldBlog, isHeldProduct, isBlogPublic, isRetiredBlogSlug } from '../src/content/reviewHolds.ts';
 import { isPubliclyListableProduct } from '../src/content/productEligibility.ts';
 
 const env = { ...process.env };
@@ -101,7 +101,7 @@ const urls = ['/', '/shop', '/blog', '/about', '/contact', '/faq', '/shipping-po
   // The literal above keeps /blog so this list stays comparable to STATIC_ROUTES.
   .filter((u) => isBlogPublic() || u !== '/blog');
   for (const c of cats) urls.push(`/category/${c.slug}`);
-  if (isBlogPublic()) for (const b of blogs) if (!isHeldBlog(b.slug)) urls.push(`/blog/${b.slug}`);
+  if (isBlogPublic()) for (const b of blogs) if (!isHeldBlog(b.slug) && !isRetiredBlogSlug(b.slug)) urls.push(`/blog/${b.slug}`);
   for (const p of listable) urls.push(`/product/${p.slug || p.id}`);
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

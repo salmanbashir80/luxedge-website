@@ -1,5 +1,5 @@
 import { SITEMAP_PRODUCTS_SELECT, SITEMAP_CATEGORIES_SELECT, SITEMAP_BLOG_POSTS_SELECT } from './selects';
-import { isHeldBlog, isHeldProduct, isBlogPublic } from '../src/content/reviewHolds';
+import { isHeldBlog, isHeldProduct, isBlogPublic, isRetiredBlogSlug } from '../src/content/reviewHolds';
 import { isPubliclyListableProduct } from '../src/content/productEligibility';
 import { FASHION_CATEGORY_SLUGS } from '../src/content/categoryContent';
 import { readPostgrestPath } from './d1/read';
@@ -98,7 +98,7 @@ export async function buildSitemapGroups(): Promise<SitemapGroups | null> {
   const fashionCategoryIds = new Set(fashionCats.map((c) => c.id));
   const guides = isBlogPublic()
     // Held posts keep returning 404, so they must never be advertised here.
-    ? blogs.filter((b) => !isHeldBlog(b.slug))
+    ? blogs.filter((b) => !isHeldBlog(b.slug) && !isRetiredBlogSlug(b.slug))
     : [];
   return {
     // The blog is noindexed while isBlogPublic() is false, so its index page is

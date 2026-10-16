@@ -29,6 +29,8 @@ const heldBlog = new Set([
   'how-to-choose-cattle-trough-feed-water-setup',
   'how-to-fit-no-pull-dog-harness',
   'grooming-routine-long-haired-pets',
+  'dog-car-safety-seat-belt-guide',
+  'essential-supplies-new-puppy',
 ]);
 /**
  * The manual per-product index control.
