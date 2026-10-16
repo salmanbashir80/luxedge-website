@@ -2238,81 +2238,81 @@ function HomePage() {
       {/* ══════════════════════════════════════════════════════════
           1. MASTER HERO SECTION (Hot Luxury Fashion & Lingerie)
       ══════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#FAF8F5] via-[#FDFBF7] to-white border-b border-gray-150 py-14 sm:py-20 lg:py-24">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#FAF8F5] via-[#FDFBF7] to-white border-b border-gray-150 py-8 sm:py-10 lg:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             
             {/* Left Column: Story & Actions */}
-            <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-900 text-[11px] sm:text-xs font-bold uppercase tracking-[0.25em]">
-                <Stars01 size={14} className="text-amber-600 shrink-0" />
+            <div className="lg:col-span-6 space-y-4 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-900 text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em]">
+                <Stars01 size={13} className="text-amber-600 shrink-0" />
                 Haute Lingerie &amp; Luxury Fashion · Discreet USA Delivery
               </div>
 
-              <h1 className="font-serif text-4xl sm:text-5xl lg:text-[62px] font-bold text-gray-950 leading-[1.08] tracking-tight">
+              <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-950 leading-[1.1] tracking-tight">
                 Seductive Allure.<br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-700 via-rose-700 to-amber-950 italic font-serif">
                   Pure Luxury Fashion.
                 </span>
               </h1>
 
-              <p className="text-base sm:text-lg text-gray-700 leading-relaxed max-w-xl mx-auto lg:mx-0 font-normal">
+              <p className="text-sm sm:text-base text-gray-700 leading-relaxed max-w-xl mx-auto lg:mx-0 font-normal">
                 Exquisite French lace lingerie, liquid silk slip dresses, sculpted corsetry, and runway-ready apparel tailored to empower and captivate. Shipped fast and discreetly within the USA.
               </p>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 pt-1">
                 <Link
-                  to="/category/womens-clothing?sub=lingerie-and-intimates"
-                  className="inline-flex items-center gap-2.5 px-8 py-4 bg-gradient-to-r from-neutral-950 via-neutral-900 to-black hover:from-black hover:to-neutral-900 text-amber-200 border border-amber-400/40 rounded-full font-bold text-sm sm:text-base transition-all shadow-xl hover:shadow-2xl hover:scale-[1.02]"
+                  to="/category/lingerie-and-intimates"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-neutral-950 via-neutral-900 to-black hover:from-black hover:to-neutral-900 text-amber-200 border border-amber-400/40 rounded-full font-bold text-xs sm:text-sm transition-all shadow-md hover:shadow-lg hover:scale-[1.01]"
                 >
-                  Explore Lingerie &amp; Intimates <ArrowRight strokeWidth={2} size={16} />
+                  Explore Lingerie &amp; Intimates <ArrowRight strokeWidth={2} size={15} />
                 </Link>
                 <Link
                   to="/shop"
-                  className="inline-flex items-center gap-2 px-7 py-4 bg-white hover:bg-neutral-50 text-neutral-900 border-2 border-neutral-300 hover:border-neutral-900 rounded-full font-bold text-sm sm:text-base transition-all shadow-sm"
+                  className="inline-flex items-center gap-2 px-5 py-3 bg-white hover:bg-neutral-50 text-neutral-900 border border-neutral-300 hover:border-neutral-900 rounded-full font-bold text-xs sm:text-sm transition-all shadow-xs"
                 >
                   Shop New Season
                 </Link>
               </div>
 
               {/* Truthful Trust Points Row */}
-              <div className="pt-6 border-t border-gray-200/80 grid grid-cols-3 gap-3 text-left">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
-                    <Stars01 size={17} />
+              <div className="pt-4 border-t border-gray-200/80 grid grid-cols-3 gap-2 text-left">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
+                    <Stars01 size={15} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-gray-900">Pure Silk &amp; Lace</p>
-                    <p className="text-[11px] text-gray-500">Delicate fabrics</p>
+                    <p className="text-xs font-bold text-gray-900 leading-tight">Pure Silk &amp; Lace</p>
+                    <p className="text-[10px] text-gray-500">Delicate fabrics</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
-                    <Truck01 strokeWidth={1.5} size={17} />
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
+                    <Truck01 strokeWidth={1.5} size={15} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-gray-900">Discreet Shipping</p>
-                    <p className="text-[11px] text-gray-500">Plain packaging</p>
+                    <p className="text-xs font-bold text-gray-900 leading-tight">Discreet Shipping</p>
+                    <p className="text-[10px] text-gray-500">Plain packaging</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
-                    <Lock01 strokeWidth={1.5} size={17} />
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
+                    <Lock01 strokeWidth={1.5} size={15} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-gray-900">Secure Checkout</p>
-                    <p className="text-[11px] text-gray-500">Encrypted payments</p>
+                    <p className="text-xs font-bold text-gray-900 leading-tight">Secure Checkout</p>
+                    <p className="text-[10px] text-gray-500">Encrypted payments</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Right Column: Hero Visual Lineup */}
-            <div className="lg:col-span-6 relative">
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-black/10 bg-neutral-900 aspect-[16/11]">
+            <div className="lg:col-span-6 relative flex items-center justify-center">
+              <div className="relative rounded-2xl overflow-hidden shadow-xl border border-black/10 bg-neutral-900 aspect-[4/3] w-full max-h-[380px] lg:max-h-[420px]">
                 <img
                   src="/images/fashion/women-clothing.jpg"
                   alt="Luxedge Luxury Fashion & Intimates Collection"
@@ -2322,13 +2322,13 @@ function HomePage() {
                 />
                 
                 {/* Floating Brand Mission Badge */}
-                <div className="absolute bottom-4 right-4 max-w-xs bg-black/85 backdrop-blur-md text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl border border-amber-400/30 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black flex items-center justify-center shrink-0 font-bold shadow">
-                    <Heart size={16} fill="currentColor" />
+                <div className="absolute bottom-3 right-3 max-w-xs bg-black/85 backdrop-blur-md text-white p-3 rounded-xl shadow-xl border border-amber-400/30 flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black flex items-center justify-center shrink-0 font-bold shadow">
+                    <Heart size={15} fill="currentColor" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-amber-200">The Intimates Atelier</p>
-                    <p className="text-[11px] text-white/90 leading-tight">Pure Silk, Delicate Lace &amp; Sculpted Fits</p>
+                    <p className="text-xs font-bold text-amber-200 leading-tight">The Intimates Atelier</p>
+                    <p className="text-[10px] text-white/90 leading-tight">Pure Silk, Delicate Lace &amp; Sculpted Fits</p>
                   </div>
                 </div>
               </div>
@@ -2341,32 +2341,32 @@ function HomePage() {
       {/* ══════════════════════════════════════════════════════════
           2. FEATURED HOT SPOTLIGHT: THE INTIMATES & LINGERIE SALON
       ══════════════════════════════════════════════════════════ */}
-      <section className="py-16 sm:py-20 bg-neutral-950 text-white relative overflow-hidden">
+      <section className="py-10 sm:py-12 bg-neutral-950 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(217,119,6,0.12),transparent_50%)] pointer-events-none" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 sm:mb-8">
             <div>
               <span className="text-xs font-bold tracking-[0.25em] text-amber-400 uppercase">Sensual Elegance</span>
-              <h2 className="font-serif text-3xl sm:text-4xl font-bold text-white mt-1">The Lingerie &amp; Intimates Salon</h2>
-              <p className="text-sm text-neutral-400 mt-1 max-w-xl">Curated silk slips, French lace bralettes, and sculpted corsets crafted to celebrate every contour.</p>
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white mt-1">The Lingerie &amp; Intimates Salon</h2>
+              <p className="text-xs sm:text-sm text-neutral-400 mt-1 max-w-xl">Curated silk slips, French lace bralettes, and sculpted corsets crafted to celebrate every contour.</p>
             </div>
             <Link
-              to="/category/womens-clothing?sub=lingerie-and-intimates"
-              className="inline-flex items-center gap-2 text-sm font-bold text-amber-300 hover:text-amber-200 transition-colors group"
+              to="/category/lingerie-and-intimates"
+              className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-300 hover:text-amber-200 transition-colors group"
             >
               View Full Lingerie Collection <ArrowRight strokeWidth={2} size={15} className="transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {[
               {
                 title: 'Silk Charmeuse Chemises',
                 tag: '100% Pure Silk',
                 desc: 'Liquid silk slips with cowl necklines and alluring low backs.',
                 price: 'From $54.00',
-                to: '/category/womens-clothing?sub=lingerie-and-intimates',
+                to: '/category/lingerie-and-intimates',
                 img: '/images/fashion/samples/sample-seductive-backless-satin-slip-dress.svg',
               },
               {
@@ -2374,7 +2374,7 @@ function HomePage() {
                 tag: 'Chantilly Lace',
                 desc: 'Scalloped eyelash lace bralettes with matching cheeky briefs.',
                 price: 'From $28.00',
-                to: '/category/womens-clothing?sub=lingerie-and-intimates',
+                to: '/category/lingerie-and-intimates',
                 img: '/images/fashion/samples/sample-lace-bralette-and-brief-set.svg',
               },
               {
@@ -2382,7 +2382,7 @@ function HomePage() {
                 tag: 'Hourglass Boning',
                 desc: 'Architectural waist boning with underwire support and sheer mesh.',
                 price: 'From $48.00',
-                to: '/category/womens-clothing?sub=lingerie-and-intimates',
+                to: '/category/lingerie-and-intimates',
                 img: '/images/fashion/samples/sample-sheer-floral-lace-plunge-bodysuit.svg',
               },
               {
@@ -2390,37 +2390,37 @@ function HomePage() {
                 tag: 'Satin & Lace Trim',
                 desc: 'Wide kimono sleeve loungewear wraps in featherlight stretch satin.',
                 price: 'From $68.00',
-                to: '/category/womens-clothing?sub=lingerie-and-intimates',
+                to: '/category/lingerie-and-intimates',
                 img: '/images/fashion/samples/sample-silk-satin-robe-and-babydoll-set.svg',
               },
             ].map((card) => (
               <Link
                 key={card.title}
                 to={card.to}
-                className="group relative flex flex-col justify-between rounded-3xl overflow-hidden bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 p-5 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/10"
+                className="group relative flex flex-col justify-between rounded-2xl overflow-hidden bg-neutral-900/90 border border-neutral-800 hover:border-amber-500/50 p-4 sm:p-5 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/10"
               >
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-400/15 text-amber-300 border border-amber-400/30">
                       {card.tag}
                     </span>
                     <span className="text-xs font-semibold text-neutral-400">{card.price}</span>
                   </div>
-                  <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-neutral-950 mb-4 p-2 flex items-center justify-center">
+                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-neutral-950 mb-3 p-2 flex items-center justify-center">
                     <img
                       src={card.img}
                       alt={card.title}
                       className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
-                  <h3 className="font-serif text-lg font-bold text-white group-hover:text-amber-200 transition-colors">
+                  <h3 className="font-serif text-base sm:text-lg font-bold text-white group-hover:text-amber-200 transition-colors">
                     {card.title}
                   </h3>
-                  <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed">
+                  <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
                     {card.desc}
                   </p>
                 </div>
-                <div className="mt-5 pt-3 border-t border-neutral-800 flex items-center justify-between text-xs font-bold text-amber-300">
+                <div className="mt-4 pt-3 border-t border-neutral-800 flex items-center justify-between text-xs font-bold text-amber-300">
                   <span>Shop Styles</span>
                   <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
                 </div>
@@ -2434,28 +2434,28 @@ function HomePage() {
       {/* ══════════════════════════════════════════════════════════
           3. SHOP BY CATEGORY (Fashion Category Cards)
       ══════════════════════════════════════════════════════════ */}
-      <section id="shop-by-category" className="py-16 sm:py-20 bg-white border-b border-gray-150">
+      <section id="shop-by-category" className="py-10 sm:py-12 bg-white border-b border-gray-150">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
             <div>
               <span className="text-xs font-bold tracking-[0.25em] text-neutral-500 uppercase">Curated Catalog</span>
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-950 mt-1">Shop by Category</h2>
-              <p className="text-sm text-gray-500 mt-1">From intimate couture to evening wear, fine jewelry, and statement accessories.</p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">From intimate couture to evening wear, fine jewelry, and statement accessories.</p>
             </div>
             <Link
               to="/shop"
-              className="inline-flex items-center gap-1.5 text-sm font-bold text-neutral-900 hover:text-amber-700 transition-colors group"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-neutral-900 hover:text-amber-700 transition-colors group"
             >
               View All Categories <ArrowRight strokeWidth={2} size={15} className="transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
 
           {/* 6 Category Cards Responsive Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
             {[
-              { name: "Lingerie & Intimates", to: '/category/womens-clothing?sub=lingerie-and-intimates', img: '/images/fashion/samples/sample-lace-bralette-and-brief-set.svg' },
+              { name: "Lingerie & Intimates", to: '/category/lingerie-and-intimates', img: '/images/fashion/samples/sample-lace-bralette-and-brief-set.svg' },
               { name: 'Dresses & Tops', to: '/category/dresses-and-tops', img: '/images/fashion/dresses-tops.jpg' },
               { name: "Women's Clothing", to: '/category/womens-clothing', img: '/images/fashion/women-clothing.jpg' },
               { name: 'Jewelry & Watches', to: '/category/jewelry', img: '/images/fashion/jewelry.jpg' },
@@ -2465,7 +2465,7 @@ function HomePage() {
               <Link
                 key={cat.name}
                 to={cat.to}
-                className="group flex flex-col rounded-2xl overflow-hidden bg-white border border-gray-200 hover:border-amber-600/50 shadow-sm hover:shadow-xl transition-all duration-300"
+                className="group flex flex-col rounded-2xl overflow-hidden bg-white border border-gray-200 hover:border-amber-600/50 shadow-xs hover:shadow-lg transition-all duration-300"
               >
                 <div className="aspect-[4/3] w-full overflow-hidden bg-neutral-100">
                   <img
@@ -2475,15 +2475,15 @@ function HomePage() {
                     className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
-                <div className="p-3.5 sm:p-4 flex items-center justify-between gap-2">
+                <div className="p-3 sm:p-3.5 flex items-center justify-between gap-2">
                   <div>
                     <h3 className="text-xs sm:text-sm font-bold text-gray-950 group-hover:text-amber-700 transition-colors leading-tight">
                       {cat.name}
                     </h3>
-                    <p className="text-[11px] font-medium text-gray-500 mt-0.5">Explore Now</p>
+                    <p className="text-[10px] font-medium text-gray-500 mt-0.5">Explore Now</p>
                   </div>
-                  <span className="w-7 h-7 rounded-full bg-neutral-100 text-neutral-900 group-hover:bg-neutral-950 group-hover:text-amber-200 flex items-center justify-center transition-colors shrink-0">
-                    <ArrowRight strokeWidth={2} size={13} />
+                  <span className="w-6 h-6 rounded-full bg-neutral-100 text-neutral-900 group-hover:bg-neutral-950 group-hover:text-amber-200 flex items-center justify-center transition-colors shrink-0">
+                    <ArrowRight strokeWidth={2} size={12} />
                   </span>
                 </div>
               </Link>
@@ -2493,7 +2493,7 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="bg-[#FAF8F5] py-8 sm:py-10 border-b border-gray-150">
+      <section className="bg-[#FAF8F5] py-6 sm:py-7 border-b border-gray-150">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <BuyerGuidance
             title="Shop with the details in view"
@@ -2505,47 +2505,47 @@ function HomePage() {
       {/* ══════════════════════════════════════════════════════════
           4. VALUE & ASSURANCE STRIP
       ══════════════════════════════════════════════════════════ */}
-      <section className="bg-[#FAF8F5] py-9 border-b border-gray-150">
+      <section className="bg-[#FAF8F5] py-6 sm:py-7 border-b border-gray-150">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center sm:text-left">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 text-center sm:text-left">
             
             <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="w-11 h-11 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-center text-amber-700 shrink-0">
-                <Truck01 strokeWidth={1.5} size={20} />
+              <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 shadow-xs flex items-center justify-center text-amber-700 shrink-0">
+                <Truck01 strokeWidth={1.5} size={18} />
               </div>
               <div>
                 <h4 className="text-xs sm:text-sm font-bold text-gray-900">Discreet USA Shipping</h4>
-                <p className="text-[11px] text-gray-500">Unmarked privacy packaging</p>
+                <p className="text-[10px] sm:text-[11px] text-gray-500">Unmarked privacy packaging</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="w-11 h-11 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-center text-amber-700 shrink-0">
-                <ShieldTick strokeWidth={1.5} size={20} />
+              <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 shadow-xs flex items-center justify-center text-amber-700 shrink-0">
+                <ShieldTick strokeWidth={1.5} size={18} />
               </div>
               <div>
                 <h4 className="text-xs sm:text-sm font-bold text-gray-900">Encrypted Payments</h4>
-                <p className="text-[11px] text-gray-500">Stripe 256-bit secure checkout</p>
+                <p className="text-[10px] sm:text-[11px] text-gray-500">Stripe 256-bit secure checkout</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="w-11 h-11 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-center text-amber-700 shrink-0">
-                <Package strokeWidth={1.5} size={20} />
+              <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 shadow-xs flex items-center justify-center text-amber-700 shrink-0">
+                <Package strokeWidth={1.5} size={18} />
               </div>
               <div>
                 <h4 className="text-xs sm:text-sm font-bold text-gray-900">Pure Luxury Fabrics</h4>
-                <p className="text-[11px] text-gray-500">Silk, satin &amp; delicate lace</p>
+                <p className="text-[10px] sm:text-[11px] text-gray-500">Silk, satin &amp; delicate lace</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="w-11 h-11 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-center text-amber-700 shrink-0">
-                <Headphones01 strokeWidth={1.5} size={20} />
+              <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 shadow-xs flex items-center justify-center text-amber-700 shrink-0">
+                <Headphones01 strokeWidth={1.5} size={18} />
               </div>
               <div>
                 <h4 className="text-xs sm:text-sm font-bold text-gray-900">Styling &amp; Fit Concierge</h4>
-                <p className="text-[11px] text-gray-500">24/7 AI sizing assistance</p>
+                <p className="text-[10px] sm:text-[11px] text-gray-500">24/7 AI sizing assistance</p>
               </div>
             </div>
 
@@ -2556,11 +2556,11 @@ function HomePage() {
       {/* ══════════════════════════════════════════════════════════
           5. BEST SELLERS (Curated Luxury Products)
       ══════════════════════════════════════════════════════════ */}
-      <section className="py-16 sm:py-20 bg-white border-b border-gray-150">
+      <section className="py-10 sm:py-12 bg-white border-b border-gray-150">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
             <div>
               <span className="text-xs font-bold tracking-[0.25em] text-neutral-500 uppercase">Trending Now</span>
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-950 mt-1">Best Sellers &amp; New Arrivals</h2>
@@ -2658,13 +2658,13 @@ function HomePage() {
       {/* ══════════════════════════════════════════════════════════
           6. EDITORIAL & CRAFTSMANSHIP 3-GRID
       ══════════════════════════════════════════════════════════ */}
-      <section className="py-16 sm:py-20 bg-[#FAF8F5] border-b border-gray-150">
+      <section className="py-10 sm:py-12 bg-[#FAF8F5] border-b border-gray-150">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
             
             {/* Block 1: The Silk & Lace Atelier */}
-            <div className="rounded-3xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
+            <div className="rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
               <div className="aspect-[16/10] w-full overflow-hidden bg-gray-100">
                 <img
                   src="/images/fashion/dresses-tops.jpg"
@@ -2672,29 +2672,29 @@ function HomePage() {
                   className="w-full h-full object-cover object-[center_20%] transition-transform duration-500 hover:scale-105"
                 />
               </div>
-              <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
+              <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700 mb-1.5">Intimate Craft</p>
-                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-gray-950 mb-2.5">
+                  <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700 mb-1">Intimate Craft</p>
+                  <h3 className="font-serif text-lg sm:text-xl font-bold text-gray-950 mb-1.5">
                     The Silk &amp; Lace Atelier
                   </h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
                     Sensual liquid silk, unlined French eyelash lace, and sculpted corsetry cut with meticulous precision for intoxicating comfort.
                   </p>
                 </div>
-                <div className="mt-6 pt-4 border-t border-gray-100">
+                <div className="mt-4 pt-3 border-t border-gray-100">
                   <Link
                     to="/about"
-                    className="inline-flex items-center gap-2 text-sm font-bold text-neutral-900 hover:text-amber-700 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-neutral-900 hover:text-amber-700 transition-colors"
                   >
-                    Our Philosophy <ArrowRight strokeWidth={2} size={15} />
+                    Our Philosophy <ArrowRight strokeWidth={2} size={14} />
                   </Link>
                 </div>
               </div>
             </div>
 
             {/* Block 2: Fit & Styling Concierge */}
-            <div className="rounded-3xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
+            <div className="rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
               <div className="aspect-[16/10] w-full overflow-hidden bg-gray-100">
                 <img
                   src="/images/fashion/jeans-pants.jpg"
@@ -2702,29 +2702,29 @@ function HomePage() {
                   className="w-full h-full object-cover object-center transition-transform duration-500 hover:scale-105"
                 />
               </div>
-              <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
+              <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700 mb-1.5">Personal Stylist</p>
-                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-gray-950 mb-2.5">
+                  <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700 mb-1">Personal Stylist</p>
+                  <h3 className="font-serif text-lg sm:text-xl font-bold text-gray-950 mb-1.5">
                     Fit &amp; Sizing Concierge
                   </h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
                     Have questions about bust, waist, or hip measurements? Luxie, our AI concierge, provides instant personalized sizing advice.
                   </p>
                 </div>
-                <div className="mt-6 pt-4 border-t border-gray-100">
+                <div className="mt-4 pt-3 border-t border-gray-100">
                   <Link
                     to="/blog"
-                    className="inline-flex items-center gap-2 text-sm font-bold text-neutral-900 hover:text-amber-700 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-neutral-900 hover:text-amber-700 transition-colors"
                   >
-                    Style &amp; Fit Guides <ArrowRight strokeWidth={2} size={15} />
+                    Style &amp; Fit Guides <ArrowRight strokeWidth={2} size={14} />
                   </Link>
                 </div>
               </div>
             </div>
 
             {/* Block 3: Discreet Packaging Guarantee */}
-            <div className="rounded-3xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
+            <div className="rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
               <div className="aspect-[16/10] w-full overflow-hidden bg-gray-100">
                 <img
                   src="/images/fashion/watches.jpg"
@@ -2732,22 +2732,22 @@ function HomePage() {
                   className="w-full h-full object-cover object-[center_60%] transition-transform duration-500 hover:scale-105"
                 />
               </div>
-              <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
+              <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700 mb-1.5">Privacy First</p>
-                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-gray-950 mb-2.5">
+                  <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700 mb-1">Privacy First</p>
+                  <h3 className="font-serif text-lg sm:text-xl font-bold text-gray-950 mb-1.5">
                     Discreet USA Delivery
                   </h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
                     All lingerie and intimate orders are delivered in unmarked exterior shipping boxes with luxury gift wrapping inside.
                   </p>
                 </div>
-                <div className="mt-6 pt-4 border-t border-gray-100">
+                <div className="mt-4 pt-3 border-t border-gray-100">
                   <Link
                     to="/shipping-policy"
-                    className="inline-flex items-center gap-2 text-sm font-bold text-neutral-900 hover:text-amber-700 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-neutral-900 hover:text-amber-700 transition-colors"
                   >
-                    Shipping &amp; Privacy <ArrowRight strokeWidth={2} size={15} />
+                    Shipping &amp; Privacy <ArrowRight strokeWidth={2} size={14} />
                   </Link>
                 </div>
               </div>
@@ -2771,13 +2771,13 @@ function HomePage() {
       {/* ══════════════════════════════════════════════════════════
           8. NEWSLETTER (VIP Atelier Sign-Up)
       ══════════════════════════════════════════════════════════ */}
-      <section className="py-16 sm:py-20 bg-neutral-950 text-white relative overflow-hidden">
+      <section className="py-10 sm:py-12 bg-neutral-950 text-white relative overflow-hidden">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <span className="text-xs font-bold tracking-[0.25em] text-amber-400 uppercase">Private Atelier</span>
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold text-white mt-1 mb-2">
+          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white mt-1 mb-2">
             Join the Luxedge VIP Club
           </h2>
-          <p className="text-sm sm:text-base text-neutral-400 max-w-md mx-auto mb-8">
+          <p className="text-xs sm:text-sm text-neutral-400 max-w-md mx-auto mb-6">
             Receive private invitations to new lingerie drops, secret lookbooks, and 15% off your first luxury order.
           </p>
 
@@ -4532,7 +4532,7 @@ export default function App() {
           {/* Store */}
           <Route path="/" element={<SLayout><HomePage /></SLayout>} />
           <Route path="/shop" element={<SLayout><ShopPage /></SLayout>} />
-          <Route path="/free-pet-gift" element={<SLayout><GiftDropPage /></SLayout>} />
+          <Route path="/free-pet-gift" element={<Navigate to="/shop" replace />} />
           <Route path="/campaigns/:slug" element={<SLayout><CampaignLanding /></SLayout>} />
                     {/* Category Aliases & Redirects */}
           <Route path="/category/dog" element={<Navigate to="/shop" replace />} />

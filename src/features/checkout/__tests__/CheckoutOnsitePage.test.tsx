@@ -4,31 +4,28 @@ import { MemoryRouter } from 'react-router-dom';
 
 // The page only reads useApp() during the initial render — effects (config
 // fetch, address validation) never run under renderToStaticMarkup.
-vi.mock('../../../App', async (importOriginal) => {
-  const mod = await importOriginal<typeof import('../../../App')>();
-  return {
-    ...mod,
-    useApp: () => ({
-      cart: [
-        {
-          product: {
-            id: 'p1', name: 'Orthopedic Memory Foam Pet Bed — Large', price: 54.98,
-            images: ['https://example.com/bed.jpg'], imageAlts: [], stock: 10, isActive: true,
-          } as unknown,
-          quantity: 2,
-        },
-      ] as { product: unknown; quantity: number }[],
-      coupon: null,
-      applyCoupon: () => null,
-      removeCoupon: () => {},
-      freeShippingEnabled: true,
-      freeShippingThreshold: 75,
-      user: null,
-      clearCart: () => {},
-      notify: () => {},
-    }),
-  };
-});
+// Mock useApp without importing the heavyweight App.tsx module
+vi.mock('../../../App', () => ({
+  useApp: () => ({
+    cart: [
+      {
+        product: {
+          id: 'p1', name: 'Silk Satin Evening Slip Dress — Black', price: 89.99,
+          images: ['https://example.com/dress.jpg'], imageAlts: [], stock: 10, isActive: true,
+        } as unknown,
+        quantity: 2,
+      },
+    ] as { product: unknown; quantity: number }[],
+    coupon: null,
+    applyCoupon: () => null,
+    removeCoupon: () => {},
+    freeShippingEnabled: true,
+    freeShippingThreshold: 75,
+    user: null,
+    clearCart: () => {},
+    notify: () => {},
+  }),
+}));
 
 import CheckoutOnsitePage from '../CheckoutOnsitePage';
 
@@ -51,7 +48,7 @@ describe('CheckoutOnsitePage premium redesign', () => {
     expect(html).toContain('checkout-city');
     expect(html).toContain('checkout-billing-same');
     // Order summary: item title, qty badge, totals; mobile collapsible + desktop sticky
-    expect(html).toContain('Orthopedic Memory Foam Pet Bed');
+    expect(html).toContain('Silk Satin Evening Slip Dress');
     expect(html).toContain('Order Summary');
     expect(html).toContain('2');
     expect(html).toContain('Subtotal');

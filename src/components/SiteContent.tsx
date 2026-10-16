@@ -15,20 +15,20 @@ import type { SiteFaqItem, SiteSection } from '../content/sitePages';
 export function SiteSections({ sections }: { sections: SiteSection[] }): JSX.Element {
   return (
     <section className="border-t border-gray-100 bg-white">
-      <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
+      <div className="max-w-4xl mx-auto px-4 py-7 sm:py-9 space-y-6">
         {sections.map((s) => (
           <div key={s.heading}>
             <h2 className="font-serif text-xl sm:text-2xl font-bold text-luxe-black">{s.heading}</h2>
             {s.paragraphs?.map((p) => (
-              <p key={p} className="mt-3 text-sm leading-relaxed text-luxe-gray">{p}</p>
+              <p key={p} className="mt-2 text-sm leading-relaxed text-luxe-gray">{p}</p>
             ))}
             {s.bullets?.length ? (
-              <ul className="mt-3 space-y-2 list-disc pl-5 text-sm leading-relaxed text-luxe-gray">
+              <ul className="mt-2 space-y-1.5 list-disc pl-5 text-sm leading-relaxed text-luxe-gray">
                 {s.bullets.map((b) => <li key={b}>{b}</li>)}
               </ul>
             ) : null}
             {s.links?.length ? (
-              <p className="mt-3 text-sm leading-relaxed">
+              <p className="mt-2 text-sm leading-relaxed">
                 {s.links.map((l, i) => (
                   <Fragment key={l.href}>
                     {i > 0 && ' · '}
@@ -47,7 +47,7 @@ export function SiteSections({ sections }: { sections: SiteSection[] }): JSX.Ele
 export function SiteFaq({ items, title = 'Common questions' }: { items: SiteFaqItem[]; title?: string }): JSX.Element {
   return (
     <section className="border-t border-gray-100 bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-10">
+      <div className="max-w-4xl mx-auto px-4 py-7 sm:py-9">
         <h2 className="font-serif text-xl sm:text-2xl font-bold text-luxe-black">{title}</h2>
         <dl className="mt-4 space-y-5">
           {items.map((f) => (

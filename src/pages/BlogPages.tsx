@@ -40,7 +40,7 @@ export function BlogListPage() {
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-luxe-gold text-xs font-semibold uppercase tracking-wider mb-2">Luxedge Blog</p>
           <h1 className="font-serif text-3xl sm:text-4xl font-bold text-luxe-black mb-2">Insights & Inspiration</h1>
-          <p className="text-gray-500 text-sm max-w-lg mx-auto">Tips, guides, and stories from the world of pet care.</p>
+          <p className="text-gray-500 text-sm max-w-lg mx-auto">Styling guides, sizing advice, and luxury fashion inspiration.</p>
         </div>
       </section>
 
@@ -166,7 +166,7 @@ export function BlogDetailPage() {
 
   if (!post) return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="text-center"><p className="text-5xl mb-4">ðŸ“</p><h2 className="text-2xl font-bold mb-2">Post Not Found</h2><Link to="/blog" className="px-6 py-3 bg-luxe-gold text-white font-semibold rounded-lg">Back to Blog</Link></div>
+      <div className="text-center"><BookOpen01 strokeWidth={1.5} size={48} className="mx-auto text-gray-300 mb-4" /><h2 className="text-2xl font-bold mb-2">Post Not Found</h2><Link to="/blog" className="px-6 py-3 bg-luxe-gold text-white font-semibold rounded-lg inline-block">Back to Blog</Link></div>
     </div>
   );
 

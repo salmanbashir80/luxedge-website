@@ -23,9 +23,10 @@ import { isPubliclyListableProduct } from '../src/content/productEligibility.ts'
 
 const env = { ...process.env };
 try {
-  for (const line of fs.readFileSync('.env', 'utf8').split('\n')) {
+  for (const rawLine of fs.readFileSync('.env', 'utf8').split('\n')) {
+    const line = rawLine.trim();
     const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, '').trim();
+    if (m) env[m[1]] = m[2].trim().replace(/^["']|["']$/g, '').trim();
   }
 } catch (e) {
   // .env might not exist in CI environments (like Vercel)
@@ -36,17 +37,22 @@ if (!URL_BASE || !KEY) { console.error('env missing VITE_SUPABASE_URL / SUPABASE
 
 const HEAD = { apikey: KEY, Authorization: `Bearer ${KEY}` };
 
-class DbUnavailableError extends Error {}
 const get = async (path) => {
+  if (URL_BASE && KEY) {
+    try {
+      const res = await fetch(`${URL_BASE}/rest/v1/${path}`, { headers: HEAD });
+      if (res.ok) return await res.json();
+      console.warn(`Supabase ${path} returned ${res.status}, falling back to D1 if configured`);
+    } catch (e) {
+      console.warn(`Supabase fetch failed: ${e.message}, falling back to D1 if configured`);
+    }
+  }
   if (env.VITE_DATA_BACKEND === 'd1') {
     const res = await fetch(`https://luxedge.us/api/db/${path}`);
-    if (!res.ok) throw new DbUnavailableError(`D1: ${path} -> ${res.status}`);
-    return res.json();
-  } else {
-    const res = await fetch(`${URL_BASE}/rest/v1/${path}`, { headers: HEAD });
-    if (!res.ok) throw new DbUnavailableError(`Supabase: ${path} -> ${res.status}`);
-    return res.json();
+    if (res.ok) return await res.json();
+    throw new DbUnavailableError(`D1: ${path} -> ${res.status}`);
   }
+  throw new DbUnavailableError(`No available database backend for ${path}`);
 };
 
 // Fields the shared public-listing contract (productEligibility.ts) reads.

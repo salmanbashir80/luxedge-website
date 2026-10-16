@@ -3,10 +3,11 @@ import { readFileSync } from 'node:fs';
 import { CATEGORY_CONTENT, categoryContentFor } from '../categoryContent';
 import { isLinkablePublicPath, setBlogPublicForTesting } from '../reviewHolds';
 
-/** The ten USA Fashion categories (src/content/categoryContent.ts is the source of truth). */
+/** The twelve USA Fashion categories (src/content/categoryContent.ts is the source of truth). */
 const CATEGORY_SLUGS = [
   'womens-clothing', 'mens-clothing', 'dresses-and-tops', 'jeans-and-pants', 'jackets-and-outerwear',
   'sneakers-and-shoes', 'handbags-and-wallets', 'jewelry', 'watches', 'sunglasses-and-accessories',
+  'lingerie-and-intimates', 'makeup-and-beauty',
 ];
 
 /** public/blog-seo.json is the offline snapshot of the PUBLISHED CMS corpus. */

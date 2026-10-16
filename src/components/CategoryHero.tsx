@@ -49,6 +49,8 @@ const FASHION_HERO_COPY: { name: string; headline: string; desc: string; ctaLabe
   { name: 'Jewelry', headline: 'Small Details, Everyday Shine', desc: 'Earrings, necklaces, bracelets and rings for everyday wear and gifts.', ctaLabel: 'Shop jewelry', buyerNote: 'Check the listed materials and dimensions, and read the care notes before you wear pieces daily.', chips: ['Watches', 'Dresses and Tops', 'Handbags and Wallets'] },
   { name: 'Watches', headline: 'Time Worn Well', desc: 'Wristwatches for work, weekends and gifting, with straps and dials to suit.', ctaLabel: 'Shop watches', buyerNote: 'Compare the case size, strap type and other details shown on each listing.', chips: ['Jewelry', "Men's Clothing", 'Sunglasses and Accessories'] },
   { name: 'Sunglasses and Accessories', headline: 'Finishing Touches for Every Outfit', desc: 'Sunglasses, belts, scarves and everyday small accessories.', ctaLabel: 'Shop sunglasses and accessories', buyerNote: 'Check the frame and lens details on each listing, and choose a size that suits your face and daily use.', chips: ['Handbags and Wallets', 'Jewelry', 'Watches'] },
+  { name: 'Lingerie and Intimates', headline: 'Delicate Foundations and Intimates', desc: 'Bras, bodysuits, sleepwear and loungewear crafted with fine lace and satin.', ctaLabel: 'Shop lingerie and intimates', buyerNote: 'Measure underbust and bust contours carefully, and check cup and band sizing guidelines on each listing.', chips: ["Women's Clothing", 'Dresses and Tops', 'Jewelry'] },
+  { name: 'Makeup and Beauty', headline: 'Refined Everyday Beauty and Essentials', desc: 'Lips, face, eyes and beauty accessories for your daily beauty ritual.', ctaLabel: 'Shop makeup and beauty', buyerNote: 'Check shade descriptions and ingredient details on each product before choosing.', chips: ['Jewelry', "Women's Clothing", 'Sunglasses and Accessories'] },
 ];
 
 const toHeroSlug = (name: string) => name.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -67,6 +69,8 @@ const FASHION_HERO_IMAGES: Record<string, { file: string; alt: string }> = {
   Jewelry: { file: 'jewelry.jpg', alt: 'Rings and necklaces displayed as jewelry' },
   Watches: { file: 'watches.jpg', alt: 'Wristwatch close-up' },
   'Sunglasses and Accessories': { file: 'sunglasses-accessories.jpg', alt: 'Pair of sunglasses for summer' },
+  'Lingerie and Intimates': { file: 'dresses-tops.jpg', alt: 'Delicate lingerie and intimates collection' },
+  'Makeup and Beauty': { file: 'jewelry.jpg', alt: 'Everyday beauty, cosmetics and accessories collection' },
 };
 
 export const CATEGORY_HERO_CONFIG: Record<string, CategoryHeroConfig> = Object.fromEntries(

@@ -309,6 +309,7 @@ const LEGACY_PATH_REDIRECTS: Record<string, string> = {
   // pages, so this is an alias into the returns policy rather than a third,
   // overlapping policy page.
   '/shipping-returns': '/returns',
+  '/free-pet-gift': '/shop',
   // Supplier-feed product slugs → the clean Luxedge slug that replaced them
   // (src/content/productSlugHistory.ts). These URLs were indexed and are in
   // bookmarks, so they must merge rather than 404 — and an internal link that

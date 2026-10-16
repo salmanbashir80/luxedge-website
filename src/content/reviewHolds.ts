@@ -17,9 +17,19 @@ const heldMedia = new Set([
   'how-livestock-salt-licks-are-made-and-used-worldwide-factory-to-farm',
   'how-pakistan-s-himalayan-pink-salt-products-are-made-mine-to-factory',
 ]);
-// Legacy article withheld after the production content audit: it is too thin
-// and makes unsupported care claims. The CMS row remains available to admins.
-const heldBlog = new Set(['grooming-routine-long-haired-pets']);
+// Legacy pet articles withheld after the Fashion-only transition.
+// CMS rows remain safely archived and editable by admins.
+const heldBlog = new Set([
+  'best-bird-feeder-buyers-guide',
+  'how-to-clean-a-bird-feeder',
+  'horse-fly-mask-buyers-guide',
+  'horse-grooming-kit-buyers-guide',
+  'horse-halter-lead-rope-buyers-guide',
+  'how-to-choose-a-cat-tunnel',
+  'how-to-choose-cattle-trough-feed-water-setup',
+  'how-to-fit-no-pull-dog-harness',
+  'grooming-routine-long-haired-pets',
+]);
 /**
  * The manual per-product index control.
  *

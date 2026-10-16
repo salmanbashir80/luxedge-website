@@ -42,6 +42,8 @@ export const NAV_PATHS = {
   jewelry: '/category/jewelry',
   watches: '/category/watches',
   accessories: '/category/sunglasses-and-accessories',
+  lingerieIntimates: '/category/lingerie-and-intimates',
+  makeupBeauty: '/category/makeup-and-beauty',
 } as const;
 
 export type NavLink = { label: string; to: string };
@@ -89,10 +91,10 @@ export const MEGA_MENU: MegaPanel[] = [
   {
     label: 'Women', to: NAV_PATHS.womensClothing,
     groups: [
-      { title: 'Clothing', links: [{ label: "Women's Clothing", to: NAV_PATHS.womensClothing }, { label: 'Dresses and Tops', to: NAV_PATHS.dressesTops }, { label: 'Jeans and Pants', to: NAV_PATHS.jeansPants }] },
+      { title: 'Clothing', links: [{ label: "Women's Clothing", to: NAV_PATHS.womensClothing }, { label: 'Dresses and Tops', to: NAV_PATHS.dressesTops }, { label: 'Jeans and Pants', to: NAV_PATHS.jeansPants }, { label: 'Lingerie & Intimates', to: NAV_PATHS.lingerieIntimates }] },
       { title: 'Outerwear', links: [{ label: 'Jackets and Outerwear', to: NAV_PATHS.outerwear }] },
       { title: 'Shoes & Bags', links: [{ label: 'Sneakers and Shoes', to: NAV_PATHS.footwear }, { label: 'Handbags and Wallets', to: NAV_PATHS.handbags }] },
-      { title: 'Jewelry & Watches', links: [{ label: 'Jewelry', to: NAV_PATHS.jewelry }, { label: 'Watches', to: NAV_PATHS.watches }] },
+      { title: 'Jewelry & Beauty', links: [{ label: 'Jewelry', to: NAV_PATHS.jewelry }, { label: 'Watches', to: NAV_PATHS.watches }, { label: 'Makeup & Beauty', to: NAV_PATHS.makeupBeauty }] },
     ],
   },
   {
@@ -141,6 +143,8 @@ export const FOOTER_COLUMNS: { title: string; links: NavLink[]; paymentsNote?: b
       { label: 'Jewelry', to: NAV_PATHS.jewelry },
       { label: 'Watches', to: NAV_PATHS.watches },
       { label: 'Sunglasses and Accessories', to: NAV_PATHS.accessories },
+      { label: 'Lingerie and Intimates', to: NAV_PATHS.lingerieIntimates },
+      { label: 'Makeup and Beauty', to: NAV_PATHS.makeupBeauty },
     ],
   },
   { title: 'Learn', links: [{ label: 'Blog & Guides', to: NAV_PATHS.blog }] },

@@ -52,7 +52,7 @@ const JEANS_AND_PANTS_PRODUCT_NAMES = new Set(["Women's Tailored Blazer & Trouse
 
 // Primary categories whose women's items also belong to Women's Clothing, so the
 // Women's Clothing Dresses / Tops / Outerwear navigation shows them by membership.
-const WOMENS_CLOTHING_SOURCE_CATEGORIES = new Set(['dresses-and-tops', 'jackets-and-outerwear']);
+const WOMENS_CLOTHING_SOURCE_CATEGORIES = new Set(['dresses-and-tops', 'jackets-and-outerwear', 'lingerie-and-intimates']);
 
 interface SampleSpec {
   name: string;
@@ -84,15 +84,15 @@ const SAMPLE_SPECS: SampleSpec[] = [
   spec("Women's Basic Cotton Crop Top", 'dresses-and-tops', 'Crop Tops', 16, ['White', 'Black', 'Sage'], APPAREL_SIZES),
 
   // Lingerie & Intimates (9)
-  spec('Lace Bralette and Brief Set', 'womens-clothing', 'Bralettes', 28, ['Black', 'Nude'], APPAREL_SIZES),
-  spec('Seamless High-Waist Shapewear', 'womens-clothing', 'Shapewear', 32, ['Black', 'Nude'], APPAREL_SIZES),
-  spec('Satin Camisole Sleep Set', 'womens-clothing', 'Satin Sleepwear', 42, ['Champagne', 'Black'], APPAREL_SIZES),
-  spec('Sheer Floral Lace Plunge Bodysuit', 'womens-clothing', 'Bodysuits', 48, ['Black', 'Burgundy'], APPAREL_SIZES),
-  spec('Silk Satin Robe and Babydoll Set', 'womens-clothing', 'Satin Sleepwear', 68, ['Champagne', 'Black', 'Emerald'], APPAREL_SIZES),
-  spec('Underwire Embroidered Lace Bra and Panty Set', 'womens-clothing', 'Lingerie Sets', 46, ['Black', 'Scarlet Red'], APPAREL_SIZES),
-  spec('Seductive Backless Satin Slip Dress', 'womens-clothing', 'Slips', 54, ['Champagne', 'Black', 'Burgundy'], APPAREL_SIZES),
-  spec('Strappy Cutout Lace Teddy', 'womens-clothing', 'Lingerie Sets', 38, ['Black', 'Ruby Red'], APPAREL_SIZES),
-  spec('Plunge Push-Up Lace Corset Top', 'womens-clothing', 'Bras', 52, ['Black', 'Nude'], APPAREL_SIZES),
+  spec('Lace Bralette and Brief Set', 'lingerie-and-intimates', 'Bralettes', 28, ['Black', 'Nude'], APPAREL_SIZES),
+  spec('Seamless High-Waist Shapewear', 'lingerie-and-intimates', 'Shapewear', 32, ['Black', 'Nude'], APPAREL_SIZES),
+  spec('Satin Camisole Sleep Set', 'lingerie-and-intimates', 'Satin Sleepwear', 42, ['Champagne', 'Black'], APPAREL_SIZES),
+  spec('Sheer Floral Lace Plunge Bodysuit', 'lingerie-and-intimates', 'Bodysuits', 48, ['Black', 'Burgundy'], APPAREL_SIZES),
+  spec('Silk Satin Robe and Babydoll Set', 'lingerie-and-intimates', 'Satin Sleepwear', 68, ['Champagne', 'Black', 'Emerald'], APPAREL_SIZES),
+  spec('Underwire Embroidered Lace Bra and Panty Set', 'lingerie-and-intimates', 'Lingerie Sets', 46, ['Black', 'Scarlet Red'], APPAREL_SIZES),
+  spec('Seductive Backless Satin Slip Dress', 'lingerie-and-intimates', 'Slips', 54, ['Champagne', 'Black', 'Burgundy'], APPAREL_SIZES),
+  spec('Strappy Cutout Lace Teddy', 'lingerie-and-intimates', 'Lingerie Sets', 38, ['Black', 'Ruby Red'], APPAREL_SIZES),
+  spec('Plunge Push-Up Lace Corset Top', 'lingerie-and-intimates', 'Bras', 52, ['Black', 'Nude'], APPAREL_SIZES),
 
   // Swimwear (3)
   spec('Two-Piece Bikini Set', 'womens-clothing', 'Bikinis', 38, ['Black', 'Terracotta'], APPAREL_SIZES),

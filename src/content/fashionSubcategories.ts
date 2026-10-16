@@ -62,6 +62,10 @@ export const FASHION_SUBCATEGORY_TREE: Record<string, FashionSubcategoryNode[]> 
   jewelry: leaves(['Necklaces', 'Earrings', 'Rings', 'Bracelets', 'Anklets', 'Jewelry Sets']),
   watches: leaves(["Women's Watches", "Men's Watches", 'Fashion Watches', 'Watch Sets']),
   'sunglasses-and-accessories': leaves(['Sunglasses', 'Belts', 'Scarves', 'Hats', 'Hair Accessories']),
+  'lingerie-and-intimates': [
+    group('Lingerie', ['Bras', 'Panties', 'Bralettes', 'Lingerie Sets', 'Shapewear', 'Slips', 'Bodysuits']),
+    group('Sleep and Lounge', ['Pajamas', 'Satin Sleepwear', 'Nightgowns', 'Robes', 'Lounge Sets']),
+  ],
   'makeup-and-beauty': [
     group('Lips', ['Lipstick', 'Lip Gloss', 'Lip Liner']),
     group('Face', ['Foundation', 'Concealer', 'Blush', 'Highlighter', 'Powder']),

@@ -674,40 +674,6 @@ input[type="number"] { -moz-appearance: textfield; }
   transform: translate(0.9rem, 0.8rem);
 }
 
-.home-hero-pet-collage {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  width: min(100%, 38rem);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.65rem;
-  align-items: end;
-}
-
-.home-hero-pet-card {
-  position: relative;
-  display: block;
-  min-height: clamp(185px, 19vw, 265px);
-  overflow: hidden;
-  border: 3px solid white;
-  border-radius: 18px;
-  background: #e4e7ec;
-  box-shadow: 0 16px 40px -24px rgba(27, 31, 39, 0.4);
-  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.home-hero-pet-card:hover { transform: translateY(-3px); }
-
-.home-hero-pet-card span { position: absolute; z-index: 1; bottom: 0.85rem; left: 0.9rem; right: 0.6rem; display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; color: white; font-family: var(--font-brand); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; }
-.home-hero-pet-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1); }
-.home-hero-pet-card:hover img { transform: scale(1.04); }
-.home-hero-dog-card,
-.home-hero-cat-card,
-.home-hero-parrot-card { min-height: clamp(185px, 19vw, 265px); }
-.home-hero-dog-card { border-color: #d9edff; }
-.home-hero-cat-card { border-color: #ffe0cf; }
-.home-hero-parrot-card { border-color: #d9f2df; }
-.home-hero-pet-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 46%, rgba(10, 36, 78, 0.75)); }
 .home-hero-product-chip { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; min-height: 48px; padding: 0.6rem 1rem; border-radius: 12px; background: #242936; color: white; box-shadow: 0 12px 26px -18px rgba(27, 31, 39, 0.55); }
 .home-hero-product-chip span { color: #a9c4e8; font-size: 0.55rem; letter-spacing: 0.09em; text-transform: uppercase; }
 .home-hero-product-chip strong { max-width: 58%; overflow: hidden; font-family: var(--font-serif); font-size: 0.8rem; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
@@ -770,18 +736,6 @@ input[type="number"] { -moz-appearance: textfield; }
 .editorial-link { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--font-brand); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; transition: gap var(--transition-fast), color var(--transition-fast); }
 .editorial-link:hover { gap: 0.6rem; color: var(--color-luxe-gold-dark); }
 
-/* ── COMPACT SHOP BY PET ── */
-.editorial-pet-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(0.65rem, 1.5vw, 1rem); }
-.editorial-pet-panel { position: relative; display: block; aspect-ratio: 1.6; overflow: hidden; background: #e2e5ea; border-radius: 10px; }
-.editorial-pet-panel img { width: 100%; height: 100%; object-fit: cover; transition: transform 450ms cubic-bezier(0.22, 1, 0.36, 1); }
-.editorial-pet-panel:hover img { transform: scale(1.03); }
-.editorial-pet-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(27,31,39,0.02) 30%, rgba(27,31,39,0.74) 100%); }
-.editorial-pet-copy { position: absolute; inset: auto 1.2rem 1rem; color: white; }
-.editorial-pet-label { display: block; font-family: var(--font-serif); font-size: clamp(1.2rem, 2vw, 1.6rem); line-height: 1; }
-.editorial-pet-desc { display: block; margin-top: 0.25rem; color: rgba(255,255,255,0.72); font-size: 0.7rem; }
-.editorial-pet-copy .editorial-link { margin-top: 0.5rem; color: #b6d2ff; opacity: 0; transform: translateY(3px); transition: opacity var(--transition-base), transform var(--transition-base), gap var(--transition-fast); }
-.editorial-pet-panel:hover .editorial-link { opacity: 1; transform: translateY(0); }
-
 /* ── COMPACT CATEGORY DISCOVERY ── */
 .editorial-category-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.6rem; }
 .editorial-category-tile { position: relative; min-height: 9rem; overflow: hidden; background: #e2e5ea; border-radius: 8px; }
@@ -837,16 +791,6 @@ input[type="number"] { -moz-appearance: textfield; }
 .promo-slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 0.45rem; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }
 .promo-slide.promo-active { opacity: 1; pointer-events: auto; }
 
-/* ── CIRCULAR PET AVATARS ── */
-.pet-avatar-grid { display: flex; gap: clamp(0.75rem, 2vw, 1.35rem); justify-content: center; flex-wrap: wrap; padding: 0.25rem 0; }
-.pet-avatar-item { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; text-decoration: none; group: pet; }
-.pet-avatar-circle { width: clamp(88px, 10vw, 116px); height: clamp(88px, 10vw, 116px); border-radius: 50%; overflow: hidden; border: 3px solid var(--color-luxe-silver); background: #e9ebee; transition: border-color var(--transition-base), transform var(--transition-base), box-shadow var(--transition-base); position: relative; }
-.pet-avatar-circle img { width: 100%; height: 100%; object-fit: cover; transition: transform 450ms cubic-bezier(0.22, 1, 0.36, 1); }
-.pet-avatar-item:hover .pet-avatar-circle { border-color: var(--color-luxe-gold); transform: translateY(-4px); box-shadow: 0 8px 24px -6px rgba(37, 99, 235, 0.25); }
-.pet-avatar-item:hover .pet-avatar-circle img { transform: scale(1.08); }
-.pet-avatar-name { font-family: var(--font-serif); font-size: clamp(0.85rem, 1.2vw, 1rem); font-weight: 600; color: var(--color-luxe-black); transition: color var(--transition-fast); }
-.pet-avatar-item:hover .pet-avatar-name { color: var(--color-luxe-gold); }
-
 /* ── HORIZONTAL CATEGORY SCROLL ── */
 .category-scroll { display: flex; gap: 0.55rem; overflow-x: auto; padding: 0.25rem 0 0.45rem; scrollbar-width: none; -ms-overflow-style: none; }
 .category-scroll::-webkit-scrollbar { display: none; }
@@ -894,11 +838,6 @@ input[type="number"] { -moz-appearance: textfield; }
   .home-hero-notes { justify-content: center; gap: 0.4rem 0.6rem; margin-top: 1.2rem; padding-top: 0.7rem; }
   .home-hero-notes span + span { padding-left: 0.6rem; }
   .home-hero-visual { min-height: 235px; padding: 0.4rem 0.2rem 0.55rem; }
-  .home-hero-pet-collage { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
-  .home-hero-pet-card,
-  .home-hero-dog-card,
-  .home-hero-cat-card,
-  .home-hero-parrot-card { min-height: 145px; border-width: 3px; border-radius: 12px; }
   .home-hero-product-chip { min-height: 38px; padding: 0.45rem 0.6rem; }
   .home-hero-product-chip span { font-size: 0.45rem; }
   .home-hero-product-chip strong { font-size: 0.65rem; }
@@ -907,8 +846,6 @@ input[type="number"] { -moz-appearance: textfield; }
   .home-hero-caption-kicker { display: none; }
   .home-hero-caption-title { max-width: 80%; font-size: 0.78rem; }
   .editorial-section { padding: 1.8rem 0; }
-  .editorial-pet-grid { grid-template-columns: 1fr; }
-  .editorial-pet-panel { aspect-ratio: 1.5; }
   .editorial-category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
   .editorial-category-large, .editorial-category-small { grid-column: span 1; min-height: 8rem; }
   .editorial-category-name { font-size: 0.85rem; }
@@ -922,8 +859,6 @@ input[type="number"] { -moz-appearance: textfield; }
   .product-card-title { font-size: 0.72rem; }
   .product-card-add { opacity: 1; transform: none; font-size: 0.5rem; }
   .product-card-view { display: none; }
-  .pet-avatar-circle { width: 72px; height: 72px; }
-  .pet-avatar-name { font-size: 0.8rem; }
   .category-pill { padding: 0.35rem 0.6rem; font-size: 0.62rem; }
   .category-pill img { width: 22px; height: 22px; }
   .trust-pill { font-size: 0.62rem; padding: 0.3rem 0.6rem; }
@@ -931,37 +866,23 @@ input[type="number"] { -moz-appearance: textfield; }
 
 @media (prefers-reduced-motion: reduce) {
   .home-hero-frame:hover .home-hero-image,
-  .editorial-pet-panel:hover img,
   .editorial-category-tile:hover img,
   .editorial-story-media:hover img,
   .product-card:hover .product-card-image:first-child,
-  .product-card:hover .product-card-image-secondary,
-  .pet-avatar-circle img { transform: none; }
-  .pet-avatar-item:hover .pet-avatar-circle { transform: none; box-shadow: none; }
+  .product-card:hover .product-card-image-secondary { transform: none; }
   .category-pill:hover { transform: none; box-shadow: none; }
 }
 
 /* ============================================================
-   Category hero — per-category mood tints (CategoryHero.tsx)
-   Subtle band backgrounds that keep the premium, editorial feel
-   while letting each pet's mood come through. All tints stay
-   low-saturation so the gold accent + serif headline lead.
+   Category hero — fashion neutral tints (CategoryHero.tsx)
+   Subtle band backgrounds that keep the premium, editorial feel.
+   All tints stay low-saturation so gold accent + serif headline lead.
    ============================================================ */
 .category-tint { border: 1px solid var(--color-luxe-silver); }
-.category-tint-dog      { background: linear-gradient(135deg, #fdf3e3 0%, #ffffff 62%); } /* warm, friendly   */
-.category-tint-cat      { background: linear-gradient(135deg, #f3eefb 0%, #ffffff 62%); } /* soft, elegant    */
-.category-tint-horse    { background: linear-gradient(135deg, #e9eef7 0%, #ffffff 62%); } /* refined, premium */
-.category-tint-bird     { background: linear-gradient(135deg, #edf6ee 0%, #ffffff 62%); } /* fresh, natural   */
-.category-tint-cattle   { background: linear-gradient(135deg, #f5efdf 0%, #ffffff 62%); } /* sturdy, grounded */
 .category-tint-neutral  { background: linear-gradient(135deg, #f2f3f5 0%, #ffffff 62%); }
 
 /* Collection headers respond to their available width, including the existing ad column. */
 .category-hero { container-type: inline-size; min-width: 0; width: 100%; overflow: hidden; border: 1px solid var(--color-luxe-silver); border-radius: 20px; background: #f5f3ed; color: var(--color-luxe-black); }
-.category-hero--dog { background: #f8f1e7; }
-.category-hero--cat { background: #f3f0f6; }
-.category-hero--horse { background: #edf0ec; }
-.category-hero--bird { background: #eff5ed; }
-.category-hero--cattle { background: #f2efe5; }
 .category-hero__breadcrumb { padding: 10px 22px; border-bottom: 1px solid rgb(28 32 39 / 8%); }
 .category-hero__breadcrumb ol { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; line-height: 1.5; color: #535b66; }
 .category-hero__breadcrumb a { display: inline-flex; align-items: center; min-height: 28px; }
@@ -983,13 +904,13 @@ input[type="number"] { -moz-appearance: textfield; }
 .category-hero a:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
 #product-grid { scroll-margin-top: 155px; }
 @container (min-width: 600px) {
-  .category-hero__body { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); min-height: 320px; }
+  .category-hero__body { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); min-height: 240px; }
   .category-hero__body--text { grid-template-columns: 1fr; min-height: 0; }
-  .category-hero__copy { grid-row: 1; grid-column: 1; align-self: center; padding: 30px; }
-  .category-hero__media { grid-column: 2; grid-row: 1; height: 100%; min-height: 320px; }
-  .category-hero__breadcrumb { padding-inline: 30px; }
-  .category-hero__browse { padding: 14px 30px 18px; }
-  .category-hero__copy h1 { max-width: 17ch; font-size: clamp(32px, 5cqi, 44px); }
+  .category-hero__copy { grid-row: 1; grid-column: 1; align-self: center; padding: 20px 24px; }
+  .category-hero__media { grid-column: 2; grid-row: 1; height: 100%; min-height: 240px; }
+  .category-hero__breadcrumb { padding-inline: 24px; }
+  .category-hero__browse { padding: 12px 24px 16px; }
+  .category-hero__copy h1 { max-width: 17ch; font-size: clamp(28px, 4.5cqi, 38px); }
 }
 @media (prefers-reduced-motion: reduce) { .category-hero a { transition: none; } }
 

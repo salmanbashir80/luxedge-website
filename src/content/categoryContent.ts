@@ -37,7 +37,9 @@ export const CATEGORY_CONTENT: Record<string, CategoryContent> = {
       'For fitted pieces, look at stretch and seam placement. A little give through the shoulders and hips usually makes a garment more comfortable to wear.',
       'Follow the care label before the first wash, and wash darker and lighter pieces separately to keep colour looking fresh.',
     ],
-    guides: [],
+    guides: [
+      { label: "Women's Outfit Styling Guide", href: '/blog/womens-outfit-styling-guide-everyday-elevated' },
+    ],
   },
   'mens-clothing': {
     name: "Men's Clothing",
@@ -49,7 +51,9 @@ export const CATEGORY_CONTENT: Record<string, CategoryContent> = {
       'Check how the collar, cuffs and hem are finished, since these areas show wear first and matter most for everyday use.',
       'Wash with like colours and dry flat or on a low setting to keep shape and fit consistent over time.',
     ],
-    guides: [],
+    guides: [
+      { label: "Men's Capsule Wardrobe Essentials", href: '/blog/mens-capsule-wardrobe-essentials' },
+    ],
   },
   'dresses-and-tops': {
     name: 'Dresses and Tops',
@@ -61,7 +65,10 @@ export const CATEGORY_CONTENT: Record<string, CategoryContent> = {
       'Look at how the fabric drapes in the listing photos. Flowing materials move differently from structured cotton, so choose for the way you want it to fall.',
       'Hand wash delicate dresses and hang them to dry, which protects the seams and keeps print detail sharp after many wears.',
     ],
-    guides: [],
+    guides: [
+      { label: 'Evening Dresses & Occasion Styling', href: '/blog/evening-dresses-and-occasion-styling-guide' },
+      { label: 'How to Choose a Midi Dress', href: '/blog/how-to-choose-a-midi-dress' },
+    ],
   },
   'jeans-and-pants': {
     name: 'Jeans and Pants',
@@ -85,7 +92,9 @@ export const CATEGORY_CONTENT: Record<string, CategoryContent> = {
       'Think about the climate you dress for. A lighter shell suits mild days, while a heavier insulated coat suits colder, drier conditions.',
       'Follow the care label closely, as technical fabrics and coated finishes often need a gentle cycle and a cool or low-heat dry.',
     ],
-    guides: [],
+    guides: [
+      { label: 'How to Care for a Leather Jacket', href: '/blog/how-to-care-for-a-leather-jacket' },
+    ],
   },
   'sneakers-and-shoes': {
     name: 'Sneakers and Shoes',
@@ -109,7 +118,9 @@ export const CATEGORY_CONTENT: Record<string, CategoryContent> = {
       'For wallets, check the number of card slots and whether a note section and coin pocket suit how you pay and organise cash.',
       'Store bags stuffed with paper or tissue to hold their shape, and keep them away from prolonged sun and damp conditions.',
     ],
-    guides: [],
+    guides: [
+      { label: 'Handbag Selection & Wardrobe Matching', href: '/blog/handbag-selection-wardrobe-matching-guide' },
+    ],
   },
   jewelry: {
     name: 'Jewelry',
@@ -121,7 +132,9 @@ export const CATEGORY_CONTENT: Record<string, CategoryContent> = {
       'Store pieces separately in a soft pouch or box, so chains do not tangle and delicate finishes do not rub against harder stones or metal.',
       'Remove jewellery before showering, swimming or exercising, and wipe it dry after wear to keep the finish looking its best for longer.',
     ],
-    guides: [],
+    guides: [
+      { label: 'Jewelry Layering & Accessories Styling', href: '/blog/jewelry-layering-and-accessories-styling' },
+    ],
   },
   watches: {
     name: 'Watches',
@@ -147,6 +160,21 @@ export const CATEGORY_CONTENT: Record<string, CategoryContent> = {
     ],
     guides: [],
   },
+  'lingerie-and-intimates': {
+    name: 'Lingerie and Intimates',
+    desc: 'Bras, bodysuits, sleepwear and delicate undergarments',
+    considerations: [
+      'Measure your underbust and fullest bust points with a soft tape to determine accurate band and cup size rather than guessing from older garments.',
+      'Check the cup style and underwire construction on the listing. Soft bralettes offer relaxed support, while molded underwire cups provide defined lift.',
+      'Look at the fabric blend and stretch properties: sheer lace, satin, and mesh provide different levels of elasticity and breathability.',
+      'Examine the closure and strap adjustability: multi-row hook closures and adjustable sliders ensure a snug, customized fit over time.',
+      'Hand wash delicate lace and satin intimates in cold water using gentle detergent, and lay flat to dry to preserve elasticity and fine embroidery.',
+    ],
+    guides: [
+      { label: 'Lingerie Sizing and Fit Guide', href: '/blog/lingerie-sizing-and-fit-guide' },
+      { label: 'Delicate Fabric Care: Satin, Lace & Silk', href: '/blog/delicate-fabric-care-satin-lace-silk' },
+    ],
+  },
   'makeup-and-beauty': {
     name: 'Makeup and Beauty',
     desc: 'Lips, face, eyes and makeup tools for everyday routines',
@@ -157,7 +185,9 @@ export const CATEGORY_CONTENT: Record<string, CategoryContent> = {
       'Look at the size and format of the product, and compare the quantity with how often you expect to use it.',
       'Store cosmetics closed and away from heat and direct sunlight, and stop using any product that changes colour, smell or texture.',
     ],
-    guides: [],
+    guides: [
+      { label: 'Essential Makeup & Beauty Routine', href: '/blog/essential-makeup-and-beauty-routine-guide' },
+    ],
   },
 };
 
