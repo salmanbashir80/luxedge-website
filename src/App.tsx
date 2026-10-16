@@ -548,7 +548,7 @@ function AppProvider({ children }: { children: ReactNode }) {
   }, [cart]);
   const closeCart = useCallback(() => setCartOpen(false), []);
 
-  // Global Adsterra monetization (Social Bar & Popunder across storefront)
+  // Cleanup any rogue popunder scripts to protect navigation and stop unwanted click redirects
   useAdsterraPop();
 
   // Phase 3B: load the real storefront catalog from Supabase when it is

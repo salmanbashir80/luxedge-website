@@ -1,23 +1,16 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Adsterra Social Bar / Popunder script loader.
- * Loads https://pl25509888.profitableratecpmnetwork.com/1e/60/9a/1e609a1772f1c8ac6a824ff2534ed894.js
- * exactly once across storefront pages (never inside /admin/*).
+ * Popunder script is disabled to protect user experience and prevent
+ * unwanted automatic redirects / file downloads on user clicks.
  */
 export function useAdsterraPop(): void {
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (window.location.pathname.startsWith('/admin')) return;
-
-    const SCRIPT_ID = 'adsterra-social-pop';
-    if (!document.getElementById(SCRIPT_ID)) {
-      const s = document.createElement('script');
-      s.id = SCRIPT_ID;
-      s.src = 'https://pl25509888.profitableratecpmnetwork.com/1e/60/9a/1e609a1772f1c8ac6a824ff2534ed894.js';
-      s.async = true;
-      document.head.appendChild(s);
-    }
+    const existing = document.getElementById('adsterra-social-pop');
+    if (existing) existing.remove();
+    const rogueScripts = document.querySelectorAll('script[src*="profitableratecpmnetwork.com"]');
+    rogueScripts.forEach((s) => s.remove());
   }, []);
 }
 
@@ -26,12 +19,12 @@ interface AdsterraBannerProps {
 }
 
 /**
- * Adsterra Native Banner Unit (container-11967f6c35e05352ed496c96f6d8ddf4).
- * Mounts the container and executes invoke.js.
+ * Adsterra Placed Native Banner Unit (container-11967f6c35e05352ed496c96f6d8ddf4).
+ * Mounts in a fixed placement inside page layouts without click hijacking.
  */
 export default function AdsterraBanner({ className = '' }: AdsterraBannerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  useAdsterraPop();
+
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
