@@ -2126,9 +2126,18 @@ function SecurePaymentsNote() {
 
 function HomePage() {
   const { products, addToCart, notify } = useApp();
+  const navigate = useNavigate();
+  const [homeQuery, setHomeQuery] = useState('');
   const [nlEmail, setNlEmail] = useState('');
   const [nlDone, setNlDone] = useState(false);
   const [nlSaved, setNlSaved] = useState(false);
+
+  const handleHomeSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const t = homeQuery.trim();
+    if (t) trackEvent('search', { search_term: t, ...utmParams() });
+    navigate(t ? `/shop?q=${encodeURIComponent(t)}` : '/shop');
+  };
 
   // No head writes here: the route head owner (AppRoutes) sets the homepage
   // title and meta description, and its strings are byte-identical to the ones
@@ -2497,15 +2506,15 @@ function HomePage() {
           <span className="text-[10px] sm:text-xs font-bold tracking-[0.25em] text-[#C5A880] uppercase">Instant Catalog Search</span>
           <h2 className="font-serif text-xl sm:text-2xl font-bold text-gray-950 mt-1 mb-4">Find Your Signature Piece</h2>
           <form
-            onSubmit={submitSearch}
+            onSubmit={handleHomeSearch}
             role="search"
             aria-label="Homepage catalog search"
             className="relative flex items-center w-full bg-white border border-gray-300 rounded-full px-4 py-2.5 sm:py-3 shadow-sm hover:border-gray-400 focus-within:border-gray-900 focus-within:ring-2 focus-within:ring-gray-900/10 transition-all"
           >
             <SearchMd strokeWidth={1.5} size={18} className="text-gray-400 shrink-0 mr-3" />
             <input
-              value={hq}
-              onChange={e => setHq(e.target.value)}
+              value={homeQuery}
+              onChange={e => setHomeQuery(e.target.value)}
               placeholder="Search dresses, jackets, designer bags, intimates, shoes..."
               aria-label="Search catalog"
               className="flex-1 min-w-0 bg-transparent text-xs sm:text-sm text-gray-900 placeholder-gray-400 focus:outline-none pr-24"
