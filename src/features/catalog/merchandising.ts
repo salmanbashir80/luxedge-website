@@ -371,11 +371,11 @@ export const HOME_BEST_SELLER_SLOTS: readonly BestSellerSlot[] = [
 
 /** Curated homepage fashion slots, in display order. */
 export const FASHION_HOME_BEST_SELLER_SLOTS: readonly BestSellerSlot[] = [
-  { badge: 'Bestseller', slugs: ['sample-floral-midi-dress'], category: 'dress' },
-  { badge: 'Hot Arrival', slugs: ['sample-sheer-floral-lace-plunge-bodysuit', 'sample-lace-bralette-and-brief-set'], category: 'women' },
-  { badge: 'Silk & Satin', slugs: ['sample-silk-satin-robe-and-babydoll-set', 'sample-satin-evening-maxi-dress'], category: 'sleepwear' },
-  { badge: 'Couture', slugs: ['sample-women-s-long-trench-coat', 'sample-women-s-tailored-blazer-and-trouser-set'], category: 'outerwear' },
-  { badge: 'Luxury Accent', slugs: ['sample-structured-tote-handbag', 'sample-gold-tone-layered-necklace'], category: 'handbag' },
+  { badge: 'Bestseller', slugs: ['floral-midi-dress', 'sample-floral-midi-dress'], category: 'dress' },
+  { badge: 'Outerwear', slugs: ['tailored-double-breasted-wool-trench-coat', 'sample-women-s-long-trench-coat'], category: 'outerwear' },
+  { badge: 'Evening Wear', slugs: ['satin-evening-maxi-dress', 'sample-satin-evening-maxi-dress'], category: 'dress' },
+  { badge: 'Handbags', slugs: ['classic-structured-leather-tote-bag', 'sample-structured-tote-handbag'], category: 'handbag' },
+  { badge: 'Fine Jewelry', slugs: ['adjustable-tennis-bracelet', 'sample-gold-tone-layered-necklace'], category: 'jewelry' },
 ];
 
 export interface BestSellerCandidate {

@@ -24,7 +24,12 @@ if (
   window.location.protocol.startsWith('https')
 ) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => { /* offline installability only — never fatal */ });
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((reg) => {
+        reg.update().catch(() => {});
+      })
+      .catch(() => { /* offline installability only — never fatal */ });
   });
 }
 

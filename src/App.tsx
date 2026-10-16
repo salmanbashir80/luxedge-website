@@ -2158,7 +2158,7 @@ function HomePage() {
   const defaultBestsellers = [
     {
       id: 'sample-floral-midi-dress',
-      slug: 'sample-floral-midi-dress',
+      slug: 'floral-midi-dress',
       name: 'Floral Midi Dress with Tiered Silhouette',
       price: 58,
       originalPrice: 78,
@@ -2166,40 +2166,40 @@ function HomePage() {
       badge: 'Best Seller'
     },
     {
-      id: 'sample-sheer-floral-lace-plunge-bodysuit',
-      slug: 'sample-sheer-floral-lace-plunge-bodysuit',
-      name: 'Sheer Floral Lace Plunge Bodysuit',
-      price: 48,
-      originalPrice: 68,
-      image: '/images/fashion/lingerie-corset.jpg',
-      badge: 'Trending Hot'
-    },
-    {
-      id: 'sample-silk-satin-robe-and-babydoll-set',
-      slug: 'sample-silk-satin-robe-and-babydoll-set',
-      name: 'Silk Satin Robe and Babydoll Set',
-      price: 68,
-      originalPrice: 94,
-      image: '/images/fashion/lingerie-robe.jpg',
-      badge: 'Pure Luxury'
+      id: 'sample-women-s-long-trench-coat',
+      slug: 'womens-classic-trench-coat',
+      name: 'Tailored Double-Breasted Wool Trench Coat',
+      price: 94,
+      originalPrice: 138,
+      image: '/images/fashion/jackets-outerwear.jpg',
+      badge: 'Outerwear'
     },
     {
       id: 'sample-satin-evening-maxi-dress',
-      slug: 'sample-satin-evening-maxi-dress',
+      slug: 'satin-evening-maxi-dress',
       name: 'Satin Evening Maxi Dress with Slit',
       price: 78,
       originalPrice: 110,
       image: '/images/fashion/satin-maxi-dress.jpg',
-      badge: 'Couture Hit'
+      badge: 'Evening Wear'
     },
     {
-      id: 'sample-lace-bralette-and-brief-set',
-      slug: 'sample-lace-bralette-and-brief-set',
-      name: 'Lace Bralette and Scalloped Brief Set',
-      price: 28,
-      originalPrice: 42,
-      image: '/images/fashion/lingerie-bralette.jpg',
-      badge: 'Intimates'
+      id: 'sample-structured-tote-handbag',
+      slug: 'classic-structured-tote-bag',
+      name: 'Classic Structured Pebble Leather Tote',
+      price: 76,
+      originalPrice: 110,
+      image: '/images/fashion/structured-tote-bag.jpg',
+      badge: 'Handbags'
+    },
+    {
+      id: 'sample-gold-tone-layered-necklace',
+      slug: 'adjustable-tennis-bracelet',
+      name: 'Sparkling Tennis Bracelet in White Gold Tone',
+      price: 52,
+      originalPrice: 74,
+      image: '/images/fashion/jewelry.jpg',
+      badge: 'Fine Jewelry'
     },
   ];
 
@@ -2242,7 +2242,7 @@ function HomePage() {
     <div className="bg-white text-gray-900 selection:bg-amber-600 selection:text-white">
 
       {/* ══════════════════════════════════════════════════════════
-          1. MASTER HERO SECTION (Hot Luxury Fashion & Lingerie)
+          1. MASTER HERO SECTION (Luxury Fashion & Designer Atelier)
       ══════════════════════════════════════════════════════════ */}
       <section className="relative overflow-hidden bg-gradient-to-b from-[#FAF8F5] via-[#FDFBF7] to-white border-b border-gray-150 py-8 sm:py-10 lg:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -2252,33 +2252,33 @@ function HomePage() {
             <div className="lg:col-span-6 space-y-4 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-900 text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em]">
                 <Stars01 size={13} className="text-amber-600 shrink-0" />
-                Haute Lingerie &amp; Luxury Fashion · Discreet USA Delivery
+                Haute Couture &amp; Luxury Fashion · Fast USA Delivery
               </div>
 
               <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-950 leading-[1.1] tracking-tight">
-                Seductive Allure.<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-700 via-rose-700 to-amber-950 italic font-serif">
+                Timeless Elegance.<br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-700 via-stone-800 to-amber-950 italic font-serif">
                   Pure Luxury Fashion.
                 </span>
               </h1>
 
               <p className="text-sm sm:text-base text-gray-700 leading-relaxed max-w-xl mx-auto lg:mx-0 font-normal">
-                Exquisite French lace lingerie, liquid silk slip dresses, sculpted corsetry, and runway-ready apparel tailored to empower and captivate. Shipped fast and discreetly within the USA.
+                Discover exquisite designer dresses, tailored outerwear, handcrafted leather goods, and statement fine jewelry crafted for discerning taste. Shipped fast and reliably across the United States.
               </p>
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 pt-1">
                 <Link
-                  to="/category/lingerie-and-intimates"
+                  to="/shop"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-neutral-950 via-neutral-900 to-black hover:from-black hover:to-neutral-900 text-amber-200 border border-amber-400/40 rounded-full font-bold text-xs sm:text-sm transition-all shadow-md hover:shadow-lg hover:scale-[1.01]"
                 >
-                  Explore Lingerie &amp; Intimates <ArrowRight strokeWidth={2} size={15} />
+                  Explore New Arrivals <ArrowRight strokeWidth={2} size={15} />
                 </Link>
                 <Link
-                  to="/shop"
+                  to="/category/dresses-and-tops"
                   className="inline-flex items-center gap-2 px-5 py-3 bg-white hover:bg-neutral-50 text-neutral-900 border border-neutral-300 hover:border-neutral-900 rounded-full font-bold text-xs sm:text-sm transition-all shadow-xs"
                 >
-                  Shop New Season
+                  Shop Designer Dresses
                 </Link>
               </div>
 
@@ -2289,8 +2289,8 @@ function HomePage() {
                     <Stars01 size={15} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-gray-900 leading-tight">Pure Silk &amp; Lace</p>
-                    <p className="text-[10px] text-gray-500">Delicate fabrics</p>
+                    <p className="text-xs font-bold text-gray-900 leading-tight">Curated Couture</p>
+                    <p className="text-[10px] text-gray-500">Premium materials</p>
                   </div>
                 </div>
 
@@ -2299,8 +2299,8 @@ function HomePage() {
                     <Truck01 strokeWidth={1.5} size={15} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-gray-900 leading-tight">Discreet Shipping</p>
-                    <p className="text-[10px] text-gray-500">Plain packaging</p>
+                    <p className="text-xs font-bold text-gray-900 leading-tight">Fast USA Shipping</p>
+                    <p className="text-[10px] text-gray-500">Tracked delivery</p>
                   </div>
                 </div>
 
@@ -2321,7 +2321,7 @@ function HomePage() {
               <div className="relative rounded-2xl overflow-hidden shadow-xl border border-black/10 bg-neutral-900 aspect-[4/3] w-full max-h-[380px] lg:max-h-[420px]">
                 <img
                   src="/images/fashion/women-clothing.jpg"
-                  alt="Luxedge Luxury Fashion & Intimates Collection"
+                  alt="Luxedge Luxury Fashion Collection"
                   loading="eager"
                   fetchPriority="high"
                   className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-105"
@@ -2330,11 +2330,11 @@ function HomePage() {
                 {/* Floating Brand Mission Badge */}
                 <div className="absolute bottom-3 right-3 max-w-xs bg-black/85 backdrop-blur-md text-white p-3 rounded-xl shadow-xl border border-amber-400/30 flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black flex items-center justify-center shrink-0 font-bold shadow">
-                    <Heart size={15} fill="currentColor" />
+                    <Stars01 size={15} className="text-black" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-amber-200 leading-tight">The Intimates Atelier</p>
-                    <p className="text-[10px] text-white/90 leading-tight">Pure Silk, Delicate Lace &amp; Sculpted Fits</p>
+                    <p className="text-xs font-bold text-amber-200 leading-tight">The Designer Atelier</p>
+                    <p className="text-[10px] text-white/90 leading-tight">Modern Tailoring, Silk Dresses &amp; Artisan Goods</p>
                   </div>
                 </div>
               </div>
@@ -2345,59 +2345,59 @@ function HomePage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════
-          2. FEATURED HOT SPOTLIGHT: THE INTIMATES & LINGERIE SALON
+          2. FEATURED SPOTLIGHT: THE RUNWAY & DESIGNER ATELIER
       ══════════════════════════════════════════════════════════ */}
-      <section id="lingerie-salon" className="py-10 sm:py-12 bg-neutral-950 text-white relative overflow-hidden">
+      <section id="runway-atelier" className="py-10 sm:py-12 bg-neutral-950 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(217,119,6,0.12),transparent_50%)] pointer-events-none" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 sm:mb-8">
             <div>
-              <span className="text-xs font-bold tracking-[0.25em] text-amber-400 uppercase">Sensual Elegance</span>
-              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white mt-1">The Lingerie &amp; Intimates Salon</h2>
-              <p className="text-xs sm:text-sm text-neutral-400 mt-1 max-w-xl">Curated silk slips, French lace bralettes, and sculpted corsets crafted to celebrate every contour.</p>
+              <span className="text-xs font-bold tracking-[0.25em] text-amber-400 uppercase">Haute Couture &amp; Fine Living</span>
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white mt-1">The Runway &amp; Designer Atelier</h2>
+              <p className="text-xs sm:text-sm text-neutral-400 mt-1 max-w-xl">Curated chiffon evening gowns, wool tailored coats, pebble leather handbags, and radiant artisan jewelry.</p>
             </div>
             <Link
-              to="/category/lingerie-and-intimates"
+              to="/shop"
               className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-300 hover:text-amber-200 transition-colors group"
             >
-              View Full Lingerie Collection <ArrowRight strokeWidth={2} size={15} className="transition-transform group-hover:translate-x-1" />
+              Explore Runway Looks <ArrowRight strokeWidth={2} size={15} className="transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {[
               {
-                title: 'Silk Charmeuse Chemises',
-                tag: '100% Pure Silk',
-                desc: 'Liquid silk slips with cowl necklines and alluring low backs.',
-                price: 'From $54.00',
-                to: '/category/lingerie-and-intimates',
-                img: '/images/fashion/lingerie-chemise.jpg',
+                title: 'Chiffon & Evening Gowns',
+                tag: 'Pure Silk & Chiffon',
+                desc: 'Flowing silhouettes, pleated ruffles, and delicate botanical prints for elevated evenings.',
+                price: 'From $58.00',
+                to: '/category/dresses-and-tops',
+                img: '/images/fashion/floral-midi-dress.jpg',
               },
               {
-                title: 'French Lace Bralette Sets',
-                tag: 'Chantilly Lace',
-                desc: 'Scalloped eyelash lace bralettes with matching cheeky briefs.',
-                price: 'From $28.00',
-                to: '/category/lingerie-and-intimates',
-                img: '/images/fashion/lingerie-bralette.jpg',
+                title: 'Tailored Coats & Trench',
+                tag: 'Warm Luxury Outerwear',
+                desc: 'Double-breasted tailored outerwear engineered in heavyweight wool and trench fabrics.',
+                price: 'From $84.00',
+                to: '/category/jackets-and-outerwear',
+                img: '/images/fashion/jackets-outerwear.jpg',
               },
               {
-                title: 'Sculpting Corset Bodysuits',
-                tag: 'Hourglass Boning',
-                desc: 'Architectural waist boning with underwire support and sheer mesh.',
-                price: 'From $48.00',
-                to: '/category/lingerie-and-intimates',
-                img: '/images/fashion/lingerie-corset.jpg',
-              },
-              {
-                title: 'Luxury Kimono Robes',
-                tag: 'Satin & Lace Trim',
-                desc: 'Wide kimono sleeve loungewear wraps in featherlight stretch satin.',
+                title: 'Handcrafted Leather Bags',
+                tag: 'Pebble Grain Leather',
+                desc: 'Spacious interior compartments, gold hardware, and architectural luxury silhouettes.',
                 price: 'From $68.00',
-                to: '/category/lingerie-and-intimates',
-                img: '/images/fashion/lingerie-robe.jpg',
+                to: '/category/handbags-and-wallets',
+                img: '/images/fashion/structured-tote-bag.jpg',
+              },
+              {
+                title: 'Fine Artisan Jewelry',
+                tag: 'Hand-Set Stones',
+                desc: 'Hypoallergenic gold-tone necklaces, brilliant tennis bracelets, and luxury timepieces.',
+                price: 'From $38.00',
+                to: '/category/jewelry',
+                img: '/images/fashion/jewelry.jpg',
               },
             ].map((card) => (
               <Link
@@ -2449,7 +2449,7 @@ function HomePage() {
             <div>
               <span className="text-xs font-bold tracking-[0.25em] text-neutral-500 uppercase">Curated Catalog</span>
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-gray-950 mt-1">Shop by Category</h2>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">From intimate couture to evening wear, fine jewelry, and statement accessories.</p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">From designer evening wear and tailored coats to fine jewelry and luxury leather.</p>
             </div>
             <Link
               to="/shop"
@@ -2462,11 +2462,11 @@ function HomePage() {
           {/* 6 Category Cards Responsive Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
             {[
-              { name: "Lingerie & Intimates", to: '/category/lingerie-and-intimates', img: '/images/fashion/lingerie-bralette.jpg' },
-              { name: 'Dresses & Tops', to: '/category/dresses-and-tops', img: '/images/fashion/dresses-tops.jpg' },
+              { name: 'Dresses & Tops', to: '/category/dresses-and-tops', img: '/images/fashion/floral-midi-dress.jpg' },
+              { name: 'Coats & Outerwear', to: '/category/jackets-and-outerwear', img: '/images/fashion/jackets-outerwear.jpg' },
               { name: "Women's Clothing", to: '/category/womens-clothing', img: '/images/fashion/women-clothing.jpg' },
+              { name: 'Handbags & Wallets', to: '/category/handbags-and-wallets', img: '/images/fashion/structured-tote-bag.jpg' },
               { name: 'Jewelry & Watches', to: '/category/jewelry', img: '/images/fashion/jewelry.jpg' },
-              { name: 'Handbags & Wallets', to: '/category/handbags-and-wallets', img: '/images/fashion/handbags-wallets.jpg' },
               { name: 'Shoes & Heels', to: '/category/sneakers-and-shoes', img: '/images/fashion/sneakers-shoes.jpg' },
             ].map((cat) => (
               <Link
@@ -2532,11 +2532,11 @@ function HomePage() {
             <span className="font-semibold text-gray-400">Popular:</span>
             {[
               { label: 'Silk Slip Dresses', q: 'silk dress' },
-              { label: 'Lace Bralettes', q: 'lace bralette' },
-              { label: 'Corset Bodysuits', q: 'corset' },
+              { label: 'Trench Coats', q: 'coat' },
+              { label: 'Tailored Blazers', q: 'blazer' },
               { label: 'Evening Gowns', q: 'evening maxi' },
-              { label: 'Tailored Suits', q: 'blazer trouser' },
-              { label: 'Leather Totes', q: 'tote handbag' },
+              { label: 'Leather Handbags', q: 'tote handbag' },
+              { label: 'Fine Jewelry', q: 'jewelry' },
             ].map(tag => (
               <Link
                 key={tag.label}
@@ -2562,8 +2562,8 @@ function HomePage() {
                 <Truck01 strokeWidth={1.5} size={18} />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-gray-900">Discreet USA Shipping</h4>
-                <p className="text-[10px] sm:text-[11px] text-gray-500">Unmarked privacy packaging</p>
+                <h4 className="text-xs sm:text-sm font-bold text-gray-900">Fast USA Shipping</h4>
+                <p className="text-[10px] sm:text-[11px] text-gray-500">Tracked 3-5 business day delivery</p>
               </div>
             </div>
 
@@ -2583,7 +2583,7 @@ function HomePage() {
               </div>
               <div>
                 <h4 className="text-xs sm:text-sm font-bold text-gray-900">Pure Luxury Fabrics</h4>
-                <p className="text-[10px] sm:text-[11px] text-gray-500">Silk, satin &amp; delicate lace</p>
+                <p className="text-[10px] sm:text-[11px] text-gray-500">Silk, cashmere, satin &amp; fine wool</p>
               </div>
             </div>
 
@@ -2722,12 +2722,12 @@ function HomePage() {
               </div>
               <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
                 <div>
-                  <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700 mb-1">Intimate Craft</p>
+                  <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700 mb-1">Couture Tailoring</p>
                   <h3 className="font-serif text-lg sm:text-xl font-bold text-gray-950 mb-1.5">
-                    The Silk &amp; Lace Atelier
+                    The Haute Couture Atelier
                   </h3>
                   <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                    Sensual liquid silk, unlined French eyelash lace, and sculpted corsetry cut with meticulous precision for intoxicating comfort.
+                    Flowing silk slip dresses, sculpted blazers, and luxury wool outerwear tailored with meticulous precision for enduring sophistication.
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-gray-100">
