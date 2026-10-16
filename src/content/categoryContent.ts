@@ -196,6 +196,7 @@ export const CATEGORY_NAMES: string[] = Object.values(CATEGORY_CONTENT).map((c) 
 
 /** The route slug for a display name, or null when the name is not a known category. */
 export function categorySlugFor(name: string): string | null {
+  if (name === 'Lingerie & Intimates' || name === 'Luxury Lingerie' || name === 'Lingerie and Intimates') return 'lingerie-and-intimates';
   return Object.keys(CATEGORY_CONTENT).find((slug) => CATEGORY_CONTENT[slug].name === name) ?? null;
 }
 
@@ -208,8 +209,13 @@ export const FASHION_CATEGORY_SLUGS: ReadonlySet<string> = new Set(Object.keys(C
 
 /** Lookup by slug, tolerant of a display name ("Women's Clothing"). */
 export function categoryContentFor(slugOrName: string): CategoryContent | null {
+  if (slugOrName === 'lingerie-and-intimates' || slugOrName === 'lingerie-intimates' || slugOrName === 'Lingerie & Intimates' || slugOrName === 'Lingerie and Intimates') {
+    const entry = CATEGORY_CONTENT['lingerie-and-intimates'];
+    return { ...entry, guides: entry.guides.filter((g) => isLinkablePublicPath(g.href)) };
+  }
   const slug = String(slugOrName || '')
     .toLowerCase()
+    .replace(/&/g, 'and')
     .replace(/['’]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');

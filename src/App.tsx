@@ -22,6 +22,7 @@ import { proxiedImage } from './lib/product-images';
 import CookieConsent from './components/CookieConsent';
 import WelcomePopup from './components/WelcomePopup';
 import AIAssistant from './components/AIAssistant';
+import AdsterraBanner, { useAdsterraPop } from './components/AdsterraBanner';
 import { trackEvent, utmParams } from './lib/marketing';
 import { useAuthStore } from './store/authStore';
 import { isSupabaseConfigured, updatePassword, updateUserMetadata, getAccessToken, getFreshAccessToken } from './services/supabase';
@@ -281,6 +282,7 @@ const INIT_CATEGORIES: AdminCategory[] = [
   { id: 'c4', name: 'Jeans and Pants', isActive: true, subs: [] },
   { id: 'c5', name: 'Jackets and Outerwear', isActive: true, subs: [] },
   { id: 'c6', name: 'Sneakers and Shoes', isActive: true, subs: [] },
+  { id: 'c7', name: 'Lingerie and Intimates', slug: 'lingerie-and-intimates', isActive: true, subs: [] },
   { id: 'c8', name: 'Handbags and Wallets', isActive: true, subs: [] },
   { id: 'c9', name: 'Jewelry', isActive: true, subs: [] },
   { id: 'c10', name: 'Watches', isActive: true, subs: [] },
@@ -1350,12 +1352,16 @@ function ScrollToTop() {
 }
 
 function SLayout({ children }: { children: ReactNode }) {
+  useAdsterraPop();
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[200] focus:px-4 focus:py-2 focus:bg-luxe-black focus:text-white focus:rounded-lg focus:text-sm">Skip to content</a>
       <ScrollToTop />
       <Header />
       <main id="main-content" className="flex-1">{children}</main>
+      <div className="max-w-7xl mx-auto px-4 w-full">
+        <AdsterraBanner />
+      </div>
       <Footer />
       <CartDrawer />
       <CookieConsent />
@@ -2462,9 +2468,9 @@ function HomePage() {
           {/* 6 Category Cards Responsive Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
             {[
+              { name: 'Luxury Lingerie', to: '/category/lingerie-and-intimates', img: '/images/fashion/lingerie-red-lace-set.jpg', badge: 'Seductive · Hot' },
               { name: 'Dresses & Tops', to: '/category/dresses-and-tops', img: '/images/fashion/floral-midi-dress.jpg' },
               { name: 'Coats & Outerwear', to: '/category/jackets-and-outerwear', img: '/images/fashion/jackets-outerwear.jpg' },
-              { name: "Women's Clothing", to: '/category/womens-clothing', img: '/images/fashion/women-clothing.jpg' },
               { name: 'Handbags & Wallets', to: '/category/handbags-and-wallets', img: '/images/fashion/structured-tote-bag.jpg' },
               { name: 'Jewelry & Watches', to: '/category/jewelry', img: '/images/fashion/jewelry.jpg' },
               { name: 'Shoes & Heels', to: '/category/sneakers-and-shoes', img: '/images/fashion/sneakers-shoes.jpg' },
@@ -2472,8 +2478,13 @@ function HomePage() {
               <Link
                 key={cat.name}
                 to={cat.to}
-                className="group flex flex-col rounded-2xl overflow-hidden bg-white border border-gray-200 hover:border-amber-600/50 shadow-xs hover:shadow-lg transition-all duration-300"
+                className="group flex flex-col rounded-2xl overflow-hidden bg-white border border-gray-200 hover:border-amber-600/50 shadow-xs hover:shadow-lg transition-all duration-300 relative"
               >
+                {'badge' in cat && cat.badge && (
+                  <span className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-rose-600 text-white shadow-sm">
+                    {cat.badge}
+                  </span>
+                )}
                 <div className="aspect-[4/3] w-full overflow-hidden bg-neutral-100">
                   <img
                     src={cat.img}
@@ -2495,6 +2506,11 @@ function HomePage() {
                 </div>
               </Link>
             ))}
+          </div>
+
+          {/* Adsterra Sponsored Native Recommendations */}
+          <div className="mt-8">
+            <AdsterraBanner />
           </div>
 
         </div>
@@ -2933,6 +2949,16 @@ function ShopPage() {
       if (cat === 'All') return true;
       if (p.category === cat) return true;
       if (p.collectionSlugs?.includes(slugOf(cat))) return true;
+      if (cat === 'Lingerie and Intimates' || cat === 'Lingerie & Intimates' || slugOf(cat) === 'lingerie-and-intimates') {
+        const name = (p.name || '').toLowerCase();
+        let tags: string[] = [];
+        try { tags = typeof p.tags === 'string' ? JSON.parse(p.tags) : (p.tags || []); } catch { tags = []; }
+        tags = tags.map(t => String(t).toLowerCase());
+        if (p.category === 'Lingerie and Intimates' || p.category === 'Lingerie & Intimates') return true;
+        const lingerieKeywords = ['lingerie', 'intimates', 'bralette', 'corset', 'bodysuit', 'panty', 'panties', 'teddy', 'slips', 'sleepwear', 'shapewear', 'babydoll', 'chemise'];
+        if (tags.some(t => lingerieKeywords.some(k => t.includes(k)) || t === 'bra' || t === 'bras')) return true;
+        if (/\b(lingerie|bralette|corset|bodysuit|bra|bras|panty|panties|babydoll|teddy|camisole|slip dress|chemise|nightdress)\b/i.test(name) && !/bracelet/i.test(name)) return true;
+      }
       if (cat === 'Cat Supplies') {
         const slug = (p.id || '').toLowerCase();
         const name = (p.name || '').toLowerCase();

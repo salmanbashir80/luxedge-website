@@ -36,22 +36,27 @@ export default function AdsterraBanner({ className = '' }: AdsterraBannerProps) 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (window.location.pathname.startsWith('/admin')) return;
+    if (!containerRef.current) return;
 
-    const SCRIPT_ID = 'adsterra-invoke-script';
-    if (!document.getElementById(SCRIPT_ID)) {
-      const s = document.createElement('script');
-      s.id = SCRIPT_ID;
-      s.async = true;
-      s.setAttribute('data-cfasync', 'false');
-      s.src = 'https://pl25509212.profitableratecpmnetwork.com/11967f6c35e05352ed496c96f6d8ddf4/invoke.js';
-      document.body.appendChild(s);
-    }
+    // Check if script is already injected in this container
+    if (containerRef.current.querySelector('script[data-adsterra-invoke]')) return;
+
+    const s = document.createElement('script');
+    s.async = true;
+    s.setAttribute('data-cfasync', 'false');
+    s.setAttribute('data-adsterra-invoke', 'true');
+    s.src = 'https://pl25509212.profitableratecpmnetwork.com/11967f6c35e05352ed496c96f6d8ddf4/invoke.js';
+    containerRef.current.appendChild(s);
   }, []);
 
   return (
-    <div className={`my-6 flex flex-col items-center justify-center text-center ${className}`}>
-      <span className="text-[10px] uppercase tracking-wider text-gray-400 mb-2">Advertisement</span>
-      <div id="container-11967f6c35e05352ed496c96f6d8ddf4" ref={containerRef} className="min-h-[90px] w-full flex items-center justify-center max-w-4xl" />
+    <div className={`my-8 flex flex-col items-center justify-center text-center overflow-hidden ${className}`}>
+      <span className="text-[10px] uppercase tracking-wider text-gray-400 mb-2 font-mono">Sponsored Recommendations</span>
+      <div
+        id="container-11967f6c35e05352ed496c96f6d8ddf4"
+        ref={containerRef}
+        className="min-h-[100px] w-full flex items-center justify-center max-w-4xl"
+      />
     </div>
   );
 }
