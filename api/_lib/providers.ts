@@ -245,7 +245,7 @@ export function classifyProviderStatus(
   const name = PROVIDER_NAMES[providerId] || providerId;
   const body = (raw || '').slice(0, 400).toLowerCase();
   const quotaHit = status === 429 || /quota|exhausted|insufficient|rate limit|billing/i.test(body);
-  const modelHit = status === 404 || /not found|not supported|does not exist|unknown model|not exist/i.test(body);
+  const modelHit = status === 404 || /not found|not supported|does not exist|unknown model|not exist|no longer available/i.test(body);
   const problem: ProviderProblem =
     status === 401 || (status === 403 && !quotaHit)
       ? 'auth'
@@ -268,9 +268,11 @@ export function classifyProviderStatus(
       return { problem, message: `${name} is out of quota or rate-limited (HTTP ${status}). Free tiers are heavily limited — ${fix}, then retry.` };
     }
     case 'model':
-      return { problem, message: `${name} does not offer the requested model (HTTP ${status}). Pick a supported model in the UI — media generation retries the next available model automatically.` };
-    default:
-      return { problem, message: `${name} error (HTTP ${status}). Check server logs for details.` };
+      return { problem, message: `${name} does not offer the requested model (HTTP ${status}). Pick a supported active model (e.g. gemini-3.5-flash) in the UI.` };
+    default: {
+      const cleanDetail = typeof raw === 'string' && raw.length > 0 && raw.length < 250 && !/key|bearer|token|secret/i.test(raw) ? `: ${raw}` : '';
+      return { problem, message: `${name} error (HTTP ${status})${cleanDetail}. Check server logs for details.` };
+    }
   }
 }
 
@@ -354,7 +356,8 @@ export async function generate(providerId: string, opts: GenerateOptions): Promi
       });
     }
     case 'gemini': {
-      const effectiveModel = !model || model === 'gemini-3.5-flash' ? 'gemini-2.5-flash' : model;
+      const isRetired = !model || (!model.startsWith('gemini-3') && !model.includes('latest'));
+      const effectiveModel = isRetired ? 'gemini-3.5-flash' : model;
       const bodyPayload: Record<string, unknown> = {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.2, maxOutputTokens: 4096 },
@@ -362,14 +365,17 @@ export async function generate(providerId: string, opts: GenerateOptions): Promi
       if (system && system.trim()) {
         bodyPayload.systemInstruction = { parts: [{ text: system.trim() }] };
       }
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${effectiveModel}:generateContent?key=${key}`, {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(effectiveModel)}:generateContent?key=${encodeURIComponent(key.trim())}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bodyPayload),
         signal,
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw providerError(providerId, r.status, JSON.stringify(d));
+      if (!r.ok) {
+        const errorMsg = d?.error?.message || JSON.stringify(d);
+        throw providerError(providerId, r.status, errorMsg);
+      }
       const text = d?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (typeof text !== 'string') throw new Error('Gemini returned no text');
       return text;
@@ -512,7 +518,7 @@ export function defaultModelFor(providerId: string): string {
     case 'codex': return 'gpt-5-codex';
     case 'deepseek': return 'deepseek-chat';
     case 'anthropic': return 'claude-haiku-4-5-20251001';
-    case 'gemini': return 'gemini-2.5-flash';
+    case 'gemini': return 'gemini-3.5-flash';
     case 'openrouter': return 'nvidia/nemotron-3-super-120b-a12b:free';
     default: return '';
   }

@@ -2249,7 +2249,7 @@ function ASettings() {
             </div>
           </div>
           <p className="text-xs text-purple-700 bg-purple-50 border border-purple-200 rounded-lg p-2.5">
-            Active Engine: Google Gemini (gemini-2.5-flash) primary + OpenRouter multi-model fallback. All other legacy providers have been removed.
+            Active Engine: Google Gemini (gemini-3.5-flash) primary + OpenRouter multi-model fallback. All other legacy providers have been removed.
           </p>
           <div className="flex items-center gap-3 flex-wrap">
             <button type="button" onClick={() => { saveProviderSettings(providerSettings); notify('Provider routing saved.'); }}

@@ -81,7 +81,7 @@ describe('loadAIProviders', () => {
   it('defaults to Gemini as the default provider (owner chain: gemini primary, openrouter fallback)', () => {
     expect(DEFAULT_AI_PROVIDERS.find((p) => p.isDefault)?.id).toBe('gemini');
     const gem = DEFAULT_AI_PROVIDERS.find((p) => p.id === 'gemini');
-    expect(gem?.defaultModel).toBe('gemini-2.5-flash');
+    expect(gem?.defaultModel).toBe('gemini-3.5-flash');
     expect(gem?.enabled).toBe(true);
     expect(DEFAULT_AI_PROVIDERS.find((p) => p.id === 'openrouter')?.enabled).toBe(true);
     expect(DEFAULT_AI_PROVIDERS.find((p) => p.id === 'deepseek')?.enabled).toBe(true);
@@ -151,7 +151,9 @@ describe('loadAIProviders', () => {
         if (file.includes('__tests__')) continue;
         const text = readFileSync(file, 'utf8');
         for (const retired of Object.keys(RETIRED_MODEL_SLUGS)) {
-          if (text.includes(retired) && !file.endsWith(join('features', 'ai', 'providers.ts'))) {
+          const escaped = retired.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`(?<![\\w-])${escaped}(?![\\w-])`);
+          if (regex.test(text) && !file.endsWith(join('features', 'ai', 'providers.ts'))) {
             offenders.push(`${file}: ${retired}`);
           }
         }

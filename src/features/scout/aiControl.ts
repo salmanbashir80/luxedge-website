@@ -324,7 +324,7 @@ export const DEFAULT_MODEL_HELP: Record<ProviderId, string> = {
   openai: 'gpt-4o-mini',
   anthropic: 'claude-haiku-4-5-20251001',
   openrouter: 'nvidia/nemotron-3-super-120b-a12b:free',
-  gemini: 'gemini-2.0-flash-exp',
+  gemini: 'gemini-3.5-flash',
 };
 
 /** Premium model used under QUALITY strategy for important decisions. */
@@ -333,7 +333,7 @@ const PREMIUM_MODEL: Record<ProviderId, string> = {
   openai: 'gpt-4o',
   anthropic: 'claude-sonnet-4-6',
   openrouter: 'openrouter/free',
-  gemini: 'gemini-1.5-pro',
+  gemini: 'gemini-3.5-flash',
 };
 
 /** Count of AI calls a provider made today (from the decision log). */
