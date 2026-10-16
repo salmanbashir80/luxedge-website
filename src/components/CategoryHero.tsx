@@ -65,10 +65,10 @@ const FASHION_HERO_IMAGES: Record<string, { file: string; alt: string }> = {
   'Jackets and Outerwear': { file: 'jackets-outerwear.jpg', alt: 'Leather jacket on display' },
   'Sneakers and Shoes': { file: 'sneakers-shoes.jpg', alt: 'Pair of white sneakers' },
   'Handbags and Wallets': { file: 'handbags-wallets.jpg', alt: 'Black mini handbag styled with a minidress' },
-  Jewelry: { file: 'jewelry.jpg', alt: 'Rings and necklaces displayed as jewelry' },
+  Jewelry: { file: 'jewelry-gold-necklace.jpg', alt: 'Fine artisan jewelry, layered gold necklaces and gemstones' },
   Watches: { file: 'watches.jpg', alt: 'Wristwatch close-up' },
   'Sunglasses and Accessories': { file: 'sunglasses-accessories.jpg', alt: 'Pair of sunglasses for summer' },
-  'Lingerie and Intimates': { file: 'dresses-tops.jpg', alt: 'Delicate lingerie and intimates collection' },
+  'Lingerie and Intimates': { file: 'lingerie-red-lace-set.jpg', alt: 'Delicate lace lingerie and intimates collection' },
   'Makeup and Beauty': { file: 'jewelry.jpg', alt: 'Everyday beauty, cosmetics and accessories collection' },
 };
 

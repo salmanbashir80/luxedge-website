@@ -76,6 +76,7 @@ export const STRIP_NAV: { all: NavLink; items: (NavLink & { megaKey?: string })[
     { label: 'Outerwear', to: NAV_PATHS.outerwear },
     { label: 'Shoes', to: NAV_PATHS.footwear },
     { label: 'Handbags', to: NAV_PATHS.handbags },
+    { label: 'Jewelry', to: NAV_PATHS.jewelry },
     { label: 'Accessories', to: NAV_PATHS.accessories },
     { label: 'Blog', to: NAV_PATHS.blog },
     { label: 'About', to: NAV_PATHS.about },
@@ -108,11 +109,13 @@ export const MEGA_MENU: MegaPanel[] = [
   },
 ];
 
-/** Mobile drawer: six category tiles, then the general links. */
+/** Mobile drawer: category tiles, then the general links. */
 export const DRAWER_NAV: { tiles: NavLink[]; links: (NavLink & { highlight?: boolean })[] } = {
   tiles: [
     { label: "👗 Women's Clothing", to: NAV_PATHS.womensClothing },
     { label: "👔 Men's Clothing", to: NAV_PATHS.mensClothing },
+    { label: '💍 Fine Jewelry', to: NAV_PATHS.jewelry },
+    { label: '💋 Lingerie & Intimates', to: NAV_PATHS.lingerieIntimates },
     { label: '🧥 Outerwear', to: NAV_PATHS.outerwear },
     { label: '👟 Sneakers & Shoes', to: NAV_PATHS.footwear },
     { label: '👜 Handbags & Wallets', to: NAV_PATHS.handbags },

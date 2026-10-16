@@ -166,6 +166,19 @@ const LINGERIE_IMAGE_OVERRIDES: Record<string, string> = {
   'sample-satin-evening-maxi-dress': '/images/fashion/satin-maxi-dress.jpg',
   'sample-structured-tote-handbag': '/images/fashion/structured-tote-bag.jpg',
   'sample-women-s-tailored-blazer-and-trouser-set': '/images/fashion/tailored-blazer-suit.jpg',
+  'sample-gold-tone-layered-necklace': '/images/fashion/jewelry-gold-necklace.jpg',
+  'sample-pearl-drop-earrings': '/images/fashion/jewelry-pearl-earrings.jpg',
+  'sample-stainless-steel-minimalist-ring': '/images/fashion/jewelry-minimalist-ring.jpg',
+  'sample-adjustable-tennis-bracelet': '/images/fashion/jewelry-tennis-bracelet.jpg',
+  'sample-minimalist-pendant-jewelry-set': '/images/fashion/jewelry-pendant-set.jpg',
+  '18k-gold-tone-layered-herringbone-necklace': '/images/fashion/jewelry-gold-necklace.jpg',
+  'gold-tone-layered-necklace': '/images/fashion/jewelry-gold-necklace.jpg',
+  'freshwater-pearl-drop-earrings': '/images/fashion/jewelry-pearl-earrings.jpg',
+  'pearl-drop-earrings': '/images/fashion/jewelry-pearl-earrings.jpg',
+  'stainless-steel-minimalist-ring': '/images/fashion/jewelry-minimalist-ring.jpg',
+  'sparkling-tennis-bracelet-in-white-gold-tone': '/images/fashion/jewelry-tennis-bracelet.jpg',
+  'adjustable-tennis-bracelet': '/images/fashion/jewelry-tennis-bracelet.jpg',
+  'minimalist-pendant-jewelry-set': '/images/fashion/jewelry-pendant-set.jpg',
 };
 
 // Map a Supabase catalog row to the storefront Product shape WITHOUT
@@ -2234,7 +2247,7 @@ function HomePage() {
       name: 'Sparkling Tennis Bracelet in White Gold Tone',
       price: 52,
       originalPrice: 74,
-      image: '/images/fashion/jewelry.jpg',
+      image: '/images/fashion/jewelry-tennis-bracelet.jpg',
       badge: 'Fine Jewelry'
     },
   ];
@@ -2429,11 +2442,11 @@ function HomePage() {
               },
               {
                 title: 'Fine Artisan Jewelry',
-                tag: 'Hand-Set Stones',
-                desc: 'Hypoallergenic gold-tone necklaces, brilliant tennis bracelets, and luxury timepieces.',
-                price: 'From $38.00',
+                tag: '18K Gold & Crystals',
+                desc: 'Hypoallergenic gold-tone layered chains, brilliant tennis bracelets, and pearl adornments.',
+                price: 'From $22.00',
                 to: '/category/jewelry',
-                img: '/images/fashion/jewelry.jpg',
+                img: '/images/fashion/jewelry-gold-necklace.jpg',
               },
             ].map((card) => (
               <Link
@@ -2502,7 +2515,7 @@ function HomePage() {
               { name: 'Dresses & Tops', to: '/category/dresses-and-tops', img: '/images/fashion/floral-midi-dress.jpg' },
               { name: 'Coats & Outerwear', to: '/category/jackets-and-outerwear', img: '/images/fashion/jackets-outerwear.jpg' },
               { name: 'Handbags & Wallets', to: '/category/handbags-and-wallets', img: '/images/fashion/structured-tote-bag.jpg' },
-              { name: 'Jewelry & Watches', to: '/category/jewelry', img: '/images/fashion/jewelry.jpg' },
+              { name: 'Artisan Jewelry', to: '/category/jewelry', img: '/images/fashion/jewelry-gold-necklace.jpg', badge: 'Handcrafted · 18K' },
               { name: 'Shoes & Heels', to: '/category/sneakers-and-shoes', img: '/images/fashion/sneakers-shoes.jpg' },
             ].map((cat) => (
               <Link
@@ -2744,6 +2757,189 @@ function HomePage() {
                 </div>
               );
             })}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════
+          5B. ARTISAN FINE JEWELRY SPOTLIGHT (Dedicated Jewelry Session)
+      ══════════════════════════════════════════════════════════ */}
+      <section id="fine-jewelry-showcase" className="py-12 sm:py-16 bg-[#0E1318] text-white border-b border-neutral-800 relative overflow-hidden">
+        {/* Subtle background ambient glows */}
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-amber-600/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-[11px] font-bold tracking-[0.25em] text-amber-400 uppercase">Artisan Atelier · Handcrafted</span>
+              </div>
+              <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight">
+                Fine Artisan Jewelry &amp; Adornments
+              </h2>
+              <p className="text-xs sm:text-sm text-neutral-400 mt-1.5 max-w-2xl leading-relaxed">
+                Discover brilliant crystal tennis bracelets, 18K gold-tone layered herringbone chains, baroque freshwater pearls, and minimalist stacking rings.
+              </p>
+            </div>
+            <Link
+              to="/category/jewelry"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/30 text-amber-300 text-xs sm:text-sm font-bold transition-all shadow-sm group shrink-0"
+            >
+              <span>Explore All Jewelry</span>
+              <ArrowRight strokeWidth={2} size={15} className="transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
+
+          {/* 5 Product Showcase Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4 lg:gap-5">
+            {[
+              {
+                id: 'jewelry-necklace-herringbone',
+                name: '18K Gold-Tone Layered Herringbone Necklace',
+                slug: '18k-gold-tone-layered-herringbone-necklace',
+                price: 38,
+                originalPrice: 58,
+                image: '/images/fashion/jewelry-gold-necklace.jpg',
+                badge: '18K Gold Finish',
+                tag: 'Necklaces'
+              },
+              {
+                id: 'jewelry-pearl-earrings',
+                name: 'Freshwater Baroque Pearl Drop Earrings',
+                slug: 'freshwater-pearl-drop-earrings',
+                price: 26,
+                originalPrice: 42,
+                image: '/images/fashion/jewelry-pearl-earrings.jpg',
+                badge: 'Baroque Pearl',
+                tag: 'Earrings'
+              },
+              {
+                id: 'jewelry-tennis-bracelet',
+                name: 'Sparkling Tennis Bracelet in White Gold Tone',
+                slug: 'sparkling-tennis-bracelet-in-white-gold-tone',
+                price: 52,
+                originalPrice: 74,
+                image: '/images/fashion/jewelry-tennis-bracelet.jpg',
+                badge: 'Cubic Zirconia',
+                tag: 'Bracelets'
+              },
+              {
+                id: 'jewelry-minimalist-ring',
+                name: 'Stainless Steel Minimalist Stacking Ring',
+                slug: 'stainless-steel-minimalist-ring',
+                price: 22,
+                originalPrice: 34,
+                image: '/images/fashion/jewelry-minimalist-ring.jpg',
+                badge: 'Non-Tarnish',
+                tag: 'Rings'
+              },
+              {
+                id: 'jewelry-pendant-set',
+                name: 'Minimalist Solitaire Pendant Jewelry Set',
+                slug: 'minimalist-pendant-jewelry-set',
+                price: 36,
+                originalPrice: 54,
+                image: '/images/fashion/jewelry-pendant-set.jpg',
+                badge: 'Complete Set',
+                tag: 'Jewelry Sets'
+              },
+            ].map((item) => {
+              const targetProduct = {
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                originalPrice: item.originalPrice,
+                slug: item.slug,
+                images: [item.image],
+                isActive: true,
+                rating: 5,
+                reviews: 18,
+                category: 'Jewelry'
+              };
+
+              return (
+                <div
+                  key={item.id}
+                  className="group flex flex-col justify-between rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3.5 sm:p-4 shadow-lg hover:shadow-2xl transition-all relative hover:border-amber-500/60 flex-1 backdrop-blur-xs"
+                >
+                  {/* Badge & Wishlist */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                      {item.badge}
+                    </span>
+                    <WishlistButton product={targetProduct as any} notify={notify} className="p-1 rounded-full text-neutral-400 hover:text-rose-400 hover:bg-neutral-800 transition-colors" />
+                  </div>
+
+                  {/* Image */}
+                  <Link to={`/product/${item.slug}`} className="block aspect-square rounded-xl overflow-hidden bg-neutral-950 mb-3 relative">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[9px] font-semibold text-neutral-300">
+                      {item.tag}
+                    </span>
+                  </Link>
+
+                  {/* Info */}
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div>
+                      <Link to={`/product/${item.slug}`}>
+                        <h3 className="text-xs sm:text-sm font-semibold text-neutral-100 hover:text-amber-300 transition-colors line-clamp-2 leading-snug">
+                          {item.name}
+                        </h3>
+                      </Link>
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="font-bold text-sm sm:text-base text-amber-200">
+                          ${item.price.toFixed(2)}
+                        </span>
+                        <span className="text-xs text-neutral-500 line-through">
+                          ${item.originalPrice.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Add to Cart */}
+                    <button
+                      onClick={() => {
+                        addToCart(targetProduct as any);
+                        notify(`Added ${item.name.slice(0, 25)}... to cart`);
+                      }}
+                      className="mt-3 w-full py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 shadow-md shadow-amber-950/40"
+                    >
+                      <ShoppingBag01 size={14} /> Add to Cart
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Jewelry Guarantee Bar */}
+          <div className="mt-8 pt-6 border-t border-neutral-800/80 flex flex-wrap items-center justify-around gap-4 text-center text-xs text-neutral-400">
+            <div className="flex items-center gap-2">
+              <span className="text-amber-400 text-sm">✦</span>
+              <span>18K Gold Plated &amp; Hypoallergenic</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-amber-400 text-sm">✦</span>
+              <span>Water-Resistant &amp; Non-Tarnish Finishes</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-amber-400 text-sm">✦</span>
+              <span>Luxury Velvet Presentation Pouch Included</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-amber-400 text-sm">✦</span>
+              <span>Discreet USA Tracked Shipping</span>
+            </div>
           </div>
 
         </div>
