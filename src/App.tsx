@@ -4,7 +4,6 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import MarketingManager from './components/MarketingManager';
 import AdSenseAd from './components/AdSenseAd';
 import CategoryHero, { categoryHeroConfig } from './components/CategoryHero';
-import { BuyerGuidance } from './components/BuyerGuidance';
 import { SiteSections, SiteFaq } from './components/SiteContent';
 import { FaqContent } from './components/FaqContent';
 import { ProductFactSections, ProductSpecRows } from './components/ProductFacts';
@@ -2154,7 +2153,7 @@ function HomePage() {
       name: 'Floral Midi Dress with Tiered Silhouette',
       price: 58,
       originalPrice: 78,
-      image: '/images/fashion/samples/sample-floral-midi-dress.svg',
+      image: '/images/fashion/floral-midi-dress.jpg',
       badge: 'Best Seller'
     },
     {
@@ -2163,7 +2162,7 @@ function HomePage() {
       name: 'Sheer Floral Lace Plunge Bodysuit',
       price: 48,
       originalPrice: 68,
-      image: '/images/fashion/samples/sample-sheer-floral-lace-plunge-bodysuit.svg',
+      image: '/images/fashion/lingerie-corset.jpg',
       badge: 'Trending Hot'
     },
     {
@@ -2172,7 +2171,7 @@ function HomePage() {
       name: 'Silk Satin Robe and Babydoll Set',
       price: 68,
       originalPrice: 94,
-      image: '/images/fashion/samples/sample-silk-satin-robe-and-babydoll-set.svg',
+      image: '/images/fashion/lingerie-robe.jpg',
       badge: 'Pure Luxury'
     },
     {
@@ -2181,7 +2180,7 @@ function HomePage() {
       name: 'Satin Evening Maxi Dress with Slit',
       price: 78,
       originalPrice: 110,
-      image: '/images/fashion/samples/sample-satin-evening-maxi-dress.svg',
+      image: '/images/fashion/satin-maxi-dress.jpg',
       badge: 'Couture Hit'
     },
     {
@@ -2190,7 +2189,7 @@ function HomePage() {
       name: 'Lace Bralette and Scalloped Brief Set',
       price: 28,
       originalPrice: 42,
-      image: '/images/fashion/samples/sample-lace-bralette-and-brief-set.svg',
+      image: '/images/fashion/lingerie-bralette.jpg',
       badge: 'Intimates'
     },
   ];
@@ -2365,7 +2364,7 @@ function HomePage() {
                 desc: 'Liquid silk slips with cowl necklines and alluring low backs.',
                 price: 'From $54.00',
                 to: '/category/lingerie-and-intimates',
-                img: '/images/fashion/samples/sample-seductive-backless-satin-slip-dress.svg',
+                img: '/images/fashion/lingerie-chemise.jpg',
               },
               {
                 title: 'French Lace Bralette Sets',
@@ -2373,7 +2372,7 @@ function HomePage() {
                 desc: 'Scalloped eyelash lace bralettes with matching cheeky briefs.',
                 price: 'From $28.00',
                 to: '/category/lingerie-and-intimates',
-                img: '/images/fashion/samples/sample-lace-bralette-and-brief-set.svg',
+                img: '/images/fashion/lingerie-bralette.jpg',
               },
               {
                 title: 'Sculpting Corset Bodysuits',
@@ -2381,7 +2380,7 @@ function HomePage() {
                 desc: 'Architectural waist boning with underwire support and sheer mesh.',
                 price: 'From $48.00',
                 to: '/category/lingerie-and-intimates',
-                img: '/images/fashion/samples/sample-sheer-floral-lace-plunge-bodysuit.svg',
+                img: '/images/fashion/lingerie-corset.jpg',
               },
               {
                 title: 'Luxury Kimono Robes',
@@ -2389,7 +2388,7 @@ function HomePage() {
                 desc: 'Wide kimono sleeve loungewear wraps in featherlight stretch satin.',
                 price: 'From $68.00',
                 to: '/category/lingerie-and-intimates',
-                img: '/images/fashion/samples/sample-silk-satin-robe-and-babydoll-set.svg',
+                img: '/images/fashion/lingerie-robe.jpg',
               },
             ].map((card) => (
               <Link
@@ -2404,11 +2403,12 @@ function HomePage() {
                     </span>
                     <span className="text-xs font-semibold text-neutral-400">{card.price}</span>
                   </div>
-                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-neutral-950 mb-3 p-2 flex items-center justify-center">
+                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-neutral-950 mb-3 flex items-center justify-center">
                     <img
                       src={card.img}
                       alt={card.title}
-                      className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                      className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
                   <h3 className="font-serif text-base sm:text-lg font-bold text-white group-hover:text-amber-200 transition-colors">
@@ -2453,7 +2453,7 @@ function HomePage() {
           {/* 6 Category Cards Responsive Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
             {[
-              { name: "Lingerie & Intimates", to: '/category/lingerie-and-intimates', img: '/images/fashion/samples/sample-lace-bralette-and-brief-set.svg' },
+              { name: "Lingerie & Intimates", to: '/category/lingerie-and-intimates', img: '/images/fashion/lingerie-bralette.jpg' },
               { name: 'Dresses & Tops', to: '/category/dresses-and-tops', img: '/images/fashion/dresses-tops.jpg' },
               { name: "Women's Clothing", to: '/category/womens-clothing', img: '/images/fashion/women-clothing.jpg' },
               { name: 'Jewelry & Watches', to: '/category/jewelry', img: '/images/fashion/jewelry.jpg' },
@@ -2491,12 +2491,53 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="bg-[#FAF8F5] py-6 sm:py-7 border-b border-gray-150">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <BuyerGuidance
-            title="Shop with the details in view"
-            note="Start with the category and occasion you are shopping for, then use each listing’s stated size, materials, price, and availability to narrow the options."
-          />
+      {/* ── Search & Style Discovery Strip (Replaces Buyer Guidance) ── */}
+      <section className="bg-[#FAF8F5] py-8 sm:py-10 border-b border-gray-150">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <span className="text-[10px] sm:text-xs font-bold tracking-[0.25em] text-[#C5A880] uppercase">Instant Catalog Search</span>
+          <h2 className="font-serif text-xl sm:text-2xl font-bold text-gray-950 mt-1 mb-4">Find Your Signature Piece</h2>
+          <form
+            onSubmit={submitSearch}
+            role="search"
+            aria-label="Homepage catalog search"
+            className="relative flex items-center w-full bg-white border border-gray-300 rounded-full px-4 py-2.5 sm:py-3 shadow-sm hover:border-gray-400 focus-within:border-gray-900 focus-within:ring-2 focus-within:ring-gray-900/10 transition-all"
+          >
+            <SearchMd strokeWidth={1.5} size={18} className="text-gray-400 shrink-0 mr-3" />
+            <input
+              value={hq}
+              onChange={e => setHq(e.target.value)}
+              placeholder="Search dresses, jackets, designer bags, intimates, shoes..."
+              aria-label="Search catalog"
+              className="flex-1 min-w-0 bg-transparent text-xs sm:text-sm text-gray-900 placeholder-gray-400 focus:outline-none pr-24"
+            />
+            <button
+              type="submit"
+              aria-label="Search"
+              className="absolute right-1.5 px-4 py-2 rounded-full bg-neutral-950 hover:bg-neutral-800 text-amber-200 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+            >
+              <span>Search</span>
+              <ArrowRight size={13} />
+            </button>
+          </form>
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs text-gray-500">
+            <span className="font-semibold text-gray-400">Popular:</span>
+            {[
+              { label: 'Silk Slip Dresses', q: 'silk dress' },
+              { label: 'Lace Bralettes', q: 'lace bralette' },
+              { label: 'Corset Bodysuits', q: 'corset' },
+              { label: 'Evening Gowns', q: 'evening maxi' },
+              { label: 'Tailored Suits', q: 'blazer trouser' },
+              { label: 'Leather Totes', q: 'tote handbag' },
+            ].map(tag => (
+              <Link
+                key={tag.label}
+                to={`/shop?q=${encodeURIComponent(tag.q)}`}
+                className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-amber-600 hover:text-amber-800 hover:bg-amber-50/50 transition-all"
+              >
+                {tag.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 

@@ -1,7 +1,6 @@
-import type { JSX } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowDown, ArrowUpRight } from '@phosphor-icons/react';
-import { BuyerGuidance } from './BuyerGuidance';
+import { useState, type JSX } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowDown, ArrowUpRight, MagnifyingGlass, ArrowRight } from '@phosphor-icons/react';
 import { categoryContentFor } from '../content/categoryContent';
 
 /**
@@ -134,11 +133,20 @@ interface Props {
  * lightweight — no carousel, no autoplay, no text baked into the image.
  */
 export default function CategoryHero({ config }: Props): JSX.Element {
-  const { label, headline, desc, image, imageAlt, tint, ctaHref, ctaLabel, buyerNote, chips, mobileImage, imagePosition, badge } = config;
-  // Selection considerations and guide links come from the shared content the
-  // crawl pre-render already emits for this collection, so both surfaces show
-  // the same guidance.
-  const shared = categoryContentFor(label);
+  const { label, headline, desc, image, imageAlt, tint, ctaHref, ctaLabel, chips, mobileImage, imagePosition, badge } = config;
+  const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
+
+  const handleCategorySearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchTerm.trim();
+    if (q) {
+      navigate(`/shop?q=${encodeURIComponent(q)}`);
+    } else {
+      navigate('/shop');
+    }
+  };
+
   return (
     <div className={`category-hero category-hero--${tint}`}>
       <nav aria-label="Breadcrumb" className="category-hero__breadcrumb">
@@ -168,7 +176,33 @@ export default function CategoryHero({ config }: Props): JSX.Element {
           <a href={ctaHref} className="category-hero__cta">{ctaLabel}<ArrowDown size={16} aria-hidden="true" /></a>
         </div>
       </div>
-      <div className="px-5 pb-5 sm:px-7"><BuyerGuidance title={`Choosing ${label.toLowerCase()}`} note={buyerNote} topic={label.toLowerCase()} items={shared?.considerations} guides={shared?.guides} categoryHref={ctaHref === '#product-grid' ? '/shop' : ctaHref} /></div>
+      {/* Category Search Bar replacing legacy buyer guidance text */}
+      <div className="px-5 pb-5 sm:px-7">
+        <form
+          role="search"
+          aria-label={`Search ${label}`}
+          onSubmit={handleCategorySearch}
+          className="relative flex items-center w-full max-w-2xl bg-white/95 border border-stone-300/80 rounded-full px-4 py-2.5 sm:py-3 shadow-xs hover:border-stone-400 focus-within:border-stone-900 focus-within:ring-2 focus-within:ring-stone-900/10 transition-all"
+        >
+          <MagnifyingGlass size={18} className="text-stone-400 shrink-0 mr-3" />
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={`Search ${label.toLowerCase()} (e.g. styles, cuts, colors)...`}
+            aria-label={`Search in ${label}`}
+            className="flex-1 min-w-0 bg-transparent text-xs sm:text-sm text-stone-900 placeholder-stone-400 focus:outline-none pr-24"
+          />
+          <button
+            type="submit"
+            aria-label={`Search ${label}`}
+            className="absolute right-1.5 px-4 py-1.5 sm:py-2 rounded-full bg-stone-900 hover:bg-black text-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+          >
+            <span>Search</span>
+            <ArrowRight size={13} />
+          </button>
+        </form>
+      </div>
       {chips.length > 0 && <nav aria-label={`Explore related ${label.toLowerCase()} collections`} className="category-hero__browse">
         <p>Explore more</p>
         <ul>{chips.map(chip => <li key={chip.href}><Link to={chip.href}>{chip.label}<ArrowUpRight size={13} aria-hidden="true" /></Link></li>)}</ul>
