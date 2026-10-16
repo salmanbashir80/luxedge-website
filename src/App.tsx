@@ -842,13 +842,13 @@ function Header() {
       </div>
 
       {/* ── Main Header ── */}
-      <header className={`sticky top-0 z-50 bg-white/98 backdrop-blur-md transition-all duration-300 border-b border-gray-100 ${scrolled ? 'shadow-sm' : ''}`}>
+      <header className={`sticky top-0 z-50 bg-[#FAF7F2]/98 backdrop-blur-md transition-all duration-300 border-b border-[#ECE6DC] ${scrolled ? 'shadow-md shadow-stone-900/5' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4 lg:gap-8">
           <button
             onClick={() => setMob(!mob)}
             aria-label="Open menu"
             aria-expanded={mob}
-            className="lg:hidden p-2 -ml-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+            className="lg:hidden p-2 -ml-2 rounded-lg text-gray-700 hover:bg-[#F2ECE1] transition-colors"
           >
             {mob ? <X strokeWidth={1.5} size={22} /> : <Menu01 strokeWidth={1.5} size={22} />}
           </button>
@@ -866,7 +866,7 @@ function Header() {
 
           {/* Large Central Search Bar */}
           <form onSubmit={submitSearch} role="search" className="hidden md:flex flex-1 min-w-0 max-w-xl mx-2 lg:mx-6">
-            <div className="relative flex items-center w-full bg-[#F6F8F5] border border-gray-200/90 rounded-full px-4 py-2.5 focus-within:border-[#1E4636] focus-within:ring-2 focus-within:ring-[#1E4636]/15 transition-all">
+            <div className="relative flex items-center w-full bg-white border border-[#DDD6C8] rounded-full px-4 py-2.5 focus-within:border-[#1E4636] focus-within:ring-2 focus-within:ring-[#1E4636]/15 shadow-2xs transition-all">
               <SearchMd strokeWidth={1.5} size={17} className="text-gray-400 shrink-0 mr-2.5" />
               <input
                 value={hq}
@@ -927,15 +927,15 @@ function Header() {
                 )}
               </div>
             ) : (
-              <Link to="/login" className="flex items-center gap-1.5 py-2 px-2.5 hover:bg-gray-50 rounded-lg text-gray-700 transition-colors" aria-label="Sign in">
-                <UserIcon strokeWidth={1.5} size={19} className="text-gray-600" />
+              <Link to="/login" className="flex items-center gap-1.5 py-2 px-2.5 hover:bg-[#F2ECE1] rounded-lg text-stone-700 transition-colors" aria-label="Sign in">
+                <UserIcon strokeWidth={1.5} size={19} className="text-stone-600" />
                 <span className="hidden lg:inline text-xs font-semibold">Account</span>
               </Link>
             )}
 
             {/* Wishlist */}
-            <Link to="/wishlist" className="relative flex items-center gap-1.5 py-2 px-2.5 hover:bg-gray-50 rounded-lg text-gray-700 transition-colors" aria-label={`Wishlist, ${wishIds.length} items`}>
-              <Heart strokeWidth={1.5} size={19} fill={wishIds.length > 0 ? 'currentColor' : 'none'} className={wishIds.length > 0 ? 'text-rose-500' : 'text-gray-600'} />
+            <Link to="/wishlist" className="relative flex items-center gap-1.5 py-2 px-2.5 hover:bg-[#F2ECE1] rounded-lg text-stone-700 transition-colors" aria-label={`Wishlist, ${wishIds.length} items`}>
+              <Heart strokeWidth={1.5} size={19} fill={wishIds.length > 0 ? 'currentColor' : 'none'} className={wishIds.length > 0 ? 'text-rose-500' : 'text-stone-600'} />
               <span className="hidden lg:inline text-xs font-semibold">Wishlist</span>
               {wishIds.length > 0 && (
                 <span className="absolute top-1 right-1 lg:static min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white flex items-center justify-center text-[9px] font-bold">
@@ -945,11 +945,11 @@ function Header() {
             </Link>
 
             {/* Cart */}
-            <button onClick={openCart} className="relative flex items-center gap-1.5 py-2 px-2.5 hover:bg-gray-50 rounded-lg text-gray-700 transition-colors" aria-label={`Open cart, ${cc} items`}>
-              <ShoppingBag01 strokeWidth={1.5} size={19} className="text-gray-600" />
+            <button onClick={openCart} className="relative flex items-center gap-1.5 py-2 px-2.5 hover:bg-[#F2ECE1] rounded-lg text-stone-700 transition-colors" aria-label={`Open cart, ${cc} items`}>
+              <ShoppingBag01 strokeWidth={1.5} size={19} className="text-stone-600" />
               <span className="hidden lg:inline text-xs font-semibold">Cart</span>
               {cc > 0 && (
-                <span className="absolute top-1 right-1 lg:static min-w-[16px] h-4 px-1 rounded-full bg-[#1E4636] text-white flex items-center justify-center text-[9px] font-bold">
+                <span className="absolute top-1 right-1 lg:static min-w-[16px] h-4 px-1 rounded-full bg-[#1E4636] text-amber-200 flex items-center justify-center text-[9px] font-bold">
                   {cc}
                 </span>
               )}
@@ -958,10 +958,10 @@ function Header() {
         </div>
 
         {/* ── Main Navigation Strip with Mega Menu ── */}
-        <nav className="hidden lg:block border-t border-gray-100 bg-white" aria-label="Main Navigation">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-11 text-[13.5px] font-semibold text-gray-700">
+        <nav className="hidden lg:block border-t border-[#ECE6DC] bg-[#F4EFE6]/95 backdrop-blur-xs" aria-label="Main Navigation">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-11 text-[13.5px] font-semibold text-stone-800">
             <div className="flex items-center gap-1">
-              <Link to={STRIP_NAV.all.to} className="px-3 py-1.5 rounded-lg hover:text-[#1E4636] hover:bg-[#F6F8F5] transition-colors">
+              <Link to={STRIP_NAV.all.to} className="px-3 py-1.5 rounded-lg hover:text-[#1E4636] hover:bg-[#EAE3D5]/80 transition-colors">
                 {STRIP_NAV.all.label}
               </Link>
               {STRIP_NAV.items.map((item) => {
@@ -975,27 +975,27 @@ function Header() {
                   >
                     <Link
                       to={item.to}
-                      className="px-3 py-1.5 rounded-lg hover:text-[#1E4636] hover:bg-[#F6F8F5] transition-colors flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-lg hover:text-[#1E4636] hover:bg-[#EAE3D5]/80 transition-colors flex items-center gap-1"
                     >
                       {item.label}
-                      {megaItem && <ChevronDown strokeWidth={1.5} size={12} className={`text-gray-400 transition-transform ${mega === item.megaKey ? 'rotate-180' : ''}`} />}
+                      {megaItem && <ChevronDown strokeWidth={1.5} size={12} className={`text-stone-400 transition-transform ${mega === item.megaKey ? 'rotate-180' : ''}`} />}
                     </Link>
 
                     {/* Mega Menu Dropdown */}
                     {megaItem && mega === item.megaKey && (
                       <div className="absolute left-0 top-full pt-1.5 z-50 w-[520px]">
-                        <div className="bg-white rounded-2xl border border-gray-150 shadow-2xl p-6 animate-fade-in-up">
-                          <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                        <div className="bg-[#FAF7F2] rounded-2xl border border-[#ECE6DC] shadow-2xl p-6 animate-fade-in-up">
+                          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#ECE6DC]">
                             <p className="font-bold text-xs uppercase tracking-wider text-[#1E4636]">Shop {megaItem.label}</p>
                             <Link to={megaItem.to} className="text-xs font-bold text-[#1E4636] hover:underline">View All →</Link>
                           </div>
                           <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                             {megaItem.groups.map(g => (
                               <div key={g.title}>
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">{g.title}</p>
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-2">{g.title}</p>
                                 <div className="space-y-1">
                                   {g.links.map(l => (
-                                    <Link key={l.label} to={l.to} className="block text-[13px] text-gray-700 hover:text-[#1E4636] hover:translate-x-0.5 transition-all">
+                                    <Link key={l.label} to={l.to} className="block text-[13px] text-stone-700 hover:text-[#1E4636] hover:translate-x-0.5 transition-all">
                                       {l.label}
                                     </Link>
                                   ))}
@@ -1010,32 +1010,32 @@ function Header() {
                 );
               })}
             </div>
-            <Link to={STRIP_NAV.deals.to} className="inline-flex items-center gap-1.5 px-3.5 py-1 text-[13px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-full transition-colors">
-              <Zap strokeWidth={1.5} size={13} className="text-amber-600" /> {STRIP_NAV.deals.label}
+            <Link to={STRIP_NAV.deals.to} className="inline-flex items-center gap-1.5 px-3.5 py-1 text-[13px] font-bold text-amber-900 bg-amber-100/90 hover:bg-amber-200/90 border border-amber-300/50 rounded-full shadow-2xs transition-colors">
+              <Zap strokeWidth={1.5} size={13} className="text-amber-700" /> {STRIP_NAV.deals.label}
             </Link>
           </div>
         </nav>
 
         {/* ── Mobile Drawer / Menu ── */}
         {mob && (
-          <div className="lg:hidden border-t border-gray-100 bg-white p-4 space-y-4 animate-fade-in-up">
-            <form onSubmit={(e) => { submitSearch(e); setMob(false); }} role="search" className="flex items-center w-full bg-[#F6F8F5] border border-gray-200 rounded-full px-3.5 py-2">
-              <SearchMd strokeWidth={1.5} size={16} className="text-gray-400 mr-2" />
+          <div className="lg:hidden border-t border-[#ECE6DC] bg-[#FAF7F2] p-4 space-y-4 animate-fade-in-up">
+            <form onSubmit={(e) => { submitSearch(e); setMob(false); }} role="search" className="flex items-center w-full bg-white border border-[#DDD6C8] rounded-full px-3.5 py-2">
+              <SearchMd strokeWidth={1.5} size={16} className="text-stone-400 mr-2" />
               <input value={hq} onChange={e => setHq(e.target.value)} placeholder="Search products &amp; guides..." className="w-full bg-transparent text-sm focus:outline-none" />
               <button type="submit" className="px-3 py-1 bg-[#1E4636] text-white rounded-full text-xs font-semibold">Search</button>
             </form>
             <div className="grid grid-cols-2 gap-2 text-sm font-medium">
               {DRAWER_NAV.tiles.map((t) => (
-                <Link key={t.to} to={t.to} onClick={() => setMob(false)} className="p-2.5 bg-gray-50 rounded-xl hover:bg-gray-100">{t.label}</Link>
+                <Link key={t.to} to={t.to} onClick={() => setMob(false)} className="p-2.5 bg-[#F4EFE6] rounded-xl hover:bg-[#EAE3D5] text-stone-800">{t.label}</Link>
               ))}
             </div>
-            <div className="border-t border-gray-100 pt-3 space-y-1 text-sm font-medium text-gray-700">
+            <div className="border-t border-[#ECE6DC] pt-3 space-y-1 text-sm font-medium text-stone-700">
               {DRAWER_NAV.links.map((l) => (
                 <Link
                   key={l.to}
                   to={l.to}
                   onClick={() => setMob(false)}
-                  className={`block py-1.5 px-2 rounded-lg ${l.highlight ? 'text-amber-700 font-bold hover:bg-amber-50' : 'hover:bg-gray-50'}`}
+                  className={`block py-1.5 px-2 rounded-lg ${l.highlight ? 'text-amber-800 font-bold hover:bg-amber-100/60' : 'hover:bg-[#F4EFE6]'}`}
                 >
                   {l.label}
                 </Link>
@@ -1384,7 +1384,7 @@ function CheckoutLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex flex-col bg-luxe-cream">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[200] focus:px-4 focus:py-2 focus:bg-luxe-black focus:text-white focus:rounded-lg focus:text-sm">Skip to content</a>
       <ScrollToTop />
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-luxe-silver/60">
+      <header className="sticky top-0 z-50 bg-[#FAF7F2]/95 backdrop-blur border-b border-[#ECE6DC]">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-2 shrink-0 group">
             <img src="/luxedge-mark.png" alt="" aria-hidden="true" className="h-10 w-auto transition-transform duration-300 group-hover:scale-105" />
