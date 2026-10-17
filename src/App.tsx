@@ -1114,28 +1114,28 @@ function Header() {
 const SOCIAL_GLYPHS: Record<string, string> = { Facebook: 'f', Instagram: 'ig', Pinterest: 'p', TikTok: 'tk' };
 
 function Footer() {
-  const FL = 'block text-[13.5px] py-1 text-white/75 hover:text-white transition-colors';
+  const FL = 'block text-[13px] py-0.5 text-white/75 hover:text-white transition-colors';
   const ColTitle = ({ children }: { children: ReactNode }) => (
-    <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-[#C5A880] mb-3">{children}</h4>
+    <h4 className="text-xs font-bold uppercase tracking-[0.18em] text-[#C5A880] mb-2.5">{children}</h4>
   );
 
   return (
     <footer className="bg-[#143023] text-white">
       {/* ── Main Footer Grid ── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8 items-start">
-          {/* Brand Column */}
-          <div className="lg:col-span-4 space-y-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-7 sm:pt-10 sm:pb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-8 items-start">
+          {/* Brand & Google Business Profile Column */}
+          <div className="lg:col-span-4 space-y-3.5">
             <Link to="/" className="flex items-center gap-3 group w-fit" aria-label="Luxedge home">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-white/10 p-1 flex items-center justify-center backdrop-blur-sm border border-white/15 transition-transform group-hover:scale-105">
+              <div className="w-10 h-10 rounded-xl bg-white/10 p-1 flex items-center justify-center backdrop-blur-sm border border-white/15 transition-transform group-hover:scale-105">
                 <img src="/luxedge-mark.png" alt="Luxedge" className="w-full h-full object-contain" />
               </div>
               <span className="flex flex-col leading-none">
-                <span className="font-brand text-xl sm:text-2xl font-bold tracking-[0.16em] text-white">LUXEDGE</span>
-                <span className="text-[7.5px] tracking-[0.24em] text-[#C5A880] mt-1 font-bold">FASHION • STYLE FOR EVERY DAY • LUXEDGE</span>
+                <span className="font-brand text-xl font-bold tracking-[0.16em] text-white">LUXEDGE</span>
+                <span className="text-[7px] tracking-[0.22em] text-[#C5A880] mt-1 font-bold">FASHION • STYLE FOR EVERY DAY • LUXEDGE</span>
               </span>
             </Link>
-            <p className="text-sm leading-relaxed text-white/75 max-w-sm">
+            <p className="text-xs leading-relaxed text-white/75 max-w-sm">
               Quality fashion, clear sizing, and honest product information for every wardrobe.
             </p>
             {/* Operating-entity disclosure: the visitor and an ad reviewer should
@@ -1143,6 +1143,69 @@ function Footer() {
                 City/state come from the owner-supplied business address in
                 policies.ts; no address is invented here. */}
             <p className="text-xs text-white/60">Luxedge is operated by Embani LLC · Denver, CO.</p>
+
+            {/* Google Business Profile & Location Card */}
+            <div className="bg-white/[0.04] border border-white/12 rounded-xl p-3 max-w-md shadow-sm">
+              <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2 mb-2">
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.27 21.43 7.33 24 12 24z"/>
+                    <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.27 2.57 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                  </svg>
+                  <span className="text-[11.5px] font-semibold text-white/90 tracking-wide">Google Business Profile</span>
+                </div>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+                  <CheckCircle size={10} className="text-emerald-400" />
+                  Verified
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-white text-[12.5px]">5.0</span>
+                  <div className="flex text-amber-400">
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <Star01 key={i} size={11} className="fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
+                  <span className="text-[10.5px] text-white/60">(US Verified)</span>
+                </div>
+                <a
+                  href="tel:+14409418002"
+                  className="text-[11px] text-[#C5A880] hover:text-white transition-colors"
+                >
+                  (440) 941-8002
+                </a>
+              </div>
+
+              <div className="flex items-center gap-1.5 text-[11px] text-white/70 mb-2">
+                <MarkerPin01 size={12} className="text-[#C5A880] flex-shrink-0" />
+                <span className="truncate">1500 N Grant St, Denver, CO 80203, US</span>
+              </div>
+
+              {/* Embedded Map */}
+              <div className="relative w-full h-24 rounded-lg overflow-hidden border border-white/10 group">
+                <iframe
+                  title="Luxedge Denver Google Maps"
+                  src="https://maps.google.com/maps?q=1500+N+Grant+St,+Denver,+CO+80203&t=&z=14&ie=UTF8&iwloc=&output=embed"
+                  className="w-full h-full border-0 pointer-events-none group-hover:pointer-events-auto"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=1500+N+Grant+St,+Denver,+CO+80203"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute bottom-1 right-1 bg-[#143023]/95 hover:bg-[#143023] text-[#C5A880] hover:text-white px-2 py-0.5 rounded text-[10px] font-medium border border-white/20 backdrop-blur-sm transition-all flex items-center gap-1 shadow-sm"
+                >
+                  <span>Google Maps</span>
+                  <ArrowRight size={9} />
+                </a>
+              </div>
+            </div>
+
             {/* Social Icons — rendered from SOCIAL_PROFILES, which is empty until
                 real Luxedge accounts exist. The previous hardcoded buttons opened
                 bare platform homepages, so they advertised accounts we do not
@@ -1150,42 +1213,57 @@ function Footer() {
                 src/content/socialProfiles.ts rather than in this file.
                 Deliberately not replaced with "coming soon" placeholders. */}
             {SOCIAL_PROFILES.length > 0 && (
-              <div className="flex items-center gap-3 pt-2">
+              <div className="flex items-center gap-3 pt-1">
                 {SOCIAL_PROFILES.map((p) => (
-                  <a key={p.label} href={p.href} target="_blank" rel="noopener noreferrer" aria-label={p.label} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 hover:text-white transition-colors text-xs font-bold">
-                    {p.label === 'YouTube' ? <YoutubeLogo size={16} /> : SOCIAL_GLYPHS[p.label]}
+                  <a key={p.label} href={p.href} target="_blank" rel="noopener noreferrer" aria-label={p.label} className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 hover:text-white transition-colors text-xs font-bold">
+                    {p.label === 'YouTube' ? <YoutubeLogo size={14} /> : SOCIAL_GLYPHS[p.label]}
                   </a>
                 ))}
               </div>
             )}
           </div>
 
-          {FOOTER_COLUMNS.map((col) => (
-            <div key={col.title} className="lg:col-span-2 space-y-1">
-              <ColTitle>{col.title}</ColTitle>
-              {col.links.map((l) => (
-                <Link key={l.to} to={l.to} className={FL}>{l.label}</Link>
-              ))}
-              {col.paymentsNote && (
-                <div className="pt-4 border-t border-white/10 mt-4">
-                  <div className="flex items-center gap-2 text-xs text-[#C5A880]">
-                    <ShieldTick strokeWidth={1.5} size={15} />
-                    <SecurePaymentsNote />
+          {/* Navigation Columns */}
+          {FOOTER_COLUMNS.map((col) => {
+            const isShop = col.title.toLowerCase() === 'shop';
+            const colSpan = isShop ? 'lg:col-span-4' : 'lg:col-span-2';
+            return (
+              <div key={col.title} className={`${colSpan} space-y-1`}>
+                <ColTitle>{col.title}</ColTitle>
+                {isShop ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5">
+                    {col.links.map((l) => (
+                      <Link key={l.to} to={l.to} className={FL}>{l.label}</Link>
+                    ))}
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                ) : (
+                  <div>
+                    {col.links.map((l) => (
+                      <Link key={l.to} to={l.to} className={FL}>{l.label}</Link>
+                    ))}
+                  </div>
+                )}
+                {col.paymentsNote && (
+                  <div className="pt-3 border-t border-white/10 mt-3">
+                    <div className="flex items-center gap-2 text-xs text-[#C5A880]">
+                      <ShieldTick strokeWidth={1.5} size={15} />
+                      <SecurePaymentsNote />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* ── Bottom Legal & Motto Strip ── */}
       <div className="border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/60">
           <p>© {new Date().getFullYear()} Luxedge. All rights reserved.</p>
           <p className="flex items-center gap-1.5 text-white/75 font-medium">
             <span>Style that lasts, for every wardrobe.</span>
-            <Heart size={13} fill="currentColor" className="text-[#C5A880]" />
+            <Heart size={12} fill="currentColor" className="text-[#C5A880]" />
           </p>
         </div>
       </div>

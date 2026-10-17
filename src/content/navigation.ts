@@ -150,10 +150,10 @@ export const FOOTER_COLUMNS: { title: string; links: NavLink[]; paymentsNote?: b
       { label: 'Makeup and Beauty', to: NAV_PATHS.makeupBeauty },
     ],
   },
-  { title: 'Learn', links: [{ label: 'Blog & Guides', to: NAV_PATHS.blog }] },
   {
-    title: 'Help',
+    title: 'Help & Guides',
     links: [
+      { label: 'Blog & Guides', to: NAV_PATHS.blog },
       { label: 'Track Order', to: NAV_PATHS.orders },
       { label: 'Shipping Policy', to: NAV_PATHS.shipping },
       { label: 'Returns & Refunds', to: NAV_PATHS.returns },
