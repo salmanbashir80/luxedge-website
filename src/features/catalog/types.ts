@@ -129,6 +129,7 @@ export interface CatalogProduct {
   seoKeywords: string[];
   canonicalSlug?: string;
   ogImage?: string;
+  imageUrl?: string | null;
   images: CatalogImage[];
   variants: CatalogVariant[];
   createdAt: string;

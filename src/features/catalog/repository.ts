@@ -112,7 +112,7 @@ const PRODUCT_PROBE_COLUMNS: readonly string[] = [
   'risk_flags', 'tags', 'featured', 'new_arrival', 'trending', 'best_rated',
   'best_seller', 'promoted', 'sale_enabled', 'discount_type', 'discount_value',
   'seo_title', 'seo_description', 'seo_keywords', 'canonical_slug', 'og_image',
-  'owner_notes', 'evidence_notes', 'sort_order', 'listing_ends_at',
+  'owner_notes', 'evidence_notes', 'sort_order', 'listing_ends_at', 'image_url',
 ];
 const IMAGE_PROBE_COLUMNS: readonly string[] = ['storage_path', 'public_url', 'created_at'];
 const VARIANT_PROBE_COLUMNS: readonly string[] = ['title', 'price_amount', 'option_values', 'created_at', 'updated_at'];
@@ -249,6 +249,8 @@ interface ProductRow {
   published_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  image_url?: string | null;
+  primary_image_url?: string | null;
   [k: string]: unknown;
 }
 
@@ -321,13 +323,26 @@ export function rowToProduct(row: ProductRow, categories: CategoryRow[], images:
     .map((i): CatalogImage => ({
       id: i.id,
       productId: i.product_id,
-      url: i.url,
+      url: i.url || i.public_url || '',
       altText: i.alt_text || '',
       kind: (i.kind as CatalogImage['kind']) || 'product',
       isPrimary: !!i.is_primary,
       sortOrder: num(i.sort_order),
       variantId: i.variant_id || null,
     }));
+  const fallbackUrl = row.image_url || row.primary_image_url;
+  if (myImages.length === 0 && fallbackUrl) {
+    myImages.push({
+      id: `img-${row.id}`,
+      productId: row.id,
+      url: String(fallbackUrl),
+      altText: row.name || row.title || '',
+      kind: 'product',
+      isPrimary: true,
+      sortOrder: 0,
+      variantId: null,
+    });
+  }
   const myVariants = variants
     .filter((v) => v.product_id === row.id)
     .map((v): CatalogVariant => {
@@ -432,6 +447,7 @@ export function rowToProduct(row: ProductRow, categories: CategoryRow[], images:
     seoKeywords: parseTagList(row.seo_keywords),
     canonicalSlug: row.canonical_slug || undefined,
     ogImage: row.og_image || undefined,
+    imageUrl: (fallbackUrl ? String(fallbackUrl) : undefined) || myImages[0]?.url,
     images: myImages,
     variants: myVariants,
     createdAt: row.created_at || '',
@@ -663,6 +679,7 @@ export interface ProductInput {
   ownerNotes?: string;
   evidenceNotes?: string;
   sortOrder?: number;
+  imageUrl?: string | null;
   /** Optional listing end (null = no expiry / Good 'Til Cancelled). */
   listingEndsAt?: string | null;
 }
@@ -729,6 +746,7 @@ export function productToRow(input: ProductInput): Record<string, unknown> {
     evidence_notes: input.evidenceNotes ?? null,
     sort_order: input.sortOrder ?? 0,
     listing_ends_at: input.listingEndsAt ?? null,
+    image_url: input.imageUrl ?? null,
   };
   return row;
 }
@@ -810,6 +828,7 @@ const INPUT_FIELD_TO_COLUMNS: Record<keyof ProductInput, string[]> = {
   ownerNotes: ['owner_notes'],
   evidenceNotes: ['evidence_notes'],
   sortOrder: ['sort_order'],
+  imageUrl: ['image_url'],
   listingEndsAt: ['listing_ends_at'],
 };
 
@@ -991,6 +1010,14 @@ export async function saveProductImages(productId: string, images: CatalogImageI
     }
   });
   await Promise.all(writes);
+  const primary = images.find((i) => i.isPrimary) || images[0];
+  if (primary?.url) {
+    try {
+      await db.update('products', productId, { image_url: primary.url, updated_at: new Date().toISOString() });
+    } catch {
+      /* ignore if update fails or table differs */
+    }
+  }
   return opts.reload === false ? null : getProduct(productId);
 }
 

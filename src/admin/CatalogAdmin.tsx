@@ -1975,6 +1975,7 @@ export function CatalogProductEditor() {
         ogImage: p.ogImage,
         ownerNotes: p.ownerNotes,
         evidenceNotes: p.evidenceNotes,
+        imageUrl: p.images[0]?.url || null,
       };
       const saved = isNew ? await createProduct(input) : (await updateProduct(p.id, input))!;
       const imagePayload = p.images.map((img, i) => ({
@@ -2707,7 +2708,7 @@ function ImageManager({ product, onProduct }: { product: CatalogProduct; onProdu
   const addByUrl = () => {
     const u = url.trim();
     if (!u) return;
-    if (!/^https?:\/\//i.test(u)) { notify('Enter a valid image URL (https://…)', 'error'); return; }
+    if (!/^(https?:\/\/|\/)/i.test(u)) { notify('Enter a valid image URL (https://… or /images/…)', 'error'); return; }
     const isFirst = product.images.length === 0;
     onProduct({ ...product, images: [...product.images, { id: uid(), productId: product.id, url: u, altText: alt.trim(), kind: 'product', isPrimary: isFirst, sortOrder: product.images.length, variantId: null }] });
     setUrl(''); setAlt('');

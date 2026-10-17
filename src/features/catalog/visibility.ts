@@ -28,6 +28,7 @@ export interface PublicVisibility {
  * the objects straight through made every listed product look like it had no
  * usable image. */
 export function publicFactsFor(p: CatalogProduct): PublicProductFacts {
+  const images = (p.images || []).map((img) => img?.url).filter((u): u is string => !!u);
   return {
     id: p.id,
     slug: p.slug,
@@ -36,7 +37,8 @@ export function publicFactsFor(p: CatalogProduct): PublicProductFacts {
     description: p.description,
     short_description: p.shortDescription,
     price: p.price,
-    images: (p.images || []).map((img) => img?.url).filter((u): u is string => !!u),
+    image_url: p.imageUrl || images[0] || null,
+    images,
     commerce_readiness: p.commerceReadiness,
     supplier_source: p.supplierSource,
     cost_price: p.costPrice,
