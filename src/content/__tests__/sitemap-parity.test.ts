@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { pathToFileURL } from 'node:url';
 import { STATIC_ROUTES, buildSitemap, buildSitemapGroups, renderHtmlSitemapBody, sitemapLinks } from '../../../worker/sitemap';
 import { NAV_PATHS, FOOTER_COLUMNS, SSR_FOOTER_NAV } from '../navigation';
 import { isBlogPublic, setBlogPublicForTesting } from '../reviewHolds';
@@ -162,6 +166,49 @@ describe('sitemap — the static URL set cannot drift', () => {
       expect(staticSitemapXml, 'the withdrawn blog is still advertised').not.toContain('<loc>https://luxedge.us/blog</loc>');
     }
     expect(staticSitemapXml).not.toContain('/shipping<');
+  });
+});
+
+describe('sitemap — a database outage cannot fail the production build', () => {
+  /**
+   * `npm run build` starts with this script, so anything it throws kills the
+   * deploy. It is meant to degrade instead: keep the committed sitemap and exit
+   * 0. That guard was written but its error class never defined, so the moment
+   * a real outage happened (Supabase restricted the project for egress) the
+   * build died on a ReferenceError instead of falling back. This runs the real
+   * script in a scratch directory with every read failing, and asserts both the
+   * clean exit and that the committed file is left byte-for-byte alone.
+   */
+  it('exits 0 and leaves the committed sitemap untouched when every read fails', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sitemap-outage-'));
+    try {
+      mkdirSync(join(dir, 'public'), { recursive: true });
+      const sentinel = '<?xml version="1.0" encoding="UTF-8"?>\n<!-- sentinel: must survive an outage -->\n';
+      writeFileSync(join(dir, 'public', 'sitemap.xml'), sentinel);
+      const scriptUrl = pathToFileURL(resolve('scripts/regenerate-sitemap.mjs')).href;
+      const loader = `
+        globalThis.fetch = async () => new Response(
+          '{"message":"restricted: exceed_egress_quota"}',
+          { status: 402, headers: { 'content-type': 'application/json' } },
+        );
+        await import(${JSON.stringify(scriptUrl)});
+      `;
+      // No .env in the scratch dir, so the script uses these instead; no D1
+      // backend either, so every read genuinely fails.
+      const env: NodeJS.ProcessEnv = {
+        ...process.env,
+        VITE_SUPABASE_URL: 'https://test-project.supabase.co',
+        SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      };
+      delete env.VITE_DATA_BACKEND;
+      const run = spawnSync(process.execPath, ['--input-type=module', '-e', loader], { cwd: dir, env, encoding: 'utf8' });
+      expect(run.stderr, 'an outage must be reported, not crashed through').toContain('DATABASE UNAVAILABLE');
+      expect(run.stderr, 'DbUnavailableError is undefined again').not.toContain('ReferenceError');
+      expect(run.status, `build step exited ${run.status}: ${run.stderr}`).toBe(0);
+      expect(readFileSync(join(dir, 'public', 'sitemap.xml'), 'utf8')).toBe(sentinel);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

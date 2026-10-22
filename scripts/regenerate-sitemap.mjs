@@ -37,6 +37,18 @@ if (!URL_BASE || !KEY) { console.error('env missing VITE_SUPABASE_URL / SUPABASE
 
 const HEAD = { apikey: KEY, Authorization: `Bearer ${KEY}` };
 
+// Raised when every configured read backend failed for a path. The build keys
+// its degrade-instead-of-fail behaviour off this class, so it has to exist:
+// it was referenced but never defined, which turned the intended "keep the
+// committed sitemap and exit 0" path into a ReferenceError that failed the
+// Vercel build the moment the database returned an error.
+class DbUnavailableError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'DbUnavailableError';
+  }
+}
+
 const get = async (path) => {
   if (URL_BASE && KEY) {
     try {
