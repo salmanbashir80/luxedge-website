@@ -20,6 +20,7 @@ Operational knowledge that is not recoverable from reading the code.
 - Vercel deploy checks fail with a known platform-wide deploy-outputs outage; before blaming a branch, compare against main's own newest Production deployment — identical failure = the outage. main is not branch-protected; the established move is `gh pr merge N --admin` after that check.
 - Establish PRs with only your own files staged (worktree routinely carries other threads' uncommitted files — docs/*.md, screenshots, check_session.ps1 — never include them).
 - Post-deploy proof: `wrangler deployments list` is OLDEST-first (grep the newest rows); admin-gated worker API routes answering 401 without a token prove the route is live; sitemap.xml must return 200 with a non-empty `<urlset>`.
+- DEPLOY AUTH TRAP: `.env`'s `CLOUDFLARE_API_TOKEN` belongs to a DIFFERENT account (`fd383fa3…`, himalayankoh.pk@gmail.com) than the one luxedge.us lives in (`f542683e…`, 8002salman@gmail.com), so a bare `wrangler deploy` fails account-config mismatch. The working login is the wrangler OAuth session in `%APPDATA%/xdg.config/.wrangler/config/default.toml`; deploy with the env token unset: `env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID npx wrangler deploy`. Confirm with `env -u CLOUDFLARE_API_TOKEN npx wrangler whoami` (must show f542683e / 8002salman).
 - The site is AdSense-facing: never touch ad code (`AdSenseAd`, `marketing.ts`, `index.html` consent injection), `/ads.txt`, `robots.txt`, or the `keep_vars` secret set.
 
 ## Dev / preview quirks (Windows)
