@@ -6,6 +6,18 @@ const text = (v: unknown) => String(v || '').replace(/\s+/g, ' ').trim();
 const usableImage = (v: unknown) => /^(https?:\/\/|\/[^/])/i.test(text(v));
 const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const isOfficialOrManufacturerSource = (p: PublicProductFacts) => /\bkong\b|\bofficial\b|\bmanufacturer\b/i.test(text(p.supplier_source || p.supplierSource));
+/**
+ * Demo/seed records are never commerce inventory.
+ *
+ * `scripts/seed-fashion-to-supabase.mjs` writes FASHION_SAMPLE_PRODUCTS demo
+ * rows with the `sample-` slug prefix; those records are documented in
+ * `fashionSampleProducts.ts` as sample:true / purchasable:false, so no surface
+ * that sells or indexes products may list one. Keyed on the slug (not stored
+ * readiness) because a seed run can stamp COMMERCE_READY by mistake.
+ */
+export function isDemoSampleSlug(slug: unknown): boolean {
+  return /^sample[-_]/i.test(text(slug));
+}
 export function isCommerceReadyForPublicListing(p: PublicProductFacts): boolean {
   // Manufacturer pages are reference material, not an independently verified
   // commerce supply. Evaluate this before stored readiness so an accidental
@@ -25,6 +37,7 @@ export function hasKnownProductContradiction(p: PublicProductFacts): boolean {
 }
 export function publicProductIneligibilityReason(p: PublicProductFacts): string | null {
   if (!['active', 'published'].includes(text(p.status).toLowerCase())) return 'not publicly active';
+  if (isDemoSampleSlug(p.slug)) return 'demo sample record';
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(text(p.slug))) return 'missing canonical slug';
   if (text(p.name).length < 3 || /^(product|item|test)(\s|$)/i.test(text(p.name))) return 'insufficient product identity';
   if (num(p.price) <= 0) return 'missing price fact';

@@ -20,6 +20,24 @@ for (const line of fs.readFileSync('.env', 'utf8').split('\n')) {
 }
 const base = env.VITE_SUPABASE_URL;
 const key = env.SUPABASE_SERVICE_ROLE_KEY;
+
+// ---------------------------------------------------------------------------
+// GUARD — this script writes DEMO data (see src/content/fashionSampleProducts.ts:
+// sample: true, purchasable: false). A 2026-10-16 run of this script published
+// 17 sample-* rows to the live catalog with COMMERCE_READY + in-stock claims,
+// which made non-existent products indexable and orderable. Two rules now hold:
+//   1. it refuses to write to the production project at all, and
+//   2. even on a staging project the rows land as drafts with no readiness or
+//      inventory claims, so no seed run can ever advertise fake stock again.
+// ---------------------------------------------------------------------------
+const PRODUCTION_PROJECT_REF = 'eidujmfbcfrjjleitaqp';
+if (!base || base.includes(PRODUCTION_PROJECT_REF)) {
+  console.error(
+    `Refusing to seed demo products into ${base || '(no VITE_SUPABASE_URL)'}.\n` +
+      'This script is for a staging/demo Supabase project only. Point .env at a non-production project.',
+  );
+  process.exit(1);
+}
 const headers = {
   apikey: key,
   Authorization: 'Bearer ' + key,
@@ -59,20 +77,16 @@ for (const p of FASHION_SAMPLE_PRODUCTS) {
     compare_at_price: Math.round(p.priceUsd * 1.35),
     short_description: p.description,
     description: p.description + ' Curated for the Luxedge luxury fashion collection. Shipped across the USA.',
-    status: 'active',
-    commerce_readiness: 'COMMERCE_READY',
+    status: 'draft',
+    // Demo rows carry NO commerce claims: no readiness stamp, no stock.
+    commerce_readiness: 'NEEDS_REVIEW',
     category_id: catId,
     image_url: p.image,
-    inventory_qty: 35,
-    featured: true,
-    new_arrival: true,
+    featured: false,
+    new_arrival: false,
     brand: 'Luxedge',
-    tags: [p.categorySlug, p.subcategory.toLowerCase(), 'fashion', 'usa-ready'],
-    free_shipping: true,
-    us_inventory: true,
-    stock_status: 'in_stock',
-    delivery_min_days: 3,
-    delivery_max_days: 6,
+    tags: [p.categorySlug, p.subcategory.toLowerCase(), 'fashion', 'demo-sample'],
+    free_shipping: false,
   };
 
   if (existingSlugs.has(p.slug)) {

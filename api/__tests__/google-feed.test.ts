@@ -237,6 +237,22 @@ describe('google feed — D1 backend', () => {
     expect(feedImageLinks(r2.body())[0]).toBe('https://luxedge.us/img/hk/hk-salt-lump.jpg');
   });
 
+  it('falls back to the product-row image_url when there is no product_images row', async () => {
+    // 32 live listings look exactly like this: a site-relative photograph on
+    // products.image_url and zero product_images rows, so they never reached
+    // the feed even though the storefront and JSON-LD render their photo.
+    db.exec("INSERT INTO categories (id, name, slug, description) VALUES ('c1', 'Womens Clothing', 'womens-clothing', '')");
+    insertProduct(product({ id: 'pRow', slug: 'row-image-only', image_url: '/images/fashion/floral-midi-dress.jpg' }));
+
+    const { server, body, status } = makeRes();
+    await feedHandler({} as never, server);
+
+    expect(status()).toBe(200);
+    expect(feedItems(body()).length).toBe(1);
+    expect(body()).toContain('<g:id>pRow</g:id>');
+    expect(feedImageLinks(body())).toEqual(['https://luxedge.us/images/fashion/floral-midi-dress.jpg']);
+  });
+
   it('drops products whose only images are base64 blobs (server-side not.like filter)', async () => {
     insertProduct(product({ id: 'pB64', slug: 'base64-only' }));
     insertImage(image({ id: 'iB', product_id: 'pB64', url: 'data:image/png;base64,AAAA', public_url: 'data:image/png;base64,AAAA' }));
@@ -247,6 +263,45 @@ describe('google feed — D1 backend', () => {
     expect(status()).toBe(200);
     expect(feedItems(body()).length).toBe(0);
     expect(body()).not.toContain('<g:id>pB64</g:id>');
+  });
+
+  it('never submits demo seed records or withheld products', async () => {
+    db.exec("INSERT INTO categories (id, name, slug, description) VALUES ('c1', 'Womens Clothing', 'womens-clothing', '')");
+    insertProduct(product({ id: 'pReal', slug: 'real-listing' }));
+    insertImage(image({ id: 'iReal', product_id: 'pReal', url: 'https://cdn.example.test/real.jpg' }));
+    // 17 of these shipped to the live catalog on 2026-10-16 via the demo seed.
+    insertProduct(product({ id: 'pDemo', slug: 'sample-waterproof-mascara' }));
+    insertImage(image({ id: 'iDemo', product_id: 'pDemo', url: 'https://cdn.example.test/demo.jpg' }));
+    insertProduct(product({ id: 'pHeld', slug: 'promo-probe-1788640230930' }));
+    insertImage(image({ id: 'iHeld', product_id: 'pHeld', url: 'https://cdn.example.test/held.jpg' }));
+
+    const { server, body, status } = makeRes();
+    await feedHandler({} as never, server);
+
+    expect(status()).toBe(200);
+    expect(feedItems(body()).length).toBe(1);
+    expect(body()).toContain('<g:id>pReal</g:id>');
+    expect(body()).not.toContain('<g:id>pDemo</g:id>');
+    expect(body()).not.toContain('<g:id>pHeld</g:id>');
+  });
+
+  it('skips 402-restricted Supabase Storage images and drops a product left with none', async () => {
+    db.exec("INSERT INTO categories (id, name, slug, description) VALUES ('c1', 'Womens Clothing', 'womens-clothing', '')");
+    insertProduct(product({ id: 'pMixed', slug: 'mixed-images' }));
+    insertImage(image({ id: 'iBad', product_id: 'pMixed', url: 'https://eidujmfbcfrjjleitaqp.supabase.co/storage/v1/object/public/p/1.jpg', sort_order: 0, is_primary: 1 }));
+    insertImage(image({ id: 'iGood', product_id: 'pMixed', url: 'https://cf.cjdropshipping.com/good.jpg', sort_order: 1, is_primary: 0 }));
+    insertProduct(product({ id: 'pOnlyBad', slug: 'storage-only' }));
+    insertImage(image({ id: 'iBad2', product_id: 'pOnlyBad', url: 'https://eidujmfbcfrjjleitaqp.supabase.co/storage/v1/object/public/p/2.jpg' }));
+
+    const { server, body, status } = makeRes();
+    await feedHandler({} as never, server);
+
+    expect(status()).toBe(200);
+    expect(feedItems(body()).length).toBe(1);
+    expect(body()).toContain('<g:id>pMixed</g:id>');
+    expect(body()).not.toContain('<g:id>pOnlyBad</g:id>');
+    const links = feedImageLinks(body());
+    expect(links).toEqual(['https://cf.cjdropshipping.com/good.jpg']);
   });
 
   it('returns a valid EMPTY feed when the image or category read fails (unchanged degradation)', async () => {

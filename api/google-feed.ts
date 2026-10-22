@@ -14,6 +14,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import { readPostgrestPath } from '../worker/d1/read';
 import { FASHION_CATEGORY_SLUGS } from '../src/content/categoryContent';
+import { isDemoSampleSlug } from '../src/content/productEligibility';
+import { isHeldProduct } from '../src/content/reviewHolds';
 import { getDataRuntime, isD1Backend } from '../worker/d1/runtime';
 
 interface FeedProductRow {
@@ -24,6 +26,7 @@ interface FeedProductRow {
   price: number | null;
   category_id: string | null;
   brand: string | null;
+  image_url: string | null;
 }
 interface FeedImageRow {
   product_id: string;
@@ -55,6 +58,15 @@ const cleanDesc = (d: string | null | undefined): string => {
 const absImage = (u: string): string =>
   /^https?:\/\//i.test(u) ? u : `https://luxedge.us${u.startsWith('/') ? '' : '/'}${u}`;
 
+/**
+ * A feed image must actually load. Supabase Storage answers HTTP 402
+ * (`exceed_egress_quota`) for this project, so a URL on that host is a broken
+ * image_link no matter how many products reference it — the storefront drops
+ * the same host in `services/catalog.ts` and falls back to the next image.
+ */
+const feedableImage = (u: string): boolean =>
+  !!u.trim() && !/supabase\.co\/storage/i.test(u) && (u.startsWith('/') || /^https?:\/\//i.test(u));
+
 export default async function handler(_req: IncomingMessage, res: ServerResponse): Promise<void> {
   // "Not configured" only applies to the Supabase path: a D1 deployment always
   // has its binding, and readPostgrestPath refuses to invent rows either way.
@@ -70,7 +82,7 @@ export default async function handler(_req: IncomingMessage, res: ServerResponse
     // Columns are exactly what the feed renders/filters on — no wide selects:
     // sku/supplier_product_ref were read for years but never emitted.
     readPostgrestPath<FeedProductRow>(
-      'products?select=id,slug,name,description,price,category_id,brand&status=eq.active&limit=500',
+      'products?select=id,slug,name,description,price,category_id,brand,image_url&status=eq.active&limit=500',
     ),
     // Server-side filter (url NOT LIKE 'data:%'): product_images carries ~9 MB
     // of junk inline base64 rows, and fetching them just to discard them burned
@@ -101,8 +113,9 @@ export default async function handler(_req: IncomingMessage, res: ServerResponse
   const imgRows = imgRowsRead || [];
   const imgsByP = new Map<string, FeedImageRow[]>();
   for (const im of imgRows) {
-    // An empty string is not a real image URL — the feed requires one.
-    if (!(im.url || im.public_url || '').trim()) continue;
+    // An empty string is not a real image URL — the feed requires one, and a
+    // 402-restricted storage host is no more usable than an empty string.
+    if (!feedableImage(im.url || im.public_url || '')) continue;
     const arr = imgsByP.get(im.product_id) || [];
     arr.push(im);
     imgsByP.set(im.product_id, arr);
@@ -111,7 +124,14 @@ export default async function handler(_req: IncomingMessage, res: ServerResponse
   const products = prodRows.map((p) => ({ ...p, category: p.category_id ? catName.get(p.category_id) || null : null, images: [] as string[] })).filter((p) => {
     const price = Number(p.price);
     const imgs = (imgsByP.get(p.id) || []).sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0) || a.sort_order - b.sort_order);
-    return price > 0 && imgs.length > 0 && !!p.category_id && fashionCategoryIds.has(p.category_id);
+    // Same public-inventory gates as the storefront and sitemap: withheld rows
+    // and demo seed records (`sample-…`) are never submitted to Google.
+    if (!p.slug || isHeldProduct(p.slug) || isDemoSampleSlug(p.slug)) return false;
+    // 32 active listings carry their photograph only on products.image_url
+    // (a site-relative /images/fashion/... path) with no product_images row;
+    // the product row image is just as valid a Merchant image_link.
+    const hasImage = imgs.length > 0 || feedableImage(String(p.image_url || ''));
+    return price > 0 && hasImage && !!p.category_id && fashionCategoryIds.has(p.category_id);
   });
 
   const items = products.map((p) => {
@@ -130,7 +150,7 @@ export default async function handler(_req: IncomingMessage, res: ServerResponse
       // column first, falling back to the site-relative local mirror — a
       // product whose url points at the restricted Supabase Storage still
       // feeds a working, same-origin image from public_url.
-      `<g:image_link>${esc(absImage(imgs[0].url || imgs[0].public_url || ''))}</g:image_link>`,
+      `<g:image_link>${esc(absImage(imgs.length ? imgs[0].url || imgs[0].public_url || '' : String(p.image_url || '')))}</g:image_link>`,
       ...imgs.slice(1, 6).map((im) => `  <g:additional_image_link>${esc(absImage(im.url || im.public_url || ''))}</g:additional_image_link>`),
       `<g:availability>in stock</g:availability>`,
       `<g:condition>new</g:condition>`,

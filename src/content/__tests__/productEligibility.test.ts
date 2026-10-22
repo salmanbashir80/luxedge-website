@@ -8,6 +8,14 @@ describe('public PDP eligibility', () => {
     expect(publicProductIneligibilityReason({ ...qualified, description: 'Too short' })).toBe('insufficient verified product content');
     expect(publicProductIneligibilityReason({ ...qualified, commerce_readiness: 'NEEDS_REVIEW' })).toBe('unverified commerce readiness');
   });
+  it('never lists demo seed records even when a seed run stamped them commerce ready', () => {
+    // scripts/seed-fashion-to-supabase.mjs wrote FASHION_SAMPLE_PRODUCTS (documented
+    // sample:true / purchasable:false) into the live catalog as active + COMMERCE_READY.
+    const seeded = { ...qualified, slug: 'sample-waterproof-mascara', commerce_readiness: 'COMMERCE_READY' };
+    expect(isPubliclyListableProduct(seeded)).toBe(false);
+    expect(publicProductIneligibilityReason(seeded)).toBe('demo sample record');
+    expect(publicProductIneligibilityReason({ ...qualified, slug: 'sample_silk_robe' })).toBe('demo sample record');
+  });
   it('withholds official/manufacturer sources even when declared commerce ready', () => {
     const officialSource = {
       ...qualified,
